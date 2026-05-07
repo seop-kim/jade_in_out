@@ -1,4 +1,9 @@
+export const config = {
+  api: { bodyParser: false },
+};
+
 const TARGET = 'https://ehr.jadehr.co.kr';
+
 const HOP_BY_HOP = new Set([
   'transfer-encoding',
   'content-encoding',
@@ -12,6 +17,22 @@ const HOP_BY_HOP = new Set([
   'upgrade',
 ]);
 
+const SKIP_INCOMING = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'x-jade-cookie',
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+  'x-forwarded-port',
+  'x-vercel-id',
+  'x-vercel-deployment-url',
+  'x-vercel-forwarded-for',
+  'x-real-ip',
+  'forwarded',
+]);
+
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -21,25 +42,45 @@ function readRawBody(req) {
   });
 }
 
-async function handler(req, res) {
+function reEncodeParsedBody(req) {
+  if (req.body === undefined || req.body === null) return null;
+  if (Buffer.isBuffer(req.body)) return req.body;
+  if (typeof req.body === 'string') return req.body;
+
+  const ct = (req.headers['content-type'] || '').toLowerCase();
+  if (ct.includes('application/x-www-form-urlencoded')) {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(req.body)) {
+      if (Array.isArray(v)) v.forEach((x) => params.append(k, x ?? ''));
+      else params.append(k, v ?? '');
+    }
+    return params.toString();
+  }
+  return JSON.stringify(req.body);
+}
+
+export default async function handler(req, res) {
   const segments = req.query.path || [];
   const pathname =
     '/' + (Array.isArray(segments) ? segments.join('/') : segments);
   const url = TARGET + pathname;
 
-  const headers = {
-    Origin: TARGET,
-    Referer: `${TARGET}/menuAction.do`,
-    'X-Requested-With': 'XMLHttpRequest',
-  };
+  const headers = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (SKIP_INCOMING.has(key.toLowerCase())) continue;
+    headers[key] = Array.isArray(value) ? value.join(', ') : value;
+  }
+  headers['Origin'] = TARGET;
+  headers['Referer'] = `${TARGET}/menuAction.do`;
+  headers['X-Requested-With'] = 'XMLHttpRequest';
+
   const cookie = req.headers['x-jade-cookie'];
   if (cookie) headers['Cookie'] = cookie;
-  if (req.headers['content-type'])
-    headers['Content-Type'] = req.headers['content-type'];
 
   let body;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    body = await readRawBody(req);
+    const parsed = reEncodeParsedBody(req);
+    body = parsed !== null ? parsed : await readRawBody(req);
   }
 
   try {
@@ -56,6 +97,3 @@ async function handler(req, res) {
     res.status(502).send('Proxy error: ' + (err?.message ?? String(err)));
   }
 }
-
-module.exports = handler;
-module.exports.config = { api: { bodyParser: false } };
