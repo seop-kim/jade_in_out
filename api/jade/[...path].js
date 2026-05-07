@@ -63,9 +63,12 @@ async function getBodyBuffer(req) {
 }
 
 export default async function handler(req, res) {
-  const segments = req.query.path || [];
-  const pathname =
-    '/' + (Array.isArray(segments) ? segments.join('/') : segments);
+  const incoming = new URL(req.url, 'http://localhost');
+  let pathname = incoming.pathname;
+  if (pathname.startsWith('/api/jade')) {
+    pathname = pathname.slice('/api/jade'.length) || '/';
+  }
+  const upstreamPath = pathname + incoming.search;
 
   const headers = {};
   for (const [k, v] of Object.entries(req.headers)) {
@@ -86,7 +89,7 @@ export default async function handler(req, res) {
     headers['content-length'] = String(body.length);
   }
 
-  console.log('[jade-proxy] →', req.method, pathname, {
+  console.log('[jade-proxy] →', req.method, upstreamPath, {
     bodyLen: body.length,
     cookieLen: cookie ? cookie.length : 0,
     contentType: headers['content-type'] || null,
@@ -97,7 +100,7 @@ export default async function handler(req, res) {
       {
         hostname: TARGET_HOST,
         port: 443,
-        path: pathname,
+        path: upstreamPath,
         method: req.method,
         headers,
       },
