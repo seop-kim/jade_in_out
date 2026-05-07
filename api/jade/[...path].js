@@ -17,21 +17,12 @@ const HOP_BY_HOP = new Set([
   'upgrade',
 ]);
 
-const SKIP_INCOMING = new Set([
-  'host',
-  'connection',
-  'content-length',
-  'x-jade-cookie',
-  'x-forwarded-for',
-  'x-forwarded-host',
-  'x-forwarded-proto',
-  'x-forwarded-port',
-  'x-vercel-id',
-  'x-vercel-deployment-url',
-  'x-vercel-forwarded-for',
-  'x-real-ip',
-  'forwarded',
-]);
+const FORWARD_HEADERS = [
+  'content-type',
+  'accept',
+  'accept-language',
+  'user-agent',
+];
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -65,14 +56,15 @@ export default async function handler(req, res) {
     '/' + (Array.isArray(segments) ? segments.join('/') : segments);
   const url = TARGET + pathname;
 
-  const headers = {};
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (SKIP_INCOMING.has(key.toLowerCase())) continue;
-    headers[key] = Array.isArray(value) ? value.join(', ') : value;
+  const headers = {
+    Origin: TARGET,
+    Referer: `${TARGET}/menuAction.do`,
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  for (const name of FORWARD_HEADERS) {
+    const v = req.headers[name];
+    if (v) headers[name] = Array.isArray(v) ? v.join(', ') : v;
   }
-  headers['Origin'] = TARGET;
-  headers['Referer'] = `${TARGET}/menuAction.do`;
-  headers['X-Requested-With'] = 'XMLHttpRequest';
 
   const cookie = req.headers['x-jade-cookie'];
   if (cookie) headers['Cookie'] = cookie;
