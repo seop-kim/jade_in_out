@@ -1,0 +1,117 @@
+import './Calendar.css';
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+function formatKey(y, m, d) {
+  return `${y}-${pad(m + 1)}-${pad(d)}`;
+}
+
+function buildCells(year, month) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const prevLast = new Date(year, month, 0).getDate();
+
+  const cells = [];
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    cells.push({
+      year: month === 0 ? year - 1 : year,
+      month: month === 0 ? 11 : month - 1,
+      day: prevLast - i,
+      inMonth: false,
+    });
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    cells.push({ year, month, day: d, inMonth: true });
+  }
+
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1];
+    const next = new Date(last.year, last.month, last.day + 1);
+    cells.push({
+      year: next.getFullYear(),
+      month: next.getMonth(),
+      day: next.getDate(),
+      inMonth: false,
+    });
+  }
+
+  return cells;
+}
+
+function isSameDate(a, year, month, day) {
+  return (
+    a.getFullYear() === year &&
+    a.getMonth() === month &&
+    a.getDate() === day
+  );
+}
+
+function Calendar({ year, month, today, attendance }) {
+  const cells = buildCells(year, month);
+
+  return (
+    <div className="calendar">
+      <div className="calendar-weekdays">
+        {WEEKDAYS.map((w, i) => (
+          <div
+            key={w}
+            className={`weekday ${i === 0 ? 'sun' : ''} ${i === 6 ? 'sat' : ''}`}
+          >
+            {w}
+          </div>
+        ))}
+      </div>
+
+      <div className="calendar-grid">
+        {cells.map((cell, idx) => {
+          const dow = idx % 7;
+          const key = formatKey(cell.year, cell.month, cell.day);
+          const record = cell.inMonth ? attendance[key] : null;
+          const isToday = isSameDate(today, cell.year, cell.month, cell.day);
+
+          return (
+            <div
+              key={key + (cell.inMonth ? '' : '-out')}
+              className={[
+                'cell',
+                cell.inMonth ? '' : 'out-month',
+                isToday ? 'today' : '',
+                dow === 0 ? 'sun' : '',
+                dow === 6 ? 'sat' : '',
+              ].join(' ').trim()}
+            >
+              <div className="cell-date">{cell.day}</div>
+              {record && record.error ? (
+                <div className="cell-error" title={record.error}>
+                  오류
+                  <div className="cell-error-msg">{record.error}</div>
+                </div>
+              ) : record ? (
+                <div className="cell-record">
+                  <div className="record-row">
+                    <span className="record-label in">출근</span>
+                    <span className="record-time">{record.clockIn || '--:--'}</span>
+                  </div>
+                  <div className="record-row">
+                    <span className="record-label out">퇴근</span>
+                    <span className="record-time">{record.clockOut || '--:--'}</span>
+                  </div>
+                </div>
+              ) : cell.inMonth ? (
+                <div className="cell-empty">—</div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default Calendar;

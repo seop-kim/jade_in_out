@@ -1,0 +1,166 @@
+.calendar {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.weekday {
+  padding: 12px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  letter-spacing: 0.02em;
+}
+
+.weekday.sun {
+  color: #dc2626;
+}
+
+.weekday.sat {
+  color: #2563eb;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(110px, auto);
+}
+
+.cell {
+  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+}
+
+.cell:nth-child(7n) {
+  border-right: none;
+}
+
+.cell:hover {
+  background: #fafafa;
+}
+
+.cell.out-month {
+  background: #fafafa;
+  color: #c7cbd1;
+}
+
+.cell.out-month .cell-date {
+  color: #c7cbd1;
+}
+
+.cell.today {
+  background: #eef4ff;
+}
+
+.cell.today .cell-date {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.cell-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.cell.sun .cell-date {
+  color: #dc2626;
+}
+
+.cell.sat .cell-date {
+  color: #2563eb;
+}
+
+.cell.today.sun .cell-date,
+.cell.today.sat .cell-date {
+  color: #ffffff;
+}
+
+.cell-record {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.record-label {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.record-label.in {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.record-label.out {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.record-time {
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.cell-empty {
+  color: #d1d5db;
+  font-size: 12px;
+}
+
+.cell-error {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.cell-error-msg {
+  font-weight: 400;
+  font-size: 10px;
+  color: #b91c1c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
