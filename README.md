@@ -31,7 +31,9 @@ Jade HR 시스템(`ehr.jadehr.co.kr`)의 일별 출퇴근 데이터를 한 달�
 - **부분 휴가**: `[28] [연차휴가 4시간]` + 출근/퇴근
 - **휴무일 근무(주말 근무)**: `[28] [휴일근무]` + 출근/퇴근
 - **야근(연장 근무)**: 퇴근 행 아래 `[야근] 5시간` 추가
-- **퇴근 시간이 안 찍혀있고 보조 필드(`C_OUT_HM`)에 값 있음**: `[퇴근 변경] 18:00` (단, 오늘 이후 날짜는 폴백 적용 안 함)
+- **출근/퇴근 보조 필드(`C_IN_HM`/`C_OUT_HM`)로 채워진 경우**: `[출근 변경] 09:00` / `[퇴근 변경] 18:00` (amber 배지)
+- **과거 날짜인데 출근/퇴근 둘 다 없음**: `[출근 누락]` / `[퇴근 누락]` (짙은 빨강)
+- **오늘 + 미래 날짜**: 보조 필드 폴백 & 누락 표시 모두 적용하지 않음 (아직 안 찍힌 게 정상)
 
 ---
 
@@ -122,7 +124,7 @@ Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다
        │      WORK_DETAIL HTML 안의 <dl class="workList"> 행을 파싱
        │
        ▼
-   { ymd, workType, vacation, overtime, dayOffWork, clockIn, clockOut, clockOutChanged }
+   { ymd, workType, vacation, overtime, dayOffWork, clockIn, clockInChanged, clockOut, clockOutChanged }
        │
        │ src/App.js (CalendarPage useEffect)
        │  - 우선순위에 따라 kind 부여 → attendance map
@@ -139,8 +141,11 @@ Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다
 ### 동시 호출
 한 달치 = 28~31일 만큼의 호출이 필요. `fetchAttendanceForMonth`가 **concurrency 4**의 워커 큐로 묶어 병렬 처리하고, 진행률을 `onProgress`로 알려줍니다.
 
-### 보조 필드 (퇴근 변경)
-`I_OUT_HM`이 비어있으면 `C_OUT_HM`(보정 입력값)을 폴백으로 사용합니다. 폴백이 적용된 경우 라벨이 `퇴근` → `퇴근 변경`(amber 배지)으로 바뀝니다. **오늘 이후 날짜는 폴백을 적용하지 않음** — 아직 퇴근 안 한 게 정상이라 잘못된 값이 박히지 않도록.
+### 보조 필드 (출근 변경 / 퇴근 변경 / 누락)
+- 출근: `I_IN_HM` 비어있으면 `C_IN_HM` 폴백 → `출근 변경`(amber)
+- 퇴근: `I_OUT_HM` 비어있으면 `C_OUT_HM` 폴백 → `퇴근 변경`(amber)
+- 과거 날짜인데 폴백까지 모두 없음: `출근 누락` / `퇴근 누락`(짙은 빨강) — 시간 칸 없이 라벨만 표시
+- **오늘 이후 날짜는 폴백 & 누락 표시 모두 적용하지 않음** — 아직 안 찍힌 게 정상이라 잘못된 표시가 박히지 않도록
 
 ---
 
@@ -151,7 +156,7 @@ Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다
 | 순위 | 조건 | 표시 | `kind` |
 |---|---|---|---|
 | 1 | API 에러 | `오류 + 메시지` | `error` |
-| 2 | `WORK_TYPE_NM === '휴일'` **AND** WORK_DETAIL에 `휴무일` 없음 | `[휴일]` 배지만 | `holiday` |
+| 2 | `WORK_TYPE_NM`이 `휴일`/`휴무` 포함 (예: `휴일`, `휴무(토요일)`) **AND** WORK_DETAIL에 `휴무일` 없음 | `[휴일]` 배지만 | `holiday` |
 | 3 | WORK_DETAIL에 `휴가` 포함 항목 8시간 이상 | `[연차휴가]` 등 배지만 | `vacation` |
 | 4 | 그 외 (근무, 부분 휴가, 휴무일 근무 등) | 헤더 배지 + 출/퇴근/야근 | `work` |
 | 5 | 데이터 없음 (`inMonth`) | `—` | — |
@@ -160,8 +165,8 @@ Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다
 - **헤더 배지**(있을 때): 우선순위 `dayOffWork → vacation`
   - `dayOffWork` → `휴일근무` (주황)
   - `vacation` (부분) → `{타입} {시간}` (시안) 예: `연차휴가 4시간`
-- **출근 행**: `[출근] HH:MM` (없으면 `--:--`)
-- **퇴근 행**: `[퇴근] HH:MM` — 단, `C_OUT_HM` 폴백 시 `[퇴근 변경]`(amber)
+- **출근 행**: `[출근] HH:MM` — `C_IN_HM` 폴백 시 `[출근 변경]`(amber), 과거 날짜에 둘 다 없으면 `[출근 누락]`(짙은 빨강)
+- **퇴근 행**: `[퇴근] HH:MM` — `C_OUT_HM` 폴백 시 `[퇴근 변경]`(amber), 과거 날짜에 둘 다 없으면 `[퇴근 누락]`(짙은 빨강)
 - **야근 행**(있을 때): WORK_DETAIL의 `연장` 항목 → `[야근] X시간`
 
 ### WORK_DETAIL 파싱 (`src/api/jadeApi.js`)
@@ -181,7 +186,8 @@ Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다
 |---|---|---|
 | 출근 | `#dcfce7` | `#166534` (green) |
 | 퇴근 | `#fee2e2` | `#991b1b` (red) |
-| 퇴근 변경 | `#fef3c7` | `#92400e` (amber) |
+| 출근 변경 / 퇴근 변경 | `#fef3c7` | `#92400e` (amber) |
+| 출근 누락 / 퇴근 누락 | `#fecaca` | `#7f1d1d` (deep red) |
 | 야근 | `#e0e7ff` | `#3730a3` (indigo) |
 | 휴일 | `#fce7f3` | `#9d174d` (pink) |
 | 휴가 | `#cffafe` | `#155e75` (cyan) |

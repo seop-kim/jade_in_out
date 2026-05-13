@@ -86,6 +86,11 @@ function ymdToKey(ymd) {
   return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
 }
 
+function isHolidayType(workType) {
+  if (!workType) return false;
+  return workType.includes('휴일') || workType.includes('휴무');
+}
+
 function formatHm(value) {
   if (!value) return '';
   const digits = String(value).replace(/\D/g, '');
@@ -184,7 +189,7 @@ function CalendarPage({ credentials }) {
             out[key] = { error: data.error };
             continue;
           }
-          if (data.workType === '휴일' && !data.dayOffWork) {
+          if (isHolidayType(data.workType) && !data.dayOffWork) {
             out[key] = { kind: 'holiday', label: '휴일' };
             continue;
           }
@@ -192,22 +197,41 @@ function CalendarPage({ credentials }) {
             out[key] = { kind: 'vacation', label: data.vacation.type };
             continue;
           }
-          const clockIn = formatHm(data.clockIn);
+          const isPast = ymd < todayYmd;
+          let clockIn = formatHm(data.clockIn);
+          let clockInChanged = !!data.clockInChanged;
           let clockOut = formatHm(data.clockOut);
           let clockOutChanged = !!data.clockOutChanged;
-          if (ymd >= todayYmd && clockOutChanged) {
+          if (!isPast && clockInChanged) {
+            clockIn = '';
+            clockInChanged = false;
+          }
+          if (!isPast && clockOutChanged) {
             clockOut = '';
             clockOutChanged = false;
           }
-          if (clockIn || clockOut || data.vacation || data.overtime || data.dayOffWork) {
+          const clockInMissing = isPast && !clockIn;
+          const clockOutMissing = isPast && !clockOut;
+          if (
+            clockIn ||
+            clockOut ||
+            data.vacation ||
+            data.overtime ||
+            data.dayOffWork ||
+            clockInMissing ||
+            clockOutMissing
+          ) {
             out[key] = {
               kind: 'work',
               vacation: data.vacation || null,
               dayOffWork: data.dayOffWork || null,
               overtime: data.overtime || null,
               clockIn,
+              clockInChanged,
+              clockInMissing,
               clockOut,
               clockOutChanged,
+              clockOutMissing,
               workDay: data.workDay,
             };
           }

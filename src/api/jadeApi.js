@@ -187,6 +187,12 @@ export async function fetchAttendanceForMonth({
           ymd,
           signal,
         });
+        let clockIn = etc.I_IN_HM || '';
+        let clockInChanged = false;
+        if (!clockIn && etc.C_IN_HM) {
+          clockIn = etc.C_IN_HM;
+          clockInChanged = true;
+        }
         let clockOut = etc.I_OUT_HM || '';
         let clockOutChanged = false;
         if (!clockOut && etc.C_OUT_HM) {
@@ -201,7 +207,8 @@ export async function fetchAttendanceForMonth({
           vacation: vacationFromDetail(workDetailHtml),
           overtime: overtimeFromDetail(workDetailHtml),
           dayOffWork: dayOffWorkFromDetail(workDetailHtml),
-          clockIn: etc.I_IN_HM || '',
+          clockIn,
+          clockInChanged,
           clockOut,
           clockOutChanged,
           raw: etc,

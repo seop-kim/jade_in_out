@@ -117,14 +117,28 @@ function Calendar({ year, month, today, attendance }) {
               ) : record && record.kind === 'work' ? (
                 <div className="cell-record">
                   <div className="record-row">
-                    <span className="record-label in">출근</span>
-                    <span className="record-time">{record.clockIn || '--:--'}</span>
+                    {record.clockInMissing ? (
+                      <span className="record-label in missing">출근 누락</span>
+                    ) : (
+                      <>
+                        <span className={`record-label in ${record.clockInChanged ? 'changed' : ''}`.trim()}>
+                          {record.clockInChanged ? '출근 변경' : '출근'}
+                        </span>
+                        <span className="record-time">{record.clockIn || '--:--'}</span>
+                      </>
+                    )}
                   </div>
                   <div className="record-row">
-                    <span className={`record-label out ${record.clockOutChanged ? 'changed' : ''}`.trim()}>
-                      {record.clockOutChanged ? '퇴근 변경' : '퇴근'}
-                    </span>
-                    <span className="record-time">{record.clockOut || '--:--'}</span>
+                    {record.clockOutMissing ? (
+                      <span className="record-label out missing">퇴근 누락</span>
+                    ) : (
+                      <>
+                        <span className={`record-label out ${record.clockOutChanged ? 'changed' : ''}`.trim()}>
+                          {record.clockOutChanged ? '퇴근 변경' : '퇴근'}
+                        </span>
+                        <span className="record-time">{record.clockOut || '--:--'}</span>
+                      </>
+                    )}
                   </div>
                   {record.overtime && (
                     <div className="record-row">

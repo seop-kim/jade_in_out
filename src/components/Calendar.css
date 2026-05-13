@@ -131,9 +131,15 @@
   color: #991b1b;
 }
 
+.record-label.in.changed,
 .record-label.out.changed {
   background: #fef3c7;
   color: #92400e;
+}
+
+.record-label.missing {
+  background: #fecaca;
+  color: #7f1d1d;
 }
 
 .record-label.overtime {
