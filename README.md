@@ -93,17 +93,40 @@ npm run build
 
 ## 인증 정보 추출 가이드 (Setup 화면)
 
-이 앱은 자체 로그인 기능이 없습니다. 대신 사용자가 직접 Jade에 로그인한 후 브라우저의 활성 세션 정보(Cookie + Request Body)를 복사해 입력하면, 그 정보를 그대로 사용해 API를 호출합니다.
+이 앱은 자체 로그인 기능이 없습니다. 대신 사용자가 직접 Jade에 로그인한 후 브라우저 DevTools의 네트워크 요청에서 인증 정보를 가져옵니다. Setup 화면에는 두 가지 입력 방식이 탭으로 제공됩니다.
+
+### 방식 1: cURL 붙여넣기 (권장 — 한 번에 붙여넣기)
 
 1. [Jade EHR](https://ehr.jadehr.co.kr)에 로그인하고 **출퇴근 메뉴**(`ess_tam_402_m01`)를 엽니다.
 2. <kbd>F12</kbd> → **Network** 탭을 열고 `commonAction.do` 요청을 찾습니다.
-3. **Headers** 탭의 `Cookie` 값을 전체 복사 → 앱의 **Cookie** 입력칸에 붙여 넣습니다.
-4. **Payload** 탭의 Request Body를 전체 복사 → 앱의 **Request Body** 입력칸에 붙여 넣습니다.
-   - `S_STD_YMD` 필드가 반드시 포함되어 있어야 합니다 (앱이 날짜만 갈아끼우며 호출).
-5. "저장하고 달력 보기" 클릭 → `localStorage`에 저장되어 새로고침에도 유지됩니다.
-6. 다른 계정/세션으로 바꾸려면 우상단 "인증 정보 재설정"을 누르면 됩니다.
+3. 해당 요청을 **우클릭 → Copy → Copy as cURL** 선택.
+   - Windows에서는 PowerShell 옵션이 아닌 `cURL (bash)` 또는 `cURL (cmd)`로 복사 (PowerShell 포맷은 미지원).
+4. 앱의 입력칸에 그대로 붙여넣기 → Cookie/Body 자동 추출.
 
-Body 형식은 `KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 둘 다 인식합니다 (`src/components/Setup.js`의 `parseBody`).
+### 방식 2: Cookie + Body 직접 입력 (수동)
+
+1. 위 1~2 동일.
+2. **Headers** 탭의 `Cookie` 값을 통째로 복사 → Cookie 칸.
+3. **Payload** 탭의 Request Body를 통째로 복사 → Request Body 칸 (`KEY:VALUE` 줄 단위 또는 `key=value&...` URL-encoded 모두 인식).
+
+### 공통
+- `S_STD_YMD` 필드가 포함되어 있어야 정상 (앱이 날짜만 갈아끼우며 일별로 호출).
+- "저장하고 달력 보기" 클릭 → `localStorage`에 Cookie + Body가 저장되어 새로고침에도 유지됩니다.
+- 다른 계정/세션으로 바꾸려면 우상단 "인증 정보 재설정"을 누릅니다.
+
+### 파서가 추출하는 것 (`src/components/Setup.js`)
+**`parseCurl`** (cURL 탭):
+- 라인 연속(`\` / `^` / 백틱) 제거 후 단일 라인으로 평탄화
+- **cmd 포맷 자동 감지** (`^"`, `^%`, `^&` 패턴 발견 시 `^X` → `X`로 unescape)
+- Cookie 추출 우선순위:
+  1. `-b '...'` 또는 `--cookie '...'` 플래그 (Chrome DevTools가 실제로 쓰는 방식)
+  2. fallback: `-H 'cookie: ...'` 헤더
+- Body 추출: `--data-raw` / `--data` / `--data-binary` / `--data-urlencode` / `--data-ascii` / `-d`
+- Body를 `URLSearchParams`로 디코드 → 필드 맵
+
+**`parseBody`** (수동 탭):
+- `key=value&...` URL-encoded 형태면 `URLSearchParams`로 파싱
+- 그 외에는 줄 단위 `KEY:VALUE` 포맷으로 파싱
 
 ---
 
