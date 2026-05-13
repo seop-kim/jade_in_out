@@ -68,6 +68,99 @@ body {
   text-align: center;
 }
 
+.month-picker {
+  position: relative;
+}
+
+.month-title-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.month-title-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.month-title-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.month-picker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.12);
+  padding: 12px;
+  min-width: 260px;
+}
+
+.month-picker-year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.month-picker-year-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.month-picker-cell {
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.month-picker-cell:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.month-picker-cell.is-today {
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.month-picker-cell.is-current {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.month-picker-cell.is-current:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
 .btn {
   appearance: none;
   border: 1px solid #e5e7eb;

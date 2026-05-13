@@ -75,6 +75,23 @@ function Calendar({ year, month, today, attendance }) {
           const record = cell.inMonth ? attendance[key] : null;
           const isToday = isSameDate(today, cell.year, cell.month, cell.day);
 
+          const tagKind =
+            record?.kind === 'holiday'
+              ? 'holiday'
+              : record?.kind === 'work' && record.dayOffWork
+              ? 'dayoff'
+              : record?.kind === 'vacation' || (record?.kind === 'work' && record.vacation)
+              ? 'vacation'
+              : null;
+          const tagLabel =
+            record?.kind === 'holiday' || record?.kind === 'vacation'
+              ? record.label
+              : record?.kind === 'work' && record.dayOffWork
+              ? '휴일근무'
+              : record?.kind === 'work' && record.vacation
+              ? `${record.vacation.type} ${record.vacation.duration}`
+              : null;
+
           return (
             <div
               key={key + (cell.inMonth ? '' : '-out')}
@@ -86,24 +103,37 @@ function Calendar({ year, month, today, attendance }) {
                 dow === 6 ? 'sat' : '',
               ].join(' ').trim()}
             >
-              <div className="cell-date">{cell.day}</div>
+              <div className="cell-header">
+                <div className="cell-date">{cell.day}</div>
+                {tagLabel && (
+                  <span className={`cell-tag ${tagKind}`}>{tagLabel}</span>
+                )}
+              </div>
               {record && record.error ? (
                 <div className="cell-error" title={record.error}>
                   오류
                   <div className="cell-error-msg">{record.error}</div>
                 </div>
-              ) : record ? (
+              ) : record && record.kind === 'work' ? (
                 <div className="cell-record">
                   <div className="record-row">
                     <span className="record-label in">출근</span>
                     <span className="record-time">{record.clockIn || '--:--'}</span>
                   </div>
                   <div className="record-row">
-                    <span className="record-label out">퇴근</span>
+                    <span className={`record-label out ${record.clockOutChanged ? 'changed' : ''}`.trim()}>
+                      {record.clockOutChanged ? '퇴근 변경' : '퇴근'}
+                    </span>
                     <span className="record-time">{record.clockOut || '--:--'}</span>
                   </div>
+                  {record.overtime && (
+                    <div className="record-row">
+                      <span className="record-label overtime">야근</span>
+                      <span className="record-time">{record.overtime.duration}</span>
+                    </div>
+                  )}
                 </div>
-              ) : cell.inMonth ? (
+              ) : !record && cell.inMonth ? (
                 <div className="cell-empty">—</div>
               ) : null}
             </div>

@@ -118,6 +118,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.4;
+  white-space: nowrap;
 }
 
 .record-label.in {
@@ -128,6 +129,48 @@
 .record-label.out {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.record-label.out.changed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.record-label.overtime {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.cell-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cell-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.cell-tag.holiday {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.cell-tag.vacation {
+  background: #cffafe;
+  color: #155e75;
+}
+
+.cell-tag.dayoff {
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 .record-time {
