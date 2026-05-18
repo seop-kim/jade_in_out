@@ -127,17 +127,17 @@ function parseAttendanceXml(xmlText) {
     result[key] = (node.textContent || '').trim();
   });
 
+  const message = doc.querySelector('MESSAGE');
+  const messageText = message ? (message.textContent || '').trim() : '';
+
   if (Object.keys(result).length === 0) {
-    throw new Error(
-      '응답에 ETC 데이터 없음. 본문 일부: ' + text.slice(0, 200)
-    );
+    if (messageText === 'LOGIN_CHECK_FAIL:LOGOUT') {
+      throw new Error('로그인 정보 만료');
+    }
+    throw new Error('오류');
   }
 
-  const message = doc.querySelector('MESSAGE');
-  if (message) {
-    const t = (message.textContent || '').trim();
-    if (t) result.__message = t;
-  }
+  if (messageText) result.__message = messageText;
   return result;
 }
 

@@ -110,10 +110,7 @@ function Calendar({ year, month, today, attendance }) {
                 )}
               </div>
               {record && record.error ? (
-                <div className="cell-error" title={record.error}>
-                  오류
-                  <div className="cell-error-msg">{record.error}</div>
-                </div>
+                <div className="cell-error" title={record.error}>{record.error}</div>
               ) : record && record.kind === 'work' ? (
                 <div className="cell-record">
                   <div className="record-row">
