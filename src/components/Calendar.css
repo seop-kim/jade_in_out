@@ -153,6 +153,11 @@
   color: #3730a3;
 }
 
+.record-label.remote {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
 .cell-header {
   display: flex;
   align-items: center;
@@ -194,6 +199,28 @@
 .cell-empty {
   color: #d1d5db;
   font-size: 12px;
+}
+
+.cell-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #6b7280;
+  border-radius: 50%;
+  animation: cell-spin 0.8s linear infinite;
+}
+
+@keyframes cell-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .cell-error {

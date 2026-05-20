@@ -19,24 +19,33 @@ interface CellTag {
   label: string;
 }
 
-function getCellTag(record: DisplayRecord | undefined): CellTag | null {
-  if (!record) return null;
+function getCellTags(record: DisplayRecord | undefined): CellTag[] {
+  if (!record) return [];
   switch (record.kind) {
     case 'holiday':
-      return {kind: 'holiday', label: record.label};
+      return [{kind: 'holiday', label: record.label}];
     case 'vacation':
-      return {kind: 'vacation', label: record.label};
-    case 'work':
-      if (record.dayOffWork) return {kind: 'dayoff', label: '휴일근무'};
+      return [{kind: 'vacation', label: record.label}];
+    case 'remote':
       if (record.vacation) {
-        return {
+        return [{
           kind: 'vacation',
           label: `${record.vacation.type} ${record.vacation.duration}`,
-        };
+        }];
       }
-      return null;
+      return [];
+    case 'work':
+      if (record.dayOffWork) return [{kind: 'dayoff', label: '휴일근무'}];
+      if (record.vacation) {
+        return [{
+          kind: 'vacation',
+          label: `${record.vacation.type} ${record.vacation.duration}`,
+        }];
+      }
+      return [];
     case 'error':
-      return null;
+    case 'loading':
+      return [];
   }
 }
 
@@ -106,10 +115,24 @@ function CellBody({record, inMonth}: {record: DisplayRecord | undefined; inMonth
     return inMonth ? <div className="cell-empty">—</div> : null;
   }
   switch (record.kind) {
+    case 'loading':
+      return (
+        <div className="cell-loading" aria-label="조회 중">
+          <span className="spinner" role="status" aria-hidden="true"/>
+        </div>
+      );
     case 'error':
       return <div className="cell-error" title={record.error}>{record.error}</div>;
     case 'work':
       return <WorkRecord record={record}/>;
+    case 'remote':
+      return (
+        <div className="cell-record">
+          <div className="record-row">
+            <span className="record-label remote">재택근무</span>
+          </div>
+        </div>
+      );
     case 'holiday':
     case 'vacation':
       return null;
@@ -117,7 +140,7 @@ function CellBody({record, inMonth}: {record: DisplayRecord | undefined; inMonth
 }
 
 function CalendarCell({cell, record, isToday, dow}: CalendarCellProps) {
-  const tag = getCellTag(record);
+  const tags = getCellTags(record);
   const className = [
     'cell',
     cell.inMonth ? '' : 'out-month',
@@ -130,7 +153,9 @@ function CalendarCell({cell, record, isToday, dow}: CalendarCellProps) {
     <div className={className}>
       <div className="cell-header">
         <div className="cell-date">{cell.day}</div>
-        {tag && <span className={`cell-tag ${tag.kind}`}>{tag.label}</span>}
+        {tags.map((tag, idx) => (
+          <span key={`${tag.kind}-${idx}`} className={`cell-tag ${tag.kind}`}>{tag.label}</span>
+        ))}
       </div>
       <CellBody record={record} inMonth={cell.inMonth}/>
     </div>

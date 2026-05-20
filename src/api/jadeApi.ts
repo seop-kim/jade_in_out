@@ -46,6 +46,7 @@ export interface AttendanceRecord {
   vacation: VacationInfo | null;
   overtime: DurationInfo | null;
   dayOffWork: DurationInfo | null;
+  remoteWork: DurationInfo | null;
   clockIn: string;
   clockInChanged: boolean;
   clockInLocal: boolean;
@@ -67,6 +68,12 @@ interface WorkListRow {
   type: string;
   duration: string;
   time: string;
+}
+
+const LEAVE_TYPE_KEYWORDS = ['휴가', '병가', '공가'] as const;
+
+function isLeaveType(type: string): boolean {
+  return LEAVE_TYPE_KEYWORDS.some((keyword) => type.includes(keyword));
 }
 
 function buildFormBody(parsedBody: Record<string, string>, ymd: string): URLSearchParams {
@@ -124,7 +131,7 @@ function findDurationRow(rows: WorkListRow[], match: (type: string) => boolean):
 }
 
 function vacationFromRows(rows: WorkListRow[]): VacationInfo | null {
-  const row = rows.find((r) => r.type.includes('휴가'));
+  const row = rows.find((r) => isLeaveType(r.type));
   if (!row) return null;
   const hours = durationToHours(row.duration);
   return {
@@ -142,6 +149,13 @@ function overtimeFromRows(rows: WorkListRow[]): DurationInfo | null {
 
 function dayOffWorkFromRows(rows: WorkListRow[]): DurationInfo | null {
   return findDurationRow(rows, (t) => t === '휴무일');
+}
+
+function remoteWorkFromRows(rows: WorkListRow[]): DurationInfo | null {
+  const row = rows.find((r) => r.type === '재택근무');
+  if (!row) return null;
+  const hours = durationToHours(row.duration);
+  return {duration: row.duration, hours};
 }
 
 function localAttendanceFromRows(rows: WorkListRow[]): LocalAttendance | null {
@@ -257,6 +271,7 @@ function buildRecord(ymd: string, etc: RawEtc): AttendanceRecord {
     vacation: vacationFromRows(rows),
     overtime: overtimeFromRows(rows),
     dayOffWork: dayOffWorkFromRows(rows),
+    remoteWork: remoteWorkFromRows(rows),
     clockIn,
     clockInChanged,
     clockInLocal,
@@ -280,6 +295,7 @@ export interface FetchMonthOptions {
   concurrency?: number;
   signal?: AbortSignal;
   onProgress?: (info: ProgressInfo) => void;
+  onDayResult?: (ymd: string, result: AttendanceResult) => void;
 }
 
 export async function fetchAttendanceForMonth({
@@ -290,6 +306,7 @@ export async function fetchAttendanceForMonth({
   concurrency = 4,
   signal,
   onProgress,
+  onDayResult,
 }: FetchMonthOptions): Promise<Record<string, AttendanceResult>> {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const queue: number[] = [];
@@ -305,9 +322,10 @@ export async function fetchAttendanceForMonth({
       const day = queue.shift();
       if (day === undefined) return;
       const ymd = toYmd(year, month, day);
+      let dayResult: AttendanceResult;
       try {
         const etc = await fetchAttendanceForDate({cookie, parsedBody, ymd, signal});
-        result[ymd] = buildRecord(ymd, etc);
+        dayResult = buildRecord(ymd, etc);
       } catch (err) {
         const error = err as {name?: string; message?: string; response?: {status?: number}};
         if (error.name === 'CanceledError' || error.name === 'AbortError') return;
@@ -315,11 +333,12 @@ export async function fetchAttendanceForMonth({
           ? `HTTP ${error.response.status}`
           : error.message ?? String(err);
         console.error('[jade] fetch failed', ymd, message, err);
-        result[ymd] = {ymd, error: message};
-      } finally {
-        completed += 1;
-        onProgress?.({completed, total});
+        dayResult = {ymd, error: message};
       }
+      result[ymd] = dayResult;
+      onDayResult?.(ymd, dayResult);
+      completed += 1;
+      onProgress?.({completed, total});
     }
   };
 

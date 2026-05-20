@@ -6,6 +6,10 @@ import {
 } from '../api/jadeApi';
 import {formatHm, isHolidayType, toYmd, ymdToKey} from './format';
 
+export interface DisplayLoading {
+  kind: 'loading';
+}
+
 export interface DisplayError {
   kind: 'error';
   error: string;
@@ -14,6 +18,11 @@ export interface DisplayError {
 export interface DisplayHoliday {
   kind: 'holiday';
   label: string;
+}
+
+export interface DisplayRemote {
+  kind: 'remote';
+  vacation: VacationInfo | null;
 }
 
 export interface DisplayVacation {
@@ -37,7 +46,13 @@ export interface DisplayWork {
   workDay: string;
 }
 
-export type DisplayRecord = DisplayError | DisplayHoliday | DisplayVacation | DisplayWork;
+export type DisplayRecord =
+  | DisplayLoading
+  | DisplayError
+  | DisplayHoliday
+  | DisplayRemote
+  | DisplayVacation
+  | DisplayWork;
 
 export type AttendanceMap = Record<string, DisplayRecord>;
 
@@ -92,34 +107,35 @@ function buildWorkRecord(record: AttendanceRecord, isPast: boolean): DisplayWork
   };
 }
 
+export function buildDisplayRecord(
+  ymd: string,
+  data: AttendanceResult,
+  today: Date
+): DisplayRecord | null {
+  if (data.error !== undefined) {
+    return {kind: 'error', error: data.error};
+  }
+  if (data.remoteWork) {
+    return {kind: 'remote', vacation: data.vacation};
+  }
+  if (isHolidayType(data.workType) && !data.dayOffWork) {
+    return {kind: 'holiday', label: '휴일'};
+  }
+  if (data.vacation?.isFullDay) {
+    return {kind: 'vacation', label: data.vacation.type};
+  }
+  const todayYmd = toYmd(today.getFullYear(), today.getMonth(), today.getDate());
+  return buildWorkRecord(data, ymd < todayYmd);
+}
+
 export function buildAttendanceMap(
   raw: Record<string, AttendanceResult>,
   today: Date
 ): AttendanceMap {
-  const todayYmd = toYmd(today.getFullYear(), today.getMonth(), today.getDate());
   const out: AttendanceMap = {};
-
   for (const [ymd, data] of Object.entries(raw)) {
-    const key = ymdToKey(ymd);
-
-    if (data.error !== undefined) {
-      out[key] = {kind: 'error', error: data.error};
-      continue;
-    }
-
-    if (isHolidayType(data.workType) && !data.dayOffWork) {
-      out[key] = {kind: 'holiday', label: '휴일'};
-      continue;
-    }
-
-    if (data.vacation?.isFullDay) {
-      out[key] = {kind: 'vacation', label: data.vacation.type};
-      continue;
-    }
-
-    const work = buildWorkRecord(data, ymd < todayYmd);
-    if (work) out[key] = work;
+    const display = buildDisplayRecord(ymd, data, today);
+    if (display) out[ymdToKey(ymd)] = display;
   }
-
   return out;
 }

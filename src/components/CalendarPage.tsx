@@ -1,12 +1,25 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Calendar from './Calendar';
 import MonthPicker from './MonthPicker';
-import {fetchAttendanceForMonth, ProgressInfo} from '../api/jadeApi';
-import {AttendanceMap, buildAttendanceMap} from '../lib/transformAttendance';
+import {fetchAttendanceForMonth} from '../api/jadeApi';
+import {
+  AttendanceMap,
+  buildDisplayRecord,
+} from '../lib/transformAttendance';
 import {Credentials} from '../lib/storage';
+import {dateKey, ymdToKey} from '../lib/format';
 
 interface CalendarPageProps {
   credentials: Credentials;
+}
+
+function buildLoadingMap(year: number, month: number): AttendanceMap {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const out: AttendanceMap = {};
+  for (let day = 1; day <= lastDay; day++) {
+    out[dateKey(year, month, day)] = {kind: 'loading'};
+  }
+  return out;
 }
 
 function CalendarPage({credentials}: CalendarPageProps) {
@@ -17,7 +30,6 @@ function CalendarPage({credentials}: CalendarPageProps) {
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<ProgressInfo>({completed: 0, total: 0});
   const [reloadKey, setReloadKey] = useState<number>(0);
 
   const goPrev = (): void => {
@@ -47,8 +59,7 @@ function CalendarPage({credentials}: CalendarPageProps) {
 
     setLoading(true);
     setError(null);
-    setAttendance({});
-    setProgress({completed: 0, total: 0});
+    setAttendance(buildLoadingMap(viewYear, viewMonth));
 
     fetchAttendanceForMonth({
       cookie: credentials.cookie,
@@ -56,14 +67,21 @@ function CalendarPage({credentials}: CalendarPageProps) {
       year: viewYear,
       month: viewMonth,
       signal: controller.signal,
-      onProgress: (p) => {
-        if (!cancelled) setProgress(p);
+      onDayResult: (ymd, result) => {
+        if (cancelled) return;
+        const display = buildDisplayRecord(ymd, result, today);
+        const key = ymdToKey(ymd);
+        setAttendance((prev) => {
+          const next = {...prev};
+          if (display) {
+            next[key] = display;
+          } else {
+            delete next[key];
+          }
+          return next;
+        });
       },
     })
-      .then((raw) => {
-        if (cancelled) return;
-        setAttendance(buildAttendanceMap(raw, today));
-      })
       .catch((err: {name?: string; message?: string}) => {
         if (cancelled) return;
         if (err.name === 'CanceledError' || err.name === 'AbortError') return;
@@ -100,18 +118,6 @@ function CalendarPage({credentials}: CalendarPageProps) {
           </button>
         </div>
       </div>
-
-      {loading && progress.total > 0 && (
-        <div className="progress">
-          <div
-            className="progress-bar"
-            style={{width: `${(progress.completed / progress.total) * 100}%`}}
-          />
-          <span className="progress-text">
-            {progress.completed} / {progress.total} 일 조회 중
-          </span>
-        </div>
-      )}
 
       {error && <div className="error-box">조회 실패: {error}</div>}
 
