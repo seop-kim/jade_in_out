@@ -8,7 +8,8 @@
       "Bash(BROWSER=none npm start)",
       "Bash(PORT=3456 BROWSER=none npm start)",
       "Bash(curl *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npm --version)"
     ]
   }
 }
