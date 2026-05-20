@@ -2,7 +2,7 @@
 
 Jade HR 시스템(`ehr.jadehr.co.kr`)의 일별 출퇴근 데이터를 한 달치 캘린더로 모아 보여주는 개인용 웹 앱입니다. Jade의 공식 UI 대신, 사용자가 추출한 인증 정보로 직접 API를 호출해 깔끔한 달력 뷰로 변환합니다.
 
-- React 19 + Create React App (CRA) 기반
+- React 19 + Create React App (CRA) + TypeScript (`strict`, `noUncheckedIndexedAccess`)
 - 사내 시스템 호출은 개발용 CRA 프록시(`src/setupProxy.js`)와 배포용 Vercel 함수(`api/jade/[...path].js`)에서 처리
 - 인증 정보(Cookie / Request Body)는 브라우저 `localStorage`에만 저장됨 (서버 저장 없음)
 
@@ -43,18 +43,28 @@ Jade HR 시스템(`ehr.jadehr.co.kr`)의 일별 출퇴근 데이터를 한 달�
 jade_in_out/
 ├── api/
 │   └── jade/
-│       └── [...path].js        # Vercel 서버리스 함수 — 운영 환경에서 Jade 백엔드로 프록시
-├── public/                     # CRA 정적 자원
+│       └── [...path].js              # Vercel 서버리스 함수 — 운영 환경에서 Jade 백엔드로 프록시
+├── public/                           # CRA 정적 자원
 ├── src/
 │   ├── api/
-│   │   └── jadeApi.js          # Jade XML 응답 파싱 + 한 달치 동시 조회 로직
+│   │   └── jadeApi.ts                # Jade XML 응답 파싱 + 한 달치 동시 조회 (타입 포함)
 │   ├── components/
-│   │   ├── Calendar.js / .css  # 캘린더 그리드 + 셀 렌더링
-│   │   └── Setup.js / .css     # 최초 진입 시 인증 정보 입력 폼
-│   ├── App.js                  # 라우팅(인증 화면 vs 캘린더), 월 picker, 데이터 변환
-│   ├── App.css                 # 툴바, 월 picker, 진행률 등 공용 스타일
-│   ├── setupProxy.js           # 개발 서버용 CRA 프록시
-│   └── index.js / index.css
+│   │   ├── Calendar.tsx / .css       # 캘린더 그리드
+│   │   ├── CalendarCell.tsx          # 단일 셀 렌더링 (kind별 분기)
+│   │   ├── CalendarPage.tsx          # 월 단위 상태/조회/렌더링 컨테이너
+│   │   ├── MonthPicker.tsx           # 연도/월 popover picker
+│   │   └── Setup.tsx / .css          # 최초 진입 시 인증 정보 입력 폼
+│   ├── lib/
+│   │   ├── format.ts                 # 날짜/시간 포맷팅 (pad, dateKey, formatHm, isHolidayType)
+│   │   ├── parseCurl.ts              # cURL/Body 텍스트 파서 (순수 함수)
+│   │   ├── storage.ts                # localStorage 자격증명 관리 + Credentials 타입
+│   │   └── transformAttendance.ts    # 원본 API 응답 → 화면용 DisplayRecord 매핑
+│   ├── App.tsx                       # 라우팅(인증 화면 vs 캘린더)
+│   ├── App.css                       # 툴바, 월 picker, 진행률 등 공용 스타일
+│   ├── setupProxy.js                 # 개발 서버용 CRA 프록시
+│   ├── react-app-env.d.ts            # CRA + CSS 모듈 타입 선언
+│   └── index.tsx / index.css
+├── tsconfig.json                     # TypeScript 설정 (strict + noUncheckedIndexedAccess)
 ├── package.json
 └── README.md
 ```
@@ -114,7 +124,7 @@ npm run build
 - "저장하고 달력 보기" 클릭 → `localStorage`에 Cookie + Body가 저장되어 새로고침에도 유지됩니다.
 - 다른 계정/세션으로 바꾸려면 우상단 "인증 정보 재설정"을 누릅니다.
 
-### 파서가 추출하는 것 (`src/components/Setup.js`)
+### 파서가 추출하는 것 (`src/lib/parseCurl.ts`)
 **`parseCurl`** (cURL 탭):
 - 라인 연속(`\` / `^` / 백틱) 제거 후 단일 라인으로 평탄화
 - **cmd 포맷 자동 감지** (`^"`, `^%`, `^&` 패턴 발견 시 `^X` → `X`로 unescape)
@@ -141,21 +151,21 @@ npm run build
 │             │  XML (ETC KEY="...") ◄──────────────────│ jadehr.co.kr │
 └─────────────┘                                          └──────────────┘
        │
-       │ src/api/jadeApi.js
+       │ src/api/jadeApi.ts
        │  - parseAttendanceXml: <ETC KEY="X">value</ETC> → { X: value }
-       │  - vacationFromDetail / overtimeFromDetail / dayOffWorkFromDetail:
-       │      WORK_DETAIL HTML 안의 <dl class="workList"> 행을 파싱
+       │  - parseWorkListRows: WORK_DETAIL HTML 안의 <dl class="workList"> 행을 한 번에 파싱
+       │  - vacation/overtime/dayOffWork/localAttendanceFromRows: 위 결과를 type별로 필터
        │
        ▼
-   { ymd, workType, vacation, overtime, dayOffWork, clockIn, clockInChanged, clockOut, clockOutChanged }
+   AttendanceRecord { ymd, workType, vacation, overtime, dayOffWork, clockIn, clockInChanged, clockOut, clockOutChanged, ... }
        │
-       │ src/App.js (CalendarPage useEffect)
-       │  - 우선순위에 따라 kind 부여 → attendance map
+       │ src/lib/transformAttendance.ts (buildAttendanceMap)
+       │  - 우선순위에 따라 kind 부여 → DisplayRecord 매핑
        │
        ▼
-   { kind: 'holiday' | 'vacation' | 'work' | error, ... }
+   DisplayRecord = { kind: 'holiday' | 'vacation' | 'work' | 'error', ... }
        │
-       │ src/components/Calendar.js
+       │ src/components/Calendar.tsx → CalendarCell.tsx (kind 별 분기)
        │
        ▼
   [날짜 셀 렌더링]
@@ -174,7 +184,7 @@ npm run build
 
 ## 표시 규칙
 
-`src/App.js`의 데이터 변환과 `src/components/Calendar.js`의 렌더링 분기로 구성됩니다. 우선순위 순서:
+`src/lib/transformAttendance.ts`의 데이터 변환과 `src/components/CalendarCell.tsx`의 렌더링 분기로 구성됩니다. 우선순위 순서:
 
 | 순위 | 조건 | 표시 | `kind` |
 |---|---|---|---|
@@ -192,12 +202,13 @@ npm run build
 - **퇴근 행**: `[퇴근] HH:MM` — `C_OUT_HM` 폴백 시 `[퇴근 변경]`(amber), 과거 날짜에 둘 다 없으면 `[퇴근 누락]`(짙은 빨강)
 - **야근 행**(있을 때): WORK_DETAIL의 `연장` 항목 → `[야근] X시간`
 
-### WORK_DETAIL 파싱 (`src/api/jadeApi.js`)
-원본 XML 안에 HTML이 CDATA로 들어 있어서 `DOMParser('text/html')`로 다시 파싱합니다. `<dl class="workList">` 안의 `<tr>` 각 행에서 `[type, duration, time]` 세 칸을 추출:
+### WORK_DETAIL 파싱 (`src/api/jadeApi.ts`)
+원본 XML 안에 HTML이 CDATA로 들어 있어서 `DOMParser('text/html')`로 다시 파싱합니다. `parseWorkListRows`가 `<dl class="workList">` 안의 `<tr>` 각 행에서 `[type, duration, time]` 세 칸을 추출해 `WorkListRow[]`로 정리한 뒤, 종류별 함수가 그 위에서 type만 필터합니다:
 
-- `vacationFromDetail` — `type`에 `휴가` 포함된 행 (`연차휴가`, `반차휴가` 등)
-- `overtimeFromDetail` — `type === '연장'`인 행 (총 연장 시간, `평일연장`/`평일야간`은 그 분해라 사용 안 함)
-- `dayOffWorkFromDetail` — `type === '휴무일'`인 행 (휴일에 일한 케이스)
+- `vacationFromRows` — `type`에 `휴가` 포함된 행 (`연차휴가`, `반차휴가` 등)
+- `overtimeFromRows` — `type === '연장'`인 행
+- `dayOffWorkFromRows` — `type === '휴무일'`인 행 (휴일에 일한 케이스)
+- `localAttendanceFromRows` — `현지출근신청` / `현지퇴근신청` 행을 합쳐 `{in, out}` 시각 추출
 
 `durationToHours`는 `"1d"`, `"0.5d"`, `"8시간"`, `"4시간"` 같은 표기를 시간 단위 숫자로 정규화합니다.
 

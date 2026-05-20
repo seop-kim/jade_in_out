@@ -1,107 +1,26 @@
-import { useMemo, useState } from 'react';
+import {FormEvent, useMemo, useState} from 'react';
 import './Setup.css';
+import {ParsedBody, parseBody, parseCurl} from '../lib/parseCurl';
+import {Credentials} from '../lib/storage';
 
 const REQUIRED_KEY = 'S_STD_YMD';
 
-function parseBody(raw) {
-  const text = (raw || '').trim();
-  if (!text) return {};
-
-  if (text.includes('=') && text.includes('&') && !/^\s*[A-Z_]+\s*:/m.test(text)) {
-    const params = new URLSearchParams(text);
-    const out = {};
-    for (const [k, v] of params.entries()) out[k] = v;
-    return out;
-  }
-
-  const out = {};
-  for (const line of text.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    const idx = line.indexOf(':');
-    if (idx < 0) continue;
-    const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
-    if (key) out[key] = value;
-  }
-  return out;
+interface SetupProps {
+  onSubmit: (credentials: Credentials) => void;
 }
 
-function normalize(rawText) {
-  let text = rawText.trim();
-  text = text.replace(/\\\r?\n\s*/g, ' ');
-  text = text.replace(/`\r?\n\s*/g, ' ');
-  text = text.replace(/\^\r?\n\s*/g, ' ');
-  if (/\^["%&^()<>|]/.test(text)) {
-    text = text.replace(/\^(.)/g, '$1');
-  }
-  return text;
+type Tab = 'curl' | 'manual';
+
+interface ActiveInput {
+  cookie: string;
+  body: string;
+  parsedBody: ParsedBody;
+  error: string | null;
+  hasContent: boolean;
 }
 
-function extractCookie(text) {
-  const flag =
-    text.match(/(?:^|\s)(?:-b|--cookie)\s+(?:\$)?'([^']*)'/) ||
-    text.match(/(?:^|\s)(?:-b|--cookie)\s+(?:\$)?"([^"]*)"/);
-  if (flag) return flag[1].trim();
-
-  const headerRe = /-H\s+(?:\$)?(['"])((?:(?!\1).)+)\1/g;
-  let m;
-  while ((m = headerRe.exec(text)) !== null) {
-    const header = m[2];
-    const idx = header.indexOf(':');
-    if (idx < 0) continue;
-    if (header.slice(0, idx).trim().toLowerCase() === 'cookie') {
-      return header.slice(idx + 1).trim();
-    }
-  }
-  return '';
-}
-
-function extractBody(text) {
-  const m =
-    text.match(/--data(?:-raw|-binary|-urlencode|-ascii)?\s+(?:\$)?'([^']*)'/) ||
-    text.match(/--data(?:-raw|-binary|-urlencode|-ascii)?\s+(?:\$)?"([^"]*)"/) ||
-    text.match(/(?:^|\s)-d\s+(?:\$)?'([^']*)'/) ||
-    text.match(/(?:^|\s)-d\s+(?:\$)?"([^"]*)"/);
-  return m ? m[1] : '';
-}
-
-function parseCurl(rawText) {
-  const empty = { cookie: '', body: '', parsedBody: {}, error: null };
-  const trimmed = (rawText || '').trim();
-  if (!trimmed) return empty;
-
-  if (!/^curl\b/i.test(trimmed) && !/-H\s+['"]|-b\s+['"]|--data/i.test(trimmed)) {
-    return {
-      ...empty,
-      error: 'cURL 명령어처럼 보이지 않아요. DevTools에서 "Copy as cURL"한 값을 붙여넣어주세요.',
-    };
-  }
-
-  const text = normalize(trimmed);
-  const cookie = extractCookie(text);
-  const body = extractBody(text);
-
-  const parsedBody = {};
-  if (body) {
-    const params = new URLSearchParams(body);
-    for (const [k, v] of params.entries()) parsedBody[k] = v;
-  }
-
-  if (!cookie && !body) {
-    return {
-      cookie,
-      body,
-      parsedBody,
-      error:
-        'Cookie와 Body를 찾지 못했어요. DevTools의 commonAction.do 요청을 "Copy as cURL"로 복사했는지 확인해주세요.',
-    };
-  }
-
-  return { cookie, body, parsedBody, error: null };
-}
-
-function Setup({ onSubmit }) {
-  const [tab, setTab] = useState('curl');
+function Setup({onSubmit}: SetupProps) {
+  const [tab, setTab] = useState<Tab>('curl');
 
   const [curlText, setCurlText] = useState('');
   const curlParsed = useMemo(() => parseCurl(curlText), [curlText]);
@@ -110,7 +29,7 @@ function Setup({ onSubmit }) {
   const [bodyText, setBodyText] = useState('');
   const manualParsedBody = useMemo(() => parseBody(bodyText), [bodyText]);
 
-  const active = tab === 'curl'
+  const active: ActiveInput = tab === 'curl'
     ? {
         cookie: curlParsed.cookie,
         body: curlParsed.body,
@@ -130,18 +49,18 @@ function Setup({ onSubmit }) {
   const fieldCount = Object.keys(active.parsedBody).length;
   const hasBody = fieldCount > 0;
   const hasRequired = REQUIRED_KEY in active.parsedBody;
-  const empId = active.parsedBody['S_EMP_ID'] || '';
-  const empName = active.parsedBody['S_EMP_NM'] || '';
+  const empId = active.parsedBody['S_EMP_ID'] ?? '';
+  const empName = active.parsedBody['S_EMP_NM'] ?? '';
 
   const canSubmit = hasCookie && hasBody && hasRequired;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ cookie: active.cookie, body: active.body, parsedBody: active.parsedBody });
+    onSubmit({cookie: active.cookie, body: active.body, parsedBody: active.parsedBody});
   };
 
-  const handleClear = () => {
+  const handleClear = (): void => {
     if (tab === 'curl') {
       setCurlText('');
     } else {
