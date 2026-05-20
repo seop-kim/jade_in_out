@@ -137,6 +137,12 @@
   color: #92400e;
 }
 
+.record-label.in.local,
+.record-label.out.local {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
 .record-label.missing {
   background: #fecaca;
   color: #7f1d1d;

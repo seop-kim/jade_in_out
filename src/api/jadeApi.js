@@ -82,6 +82,34 @@ function overtimeFromDetail(html) {
   }
 }
 
+function localAttendanceFromDetail(html) {
+  if (!html) return null;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = doc.querySelectorAll('.workList tr');
+    const result = { in: '', out: '' };
+    for (const tr of rows) {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length === 0) continue;
+      const type = (cells[0]?.textContent || '').trim();
+      if (type !== '현지출근신청' && type !== '현지퇴근신청') continue;
+      const time = cells[2]
+        ? (cells[2].textContent || '').trim().replace(/^\(\s*|\s*\)$/g, '')
+        : '';
+      const [start, end] = time.split('~').map((s) => (s || '').trim());
+      if (type === '현지출근신청') {
+        result.in = start || '';
+      } else {
+        result.out = end || start || '';
+      }
+    }
+    if (!result.in && !result.out) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 function vacationFromDetail(html) {
   if (!html) return null;
   try {
@@ -200,6 +228,19 @@ export async function fetchAttendanceForMonth({
           clockOutChanged = true;
         }
         const workDetailHtml = etc.WORK_DETAIL || '';
+        const localAttendance = localAttendanceFromDetail(workDetailHtml);
+        let clockInLocal = false;
+        if (localAttendance?.in) {
+          if (!clockIn) clockIn = localAttendance.in;
+          clockInChanged = false;
+          clockInLocal = true;
+        }
+        let clockOutLocal = false;
+        if (localAttendance?.out) {
+          if (!clockOut) clockOut = localAttendance.out;
+          clockOutChanged = false;
+          clockOutLocal = true;
+        }
         result[ymd] = {
           ymd,
           workDay: etc.WORK_DAY || '',
@@ -209,8 +250,10 @@ export async function fetchAttendanceForMonth({
           dayOffWork: dayOffWorkFromDetail(workDetailHtml),
           clockIn,
           clockInChanged,
+          clockInLocal,
           clockOut,
           clockOutChanged,
+          clockOutLocal,
           raw: etc,
         };
       } catch (err) {
