@@ -119,7 +119,7 @@ function Calendar({ year, month, today, attendance }) {
                     ) : (
                       <>
                         <span className={`record-label in ${record.clockInLocal ? 'local' : record.clockInChanged ? 'changed' : ''}`.trim()}>
-                          {record.clockInLocal ? '현지출근' : record.clockInChanged ? '출근 변경' : '출근'}
+                          {record.clockInLocal ? '현출' : record.clockInChanged ? '출근 변경' : '출근'}
                         </span>
                         <span className="record-time">{record.clockIn || '--:--'}</span>
                       </>
@@ -131,7 +131,7 @@ function Calendar({ year, month, today, attendance }) {
                     ) : (
                       <>
                         <span className={`record-label out ${record.clockOutLocal ? 'local' : record.clockOutChanged ? 'changed' : ''}`.trim()}>
-                          {record.clockOutLocal ? '현지퇴근' : record.clockOutChanged ? '퇴근 변경' : '퇴근'}
+                          {record.clockOutLocal ? '현퇴' : record.clockOutChanged ? '퇴근 변경' : '퇴근'}
                         </span>
                         <span className="record-time">{record.clockOut || '--:--'}</span>
                       </>
