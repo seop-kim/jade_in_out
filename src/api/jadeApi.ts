@@ -27,6 +27,12 @@ export interface LocalAttendance {
   out: string;
 }
 
+export interface WorkListRow {
+  type: string;
+  duration: string;
+  time: string;
+}
+
 export interface RawEtc {
   I_IN_HM?: string;
   I_OUT_HM?: string;
@@ -53,6 +59,7 @@ export interface AttendanceRecord {
   clockOut: string;
   clockOutChanged: boolean;
   clockOutLocal: boolean;
+  workList: WorkListRow[];
   raw: RawEtc;
   error?: undefined;
 }
@@ -63,12 +70,6 @@ export interface AttendanceError {
 }
 
 export type AttendanceResult = AttendanceRecord | AttendanceError;
-
-interface WorkListRow {
-  type: string;
-  duration: string;
-  time: string;
-}
 
 const LEAVE_TYPE_KEYWORDS = ['휴가', '병가', '공가'] as const;
 
@@ -278,6 +279,7 @@ function buildRecord(ymd: string, etc: RawEtc): AttendanceRecord {
     clockOut,
     clockOutChanged,
     clockOutLocal,
+    workList: rows,
     raw: etc,
   };
 }

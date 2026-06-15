@@ -3,6 +3,7 @@ import {
   AttendanceResult,
   DurationInfo,
   VacationInfo,
+  WorkListRow,
 } from '../api/jadeApi';
 import {formatHm, isHolidayType, toYmd, ymdToKey} from './format';
 
@@ -18,21 +19,25 @@ export interface DisplayError {
 export interface DisplayHoliday {
   kind: 'holiday';
   label: string;
+  workList: WorkListRow[];
 }
 
 export interface DisplayRemote {
   kind: 'remote';
   vacation: VacationInfo | null;
+  workList: WorkListRow[];
 }
 
 export interface DisplayVacation {
   kind: 'vacation';
   label: string;
+  workList: WorkListRow[];
 }
 
 export interface DisplayWork {
   kind: 'work';
   vacation: VacationInfo | null;
+  workList: WorkListRow[];
   dayOffWork: DurationInfo | null;
   overtime: DurationInfo | null;
   clockIn: string;
@@ -93,6 +98,7 @@ function buildWorkRecord(record: AttendanceRecord, isPast: boolean): DisplayWork
   return {
     kind: 'work',
     vacation: record.vacation,
+    workList: record.workList,
     dayOffWork: record.dayOffWork,
     overtime: record.overtime,
     clockIn,
@@ -116,13 +122,13 @@ export function buildDisplayRecord(
     return {kind: 'error', error: data.error};
   }
   if (data.remoteWork) {
-    return {kind: 'remote', vacation: data.vacation};
+    return {kind: 'remote', vacation: data.vacation, workList: data.workList};
   }
   if (isHolidayType(data.workType) && !data.dayOffWork) {
-    return {kind: 'holiday', label: '휴일'};
+    return {kind: 'holiday', label: '휴일', workList: data.workList};
   }
   if (data.vacation?.isFullDay) {
-    return {kind: 'vacation', label: data.vacation.type};
+    return {kind: 'vacation', label: data.vacation.type, workList: data.workList};
   }
   const todayYmd = toYmd(today.getFullYear(), today.getMonth(), today.getDate());
   return buildWorkRecord(data, ymd < todayYmd);

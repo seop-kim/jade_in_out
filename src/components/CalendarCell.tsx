@@ -1,3 +1,5 @@
+import {MouseEvent, useState} from 'react';
+import {WorkListRow} from '../api/jadeApi';
 import {DisplayRecord, DisplayWork} from '../lib/transformAttendance';
 
 export interface Cell {
@@ -17,6 +19,54 @@ interface CalendarCellProps {
 interface CellTag {
   kind: 'holiday' | 'vacation' | 'dayoff';
   label: string;
+}
+
+function getWorkList(record: DisplayRecord | undefined): WorkListRow[] {
+  if (!record) return [];
+  if (record.kind === 'loading' || record.kind === 'error') return [];
+  return record.workList ?? [];
+}
+
+interface TooltipPos {
+  top: number;
+  left: number;
+  above: boolean;
+}
+
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function WorkTooltip({
+  rows,
+  pos,
+  dateLabel,
+}: {
+  rows: WorkListRow[];
+  pos: TooltipPos;
+  dateLabel: string;
+}) {
+  return (
+    <div
+      className={`work-tooltip ${pos.above ? 'above' : ''}`.trim()}
+      style={{top: pos.top, left: pos.left}}
+      role="tooltip"
+    >
+      <div className="work-tooltip-header">
+        <span className="work-tooltip-title">근무 상세</span>
+        <span className="work-tooltip-date">{dateLabel}</span>
+      </div>
+      <ul className="work-tooltip-list">
+        {rows.map((row, idx) => (
+          <li key={`${row.type}-${idx}`} className="work-tooltip-row">
+            <span className="work-tooltip-type">{row.type}</span>
+            <span className="work-tooltip-meta">
+              {row.time && <span className="work-tooltip-time">{row.time}</span>}
+              {row.duration && <span className="work-tooltip-dur">{row.duration}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function getCellTags(record: DisplayRecord | undefined): CellTag[] {
@@ -140,7 +190,9 @@ function CellBody({record, inMonth}: {record: DisplayRecord | undefined; inMonth
 }
 
 function CalendarCell({cell, record, isToday, dow}: CalendarCellProps) {
+  const [tooltip, setTooltip] = useState<TooltipPos | null>(null);
   const tags = getCellTags(record);
+  const workList = getWorkList(record);
   const className = [
     'cell',
     cell.inMonth ? '' : 'out-month',
@@ -149,8 +201,21 @@ function CalendarCell({cell, record, isToday, dow}: CalendarCellProps) {
     dow === 6 ? 'sat' : '',
   ].join(' ').trim();
 
+  const handleEnter = (e: MouseEvent<HTMLDivElement>): void => {
+    if (workList.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const above = rect.bottom > window.innerHeight * 0.6;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 268));
+    setTooltip({
+      left,
+      top: above ? rect.top - 6 : rect.bottom + 6,
+      above,
+    });
+  };
+  const handleLeave = (): void => setTooltip(null);
+
   return (
-    <div className={className}>
+    <div className={className} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <div className="cell-header">
         <div className="cell-date">{cell.day}</div>
         {tags.map((tag, idx) => (
@@ -158,6 +223,13 @@ function CalendarCell({cell, record, isToday, dow}: CalendarCellProps) {
         ))}
       </div>
       <CellBody record={record} inMonth={cell.inMonth}/>
+      {tooltip && workList.length > 0 && (
+        <WorkTooltip
+          rows={workList}
+          pos={tooltip}
+          dateLabel={`${cell.month + 1}/${cell.day} (${WEEKDAY_LABELS[dow]})`}
+        />
+      )}
     </div>
   );
 }
