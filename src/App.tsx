@@ -35,7 +35,7 @@ function App() {
           </div>
           {credentials && (
             <button className="btn btn-ghost" onClick={handleResetCredentials}>
-              인증 정보 재설정
+              인증 정보 초기화
             </button>
           )}
         </div>
