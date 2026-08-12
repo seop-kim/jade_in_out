@@ -78,7 +78,10 @@ describe('INSA API', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/insa/worktime/01_list.asp', {
       method: 'POST',
-      headers: {'X-Insa-Cookie': 'test-session'},
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Insa-Cookie': 'test-session',
+      },
       body: 'sType=0&sdt=2026-08-01&edt=2026-08-11',
       signal: undefined,
       credentials: 'omit',

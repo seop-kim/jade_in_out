@@ -66,6 +66,15 @@ function cleanText(element: Element): string {
   return (element.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function directText(element: Element): string {
+  return Array.from(element.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent ?? '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function directCells(row: Element): HTMLTableCellElement[] {
   return Array.from(row.children).filter(
     (child): child is HTMLTableCellElement => child.tagName === 'TD'
@@ -130,6 +139,47 @@ export function parseInsaHomeHtml(
 
 export function parseInsaDayDetails(html: string, expectedYmd: string): InsaTeamDetail[] {
   const doc = parseDocument(html);
+  const detailEnd = doc.querySelector('img[src*="main_schedule_detail_bottom.gif"]');
+
+  if (detailEnd) {
+    let sectionTable = detailEnd.closest('table');
+    let detailTable: HTMLTableElement | null = null;
+    while (sectionTable && !detailTable) {
+      detailTable = sectionTable.querySelector<HTMLTableElement>('div.scroll > table');
+      sectionTable = sectionTable.parentElement?.closest('table') ?? null;
+    }
+    if (!detailTable) throw new Error(DAY_DETAILS_FORMAT_ERROR);
+
+    return Array.from(detailTable.querySelectorAll('tr')).flatMap((row) => {
+      const cells = directCells(row);
+      if (cells.length !== 4) return [];
+      const iconCell = cells[1];
+      const detailCell = cells[2];
+      const icon = iconCell?.querySelector(
+        'img[src*="icon_dot_schedule0.gif"], img[src*="icon_dot_schedule1.gif"]'
+      );
+      if (!icon) return [];
+      if (!detailCell) throw new Error(DAY_DETAILS_FORMAT_ERROR);
+
+      const scheduleElement = Array.from(detailCell.children).find(
+        (child) => child.tagName === 'SPAN'
+      );
+      const durationElement = scheduleElement?.querySelector('font.cGR.font_11');
+      const name = directText(detailCell);
+      if (!scheduleElement || !durationElement || !name) {
+        throw new Error(DAY_DETAILS_FORMAT_ERROR);
+      }
+
+      const scheduleWithoutDuration = scheduleElement.cloneNode(true) as Element;
+      scheduleWithoutDuration.querySelectorAll('font.cGR.font_11').forEach((element) => element.remove());
+      const scheduleLabel = cleanText(scheduleWithoutDuration);
+      const durationLabel = cleanText(durationElement);
+      if (!scheduleLabel) throw new Error(DAY_DETAILS_FORMAT_ERROR);
+
+      return [{ymd: expectedYmd, name, scheduleLabel, durationLabel}];
+    });
+  }
+
   const table = doc.querySelector('table.tbltop');
   if (!table) throw new Error(DAY_DETAILS_FORMAT_ERROR);
 

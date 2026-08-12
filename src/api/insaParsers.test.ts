@@ -75,6 +75,69 @@ describe('INSA HTML parsers', () => {
     ]);
   });
 
+  test('parses the real four-column schedule detail structure without duplicating duration', () => {
+    const html = `
+      <table><tbody>
+        <tr><td>
+          <div class="scroll"><table><tbody>
+            <tr>
+              <td></td>
+              <td><img src="/images/icon_dot_schedule0.gif" alt="vacation"></td>
+              <td>
+                Employee Alpha
+                <span>Annual leave <font class="cGR font_11">(4 hours)</font></span>
+              </td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td><img src="/images/icon_dot_schedule1.gif" alt="time"></td>
+              <td>Employee Beta <span>Late arrival <font class="cGR font_11">(2 hours)</font></span></td>
+              <td></td>
+            </tr>
+          </tbody></table></div>
+        </td></tr>
+        <tr><td><img src="/images/main_schedule_detail_bottom.gif" alt="detail end"></td></tr>
+      </tbody></table>`;
+
+    expect(parseInsaDayDetails(html, '2026-08-05')).toEqual([
+      {
+        ymd: '2026-08-05',
+        name: 'Employee Alpha',
+        scheduleLabel: 'Annual leave',
+        durationLabel: '(4 hours)',
+      },
+      {
+        ymd: '2026-08-05',
+        name: 'Employee Beta',
+        scheduleLabel: 'Late arrival',
+        durationLabel: '(2 hours)',
+      },
+    ]);
+  });
+
+  test('returns no details for a structurally valid empty schedule detail section', () => {
+    const html = `
+      <table><tbody>
+        <tr><td><div class="scroll"><table><tbody></tbody></table></div></td></tr>
+        <tr><td><img src="/images/main_schedule_detail_bottom.gif" alt="detail end"></td></tr>
+      </tbody></table>`;
+
+    expect(parseInsaDayDetails(html, '2026-08-05')).toEqual([]);
+  });
+
+  test('rejects a marked schedule detail section without its inner table', () => {
+    const html = `
+      <table><tbody>
+        <tr><td><div class="scroll"></div></td></tr>
+        <tr><td><img src="/images/main_schedule_detail_bottom.gif" alt="detail end"></td></tr>
+      </tbody></table>`;
+
+    expect(() => parseInsaDayDetails(html, '2026-08-05')).toThrow(
+      'INSA day details response format is invalid'
+    );
+  });
+
   test('parses a 14-column worktime row without counting nested cells', () => {
     const html = worktimeFixture.replace(
       '<td>정정 없음</td>',

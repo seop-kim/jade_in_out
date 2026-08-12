@@ -113,7 +113,11 @@ export async function fetchInsaWorktime(
   const html = await requestHtml(
     '/worktime/01_list.asp',
     cookie,
-    {method: 'POST', body: `sType=0&sdt=${range.start}&edt=${range.end}`},
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `sType=0&sdt=${range.start}&edt=${range.end}`,
+    },
     signal
   );
   return parseInsaWorktimeHtml(html);
