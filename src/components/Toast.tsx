@@ -7,6 +7,8 @@ const TOAST_EXIT_MS = 220;
 export interface ToastMessage {
   id: number;
   message: string;
+  variant?: 'error' | 'success';
+  persistent?: boolean;
 }
 
 interface ToastItemProps {
@@ -23,6 +25,8 @@ function ToastItem({toast, onDismiss}: ToastItemProps) {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
+    if (toast.persistent) return undefined;
+
     const exitTimer = window.setTimeout(() => setExiting(true), TOAST_DURATION_MS);
     const dismissTimer = window.setTimeout(() => onDismiss(toast.id), TOAST_DURATION_MS + TOAST_EXIT_MS);
 
@@ -30,10 +34,10 @@ function ToastItem({toast, onDismiss}: ToastItemProps) {
       window.clearTimeout(exitTimer);
       window.clearTimeout(dismissTimer);
     };
-  }, [onDismiss, toast.id]);
+  }, [onDismiss, toast.id, toast.persistent]);
 
   return (
-    <div className={`toast ${exiting ? 'is-exiting' : ''}`.trim()} role="alert">
+    <div className={`toast toast-${toast.variant ?? 'error'} ${exiting ? 'is-exiting' : ''}`.trim()} role="alert">
       <span className="toast-message">{toast.message}</span>
       <button type="button" className="toast-dismiss" onClick={() => onDismiss(toast.id)} aria-label="알림 닫기">
         ×

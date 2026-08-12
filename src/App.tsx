@@ -1,12 +1,20 @@
-import {KeyboardEvent, useCallback, useRef, useState} from 'react';
+import {KeyboardEvent, useCallback, useEffect, useRef, useState} from 'react';
 import './App.css';
 import Setup from './components/Setup';
 import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
-import InsaPage from './components/insa/InsaPage';
+import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 
 type SystemTab = 'jade' | 'insa';
+const MIN_INSA_STATUS_TOAST_MS = 300;
+
+interface InsaRequestToastState {
+  id: number;
+  messages: string[];
+  startedAt: number;
+  removeTimer?: number;
+}
 
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
@@ -15,6 +23,7 @@ function App() {
   const [insaConnected, setInsaConnected] = useState(false);
   const [insaResetRequest, setInsaResetRequest] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const insaRequestToasts = useRef(new Map<string, InsaRequestToastState>());
   const jadeTabRef = useRef<HTMLButtonElement>(null);
   const insaTabRef = useRef<HTMLButtonElement>(null);
   const nextToastId = useRef(0);
@@ -62,7 +71,75 @@ function App() {
     setToasts((current) => [...current, {id, message}]);
   }, []);
 
+  const handleInsaApiRequestChange = useCallback((request: InsaApiRequest, active: boolean): void => {
+    const current = insaRequestToasts.current.get(request.key);
+    if (active) {
+      if (current) {
+        if (current.removeTimer !== undefined) {
+          window.clearTimeout(current.removeTimer);
+          current.removeTimer = undefined;
+          current.startedAt = Date.now();
+        }
+        current.messages.push(request.message);
+        setToasts((currentToasts) => currentToasts.map((toast) => (
+          toast.id === current.id ? {...toast, message: request.message} : toast
+        )));
+        return;
+      }
+
+      const id = nextToastId.current + 1;
+      nextToastId.current = id;
+      insaRequestToasts.current.set(request.key, {
+        id,
+        messages: [request.message],
+        startedAt: Date.now(),
+      });
+      setToasts((currentToasts) => [...currentToasts, {
+        id,
+        message: request.message,
+        variant: 'success',
+        persistent: true,
+      }]);
+      return;
+    }
+
+    if (!current) return;
+    const messageIndex = current.messages.indexOf(request.message);
+    if (messageIndex >= 0) current.messages.splice(messageIndex, 1);
+    else current.messages.pop();
+    if (current.messages.length > 0) {
+      const latestMessage = current.messages[current.messages.length - 1];
+      if (latestMessage === undefined) return;
+      setToasts((currentToasts) => currentToasts.map((toast) => (
+        toast.id === current.id ? {...toast, message: latestMessage} : toast
+      )));
+      return;
+    }
+
+    const removeToast = (): void => {
+      const latest = insaRequestToasts.current.get(request.key);
+      if (latest !== current || latest.messages.length > 0) return;
+      insaRequestToasts.current.delete(request.key);
+      setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== current.id));
+    };
+    const remaining = Math.max(0, MIN_INSA_STATUS_TOAST_MS - (Date.now() - current.startedAt));
+    if (remaining === 0) removeToast();
+    else current.removeTimer = window.setTimeout(removeToast, remaining);
+  }, []);
+
+  useEffect(() => () => {
+    insaRequestToasts.current.forEach((request) => {
+      if (request.removeTimer !== undefined) window.clearTimeout(request.removeTimer);
+    });
+  }, []);
+
   const dismissToast = useCallback((id: number): void => {
+    insaRequestToasts.current.forEach((request, key) => {
+      if (request.id === id) {
+        if (request.removeTimer !== undefined) window.clearTimeout(request.removeTimer);
+        insaRequestToasts.current.delete(key);
+      }
+    });
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
@@ -150,6 +227,7 @@ function App() {
             <InsaPage
               resetRequest={insaResetRequest}
               onConnectionChange={handleInsaConnectionChange}
+              onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
             />
           )}

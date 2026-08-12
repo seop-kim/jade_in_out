@@ -1,4 +1,4 @@
-import {act, render, screen, within} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import {fetchInsaDayDetails, InsaMonthLoadResult, loadInsaMonth} from './api/insaApi';
@@ -104,6 +104,94 @@ describe('App system tabs', () => {
 
     expect(await screen.findByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
     expect(within(header).queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+  });
+
+  test('shows a green toast while an INSA request is in flight and removes it on completion', async () => {
+    saveInsaCookie('synthetic-session');
+    let finishMonth!: () => void;
+    mockedLoadInsaMonth.mockImplementation(({onRequestStart, onRequestEnd}) => {
+      onRequestStart?.('home');
+      onRequestStart?.('leave');
+      onRequestStart?.('worktime');
+      return new Promise<InsaMonthLoadResult>((resolve) => {
+        finishMonth = () => {
+          onRequestEnd?.('home');
+          onRequestEnd?.('leave');
+          onRequestEnd?.('worktime');
+          resolve(monthResult(2026, new Date().getMonth()));
+        };
+      });
+    });
+
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findByText('연차 정보를 불러오는 중 입니다.');
+    await screen.findByText('출퇴근 정보를 불러오는 중 입니다.');
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(screen.getAllByRole('alert').every((toast) => toast.classList.contains('toast-success'))).toBe(true);
+
+    await act(async () => finishMonth());
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  test('renders the attendance status even when the request completes immediately', async () => {
+    saveInsaCookie('synthetic-session');
+    mockedLoadInsaMonth.mockImplementation(async ({onRequestStart, onRequestEnd}) => {
+      onRequestStart?.('worktime');
+      onRequestEnd?.('worktime');
+      return monthResult(2026, new Date().getMonth());
+    });
+
+    render(<App />);
+    await act(async () => {
+      await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    });
+
+    expect(await screen.findByText('출퇴근 정보를 불러오는 중 입니다.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  test('keeps one department leave toast and updates its count for another hovered day', async () => {
+    saveInsaCookie('synthetic-session');
+    const multiDayMonthResult: InsaMonthLoadResult = {
+      ...monthResult(2026, new Date().getMonth()),
+      home: {
+        year: 2026,
+        month: new Date().getMonth() + 1,
+        days: {
+          '2026-08-05': {ymd: '2026-08-05', vacationCount: 1, timeCount: 0},
+          '2026-08-06': {ymd: '2026-08-06', vacationCount: 3, timeCount: 0},
+        },
+      },
+    };
+    let resolveMonth!: (result: InsaMonthLoadResult) => void;
+    mockedLoadInsaMonth.mockReturnValue(new Promise((resolve) => {
+      resolveMonth = resolve;
+    }));
+    const detailResolvers = new Map<string, (details: Awaited<ReturnType<typeof fetchInsaDayDetails>>) => void>();
+    mockedFetchInsaDayDetails.mockImplementation(({ymd}) => new Promise((resolve) => {
+      detailResolvers.set(ymd, resolve);
+    }));
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await act(async () => resolveMonth(multiDayMonthResult));
+    const firstDay = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    const secondDay = await screen.findByRole('button', {name: '2026년 8월 6일 상세'});
+
+    await userEvent.hover(firstDay);
+    expect(await screen.findByText('부서 연차 정보를 불러오는 중 입니다. (1건)')).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+
+    await userEvent.hover(secondDay);
+    expect(await screen.findByText('부서 연차 정보를 불러오는 중 입니다. (3건)')).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+
+    await act(async () => {
+      detailResolvers.forEach((resolve) => resolve([]));
+    });
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
   test('keeps both controlled tab panels in the DOM and hides the inactive panel', async () => {

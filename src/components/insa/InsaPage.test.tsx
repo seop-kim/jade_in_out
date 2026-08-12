@@ -134,6 +134,28 @@ describe('InsaPage', () => {
     expect(within(calendar).queryByRole('status')).not.toBeInTheDocument();
   });
 
+  test('reports the department leave count while a day-detail request is pending', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
+    const onApiRequestChange = jest.fn();
+    mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
+
+    render(<InsaPage onApiRequestChange={onApiRequestChange} />);
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+
+    await userEvent.click(dayButton);
+    await waitFor(() => expect(onApiRequestChange).toHaveBeenCalledWith({
+      key: 'department-leave',
+      message: '부서 연차 정보를 불러오는 중 입니다. (1건)',
+    }, true));
+
+    await act(async () => detailRequest.resolve([]));
+    await waitFor(() => expect(onApiRequestChange).toHaveBeenCalledWith({
+      key: 'department-leave',
+      message: '부서 연차 정보를 불러오는 중 입니다. (1건)',
+    }, false));
+  });
+
   test('aborts a stale monthly request when the viewed month changes', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const firstRequest = deferred<InsaMonthLoadResult>();

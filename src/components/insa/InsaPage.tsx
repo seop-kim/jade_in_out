@@ -18,6 +18,11 @@ export type DetailState =
   | {status: 'loaded'; details: InsaTeamDetail[]}
   | {status: 'error'; message: string};
 
+export interface InsaApiRequest {
+  key: string;
+  message: string;
+}
+
 const SOURCE_LABELS: Record<InsaMonthSource, string> = {
   home: '팀 일정',
   worktime: '근태',
@@ -61,10 +66,11 @@ function TeamDetailPanel({ymd, state}: {ymd: string; state?: DetailState}) {
 export interface InsaPageProps {
   resetRequest?: number;
   onConnectionChange?: (connected: boolean) => void;
+  onApiRequestChange?: (request: InsaApiRequest, active: boolean) => void;
   onError?: (message: string) => void;
 }
 
-function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps) {
+function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onError}: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -94,6 +100,16 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
     onConnectionChange?.(Boolean(cookie));
   }, [cookie, onConnectionChange]);
 
+  const handleMonthlyRequestChange = useCallback((source: InsaMonthSource, active: boolean): void => {
+    const isWorktime = source === 'worktime';
+    onApiRequestChange?.({
+      key: isWorktime ? 'worktime' : 'leave',
+      message: isWorktime
+        ? '출퇴근 정보를 불러오는 중 입니다.'
+        : '연차 정보를 불러오는 중 입니다.',
+    }, active);
+  }, [onApiRequestChange]);
+
   useEffect(() => {
     if (!cookie) return undefined;
     const controller = new AbortController();
@@ -109,6 +125,8 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
       month: viewMonth,
       today,
       signal: controller.signal,
+      onRequestStart: (source) => handleMonthlyRequestChange(source, true),
+      onRequestEnd: (source) => handleMonthlyRequestChange(source, false),
     })
       .then((nextResult) => {
         if (!cancelled) {
@@ -131,7 +149,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
       cancelled = true;
       controller.abort();
     };
-  }, [cookie, onError, reloadKey, today, viewMonth, viewYear]);
+  }, [cookie, handleMonthlyRequestChange, onError, reloadKey, today, viewMonth, viewYear]);
 
   const days = useMemo(() => buildInsaCalendarMap(
     viewYear,
@@ -161,6 +179,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
     clearInsaCookie();
     setCookie(null);
     setResult(null);
+    setLoading(false);
   }, [invalidateDayDetails]);
 
   useEffect(() => {
@@ -185,6 +204,13 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
 
     const controller = new AbortController();
     detailControllers.current.set(ymd, controller);
+    const departmentLeaveCount = (days[ymd]?.teamSchedule?.vacationCount ?? 0)
+      + (days[ymd]?.teamSchedule?.timeCount ?? 0);
+    const request: InsaApiRequest = {
+      key: 'department-leave',
+      message: `부서 연차 정보를 불러오는 중 입니다. (${departmentLeaveCount}건)`,
+    };
+    onApiRequestChange?.(request, true);
     setDetailStates((previous) => {
       const next = {...previous, [ymd]: {status: 'loading'} as DetailState};
       detailStatesRef.current = next;
@@ -215,8 +241,9 @@ function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps
       if (detailControllers.current.get(ymd) === controller) {
         detailControllers.current.delete(ymd);
       }
+      onApiRequestChange?.(request, false);
     }
-  }, [cookie, onError]);
+  }, [cookie, days, onApiRequestChange, onError]);
 
   const handleDaySelect = useCallback((ymd: string): void => {
     setSelectedYmd(ymd);

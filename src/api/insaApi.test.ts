@@ -131,4 +131,27 @@ describe('INSA API', () => {
     expect(result.worktime).toBeNull();
     expect(result.errors).toEqual([{source: 'worktime', message: 'HTTP 500'}]);
   });
+
+  test('reports each monthly source when its request starts and completes', async () => {
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(encodedHtmlResponse(homeHtml))
+      .mockResolvedValueOnce(encodedHtmlResponse(worktimeHtml))
+      .mockResolvedValueOnce(encodedHtmlResponse(leaveHtml));
+    const started: string[] = [];
+    const completed: string[] = [];
+
+    await loadInsaMonth({
+      cookie: 'test-session',
+      year: 2026,
+      month: 7,
+      today: new Date(2026, 7, 12),
+      onRequestStart: (source) => started.push(source),
+      onRequestEnd: (source) => completed.push(source),
+    });
+
+    expect(started).toEqual(expect.arrayContaining(['home', 'worktime', 'leave']));
+    expect(completed).toEqual(expect.arrayContaining(['home', 'worktime', 'leave']));
+    expect(started).toHaveLength(3);
+    expect(completed).toHaveLength(3);
+  });
 });

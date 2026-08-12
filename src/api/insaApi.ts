@@ -28,11 +28,13 @@ export interface FetchInsaDayDetailsOptions extends InsaRequestOptions {
   ymd: string;
 }
 
+export type InsaMonthSource = 'home' | 'worktime' | 'leave';
+
 export interface LoadInsaMonthOptions extends FetchInsaHomeMonthOptions {
   today: Date;
+  onRequestStart?: (source: InsaMonthSource) => void;
+  onRequestEnd?: (source: InsaMonthSource) => void;
 }
-
-export type InsaMonthSource = 'home' | 'worktime' | 'leave';
 
 export interface InsaMonthLoadError {
   source: InsaMonthSource;
@@ -145,12 +147,26 @@ function sourceResult<T>(
   return null;
 }
 
+function trackMonthlyRequest<T>(
+  source: InsaMonthSource,
+  request: Promise<T>,
+  options: LoadInsaMonthOptions
+): Promise<T> {
+  options.onRequestStart?.(source);
+  return request.finally(() => options.onRequestEnd?.(source));
+}
+
 export async function loadInsaMonth(options: LoadInsaMonthOptions): Promise<InsaMonthLoadResult> {
   const worktimeRange = getWorktimeRange(options.year, options.month, options.today);
+  const homeRequest = trackMonthlyRequest('home', fetchInsaHomeMonth(options), options);
+  const worktimeRequest = worktimeRange
+    ? trackMonthlyRequest('worktime', fetchInsaWorktime(options.cookie, worktimeRange, options.signal), options)
+    : Promise.resolve([]);
+  const leaveRequest = trackMonthlyRequest('leave', fetchInsaLeave(options.cookie, options.signal), options);
   const [homeResult, worktimeResult, leaveResult] = await Promise.allSettled([
-    fetchInsaHomeMonth(options),
-    worktimeRange ? fetchInsaWorktime(options.cookie, worktimeRange, options.signal) : Promise.resolve([]),
-    fetchInsaLeave(options.cookie, options.signal),
+    homeRequest,
+    worktimeRequest,
+    leaveRequest,
   ]);
   const errors: InsaMonthLoadError[] = [];
 

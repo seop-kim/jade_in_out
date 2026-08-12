@@ -28,6 +28,12 @@
   animation: toast-enter 0.28s ease-out both;
 }
 
+.toast-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
 .toast.is-exiting {
   animation: toast-exit 0.22s ease-in forwards;
 }
@@ -54,6 +60,14 @@
 
 .toast-dismiss:hover {
   background: #fee2e2;
+}
+
+.toast-success .toast-dismiss {
+  color: #15803d;
+}
+
+.toast-success .toast-dismiss:hover {
+  background: #dcfce7;
 }
 
 .toast-dismiss:focus-visible {
