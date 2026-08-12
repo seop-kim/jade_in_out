@@ -7,8 +7,8 @@ import {
 
 describe('INSA cookie storage', () => {
   afterEach(() => {
-    localStorage.clear();
     jest.restoreAllMocks();
+    localStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
   });
 
   test('stores an INSA cookie under its independent key', () => {
