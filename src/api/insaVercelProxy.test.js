@@ -8,11 +8,12 @@ jest.mock('node:https', () => ({
 
 const FAKE_COOKIE = 'User_ID=fake-user; ASPSESSIONID=fake-session';
 
-function createRequest({method = 'GET', url = '/api/insa/main.asp', headers = {}} = {}) {
+function createRequest({method = 'GET', url = '/api/insa/main.asp', headers = {}, query} = {}) {
   const req = new EventEmitter();
   req.method = method;
   req.url = url;
   req.headers = headers;
+  if (query) req.query = query;
   return req;
 }
 
@@ -173,6 +174,22 @@ describe('Vercel INSA proxy', () => {
     await pending;
 
     expect(https.request).toHaveBeenCalledTimes(1);
+  });
+
+  test('resolves the route from Vercel splat query parameters', async () => {
+    arrangeUpstream();
+    const req = createRequest({
+      method: 'POST',
+      url: '/api/insa/[...path]?path=worktime%2F01_list.asp&source=calendar',
+      query: {path: ['worktime', '01_list.asp']},
+    });
+    const res = createResponse();
+
+    const pending = handler(req, res);
+    req.emit('end');
+    await pending;
+
+    expect(https.request.mock.calls[0][0].path).toBe('/worktime/01_list.asp?source=calendar');
   });
 
   test.each([

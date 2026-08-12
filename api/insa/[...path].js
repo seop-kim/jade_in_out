@@ -68,9 +68,16 @@ function sendProxyError(res) {
 export default async function handler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
   const incoming = new URL(req.url || '/', 'http://localhost');
-  let pathname = incoming.pathname;
-  if (pathname.startsWith('/api/insa')) {
-    pathname = pathname.slice('/api/insa'.length) || '/';
+  const splat = req.query?.path;
+  let pathname;
+  if (splat !== undefined) {
+    const segments = Array.isArray(splat) ? splat : [splat];
+    pathname = `/${segments.filter(Boolean).join('/')}`;
+  } else {
+    pathname = incoming.pathname;
+    if (pathname.startsWith('/api/insa')) {
+      pathname = pathname.slice('/api/insa'.length) || '/';
+    }
   }
   const allowedMethod = ALLOWED_ROUTES.get(pathname);
   if (!allowedMethod) {
@@ -81,7 +88,10 @@ export default async function handler(req, res) {
     rejectRequest(res, 405, 'Method Not Allowed', allowedMethod);
     return;
   }
-  const upstreamPath = pathname + incoming.search;
+  const upstreamQuery = new URLSearchParams(incoming.search);
+  if (splat !== undefined) upstreamQuery.delete('path');
+  const queryString = upstreamQuery.toString();
+  const upstreamPath = pathname + (queryString ? `?${queryString}` : '');
 
   const headers = {};
   for (const [name, value] of Object.entries(req.headers)) {
