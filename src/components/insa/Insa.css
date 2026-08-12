@@ -1,0 +1,346 @@
+.insa-page,
+.insa-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.insa-setup {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.insa-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.insa-setup-title,
+.insa-section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.insa-setup-description {
+  margin: 8px 0 18px;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.insa-field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.insa-cookie-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #111827;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
+}
+
+.insa-cookie-input:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgba(37, 99, 235, 0.15);
+}
+
+.insa-setup-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.insa-toolbar {
+  flex-wrap: wrap;
+}
+
+.insa-page-status {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.insa-error-box {
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.insa-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.insa-balance-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: #4b5563;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.insa-balance-values strong {
+  color: #1d4ed8;
+}
+
+.insa-calendar-shell {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.insa-calendar-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.insa-calendar {
+  min-width: 672px;
+}
+
+.insa-calendar-weekdays,
+.insa-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.insa-calendar-weekdays {
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.insa-weekday {
+  padding: 11px 4px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.insa-weekday.sun {
+  color: #dc2626;
+}
+
+.insa-weekday.sat {
+  color: #2563eb;
+}
+
+.insa-calendar-cell {
+  min-height: 132px;
+  padding: 8px;
+  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.insa-calendar-cell:nth-child(7n) {
+  border-right: 0;
+}
+
+.insa-calendar-cell.is-placeholder {
+  background: #fafafa;
+}
+
+.insa-calendar-cell.is-today {
+  background: #eff6ff;
+}
+
+.insa-cell-header {
+  min-height: 28px;
+}
+
+.insa-date,
+.insa-date-button {
+  display: inline-flex;
+  width: 27px;
+  height: 27px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.insa-date-button {
+  appearance: none;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  cursor: pointer;
+}
+
+.insa-date-button:hover {
+  border-color: #60a5fa;
+  background: #dbeafe;
+}
+
+.insa-date-button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
+}
+
+.insa-calendar-cell.is-today .insa-date,
+.insa-calendar-cell.is-today .insa-date-button {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.insa-cell-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.insa-own-leave,
+.insa-overtime {
+  max-width: 100%;
+  padding: 2px 6px;
+  overflow-wrap: anywhere;
+  border-radius: 4px;
+  background: #cffafe;
+  color: #155e75;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.insa-own-leave.is-fallback {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.insa-attendance {
+  color: #1f2937;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.insa-planned-time {
+  color: #6b7280;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.insa-overtime {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.insa-team-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.insa-team-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.insa-team-badge.vacation {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.insa-team-badge.time {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.insa-detail-panel {
+  scroll-margin-top: 16px;
+}
+
+.insa-detail-status,
+.insa-detail-empty,
+.insa-error-text {
+  margin: 12px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.insa-error-text {
+  color: #991b1b;
+}
+
+.insa-detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insa-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.insa-detail-item strong {
+  overflow-wrap: anywhere;
+  color: #111827;
+}
+
+@media (max-width: 640px) {
+  .insa-card {
+    padding: 16px;
+  }
+
+  .insa-toolbar,
+  .insa-toolbar .toolbar-left,
+  .insa-toolbar .toolbar-right {
+    width: 100%;
+  }
+
+  .insa-toolbar {
+    align-items: stretch;
+  }
+
+  .insa-toolbar .toolbar-left,
+  .insa-toolbar .toolbar-right {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .insa-balance {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
