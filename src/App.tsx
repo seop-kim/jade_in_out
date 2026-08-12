@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {KeyboardEvent, useRef, useState} from 'react';
 import './App.css';
 import Setup from './components/Setup';
 import CalendarPage from './components/CalendarPage';
@@ -10,6 +10,27 @@ type SystemTab = 'jade' | 'insa';
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
+  const jadeTabRef = useRef<HTMLButtonElement>(null);
+  const insaTabRef = useRef<HTMLButtonElement>(null);
+
+  const selectSystemTab = (tab: SystemTab, focus = false): void => {
+    setSystemTab(tab);
+    if (focus) {
+      (tab === 'jade' ? jadeTabRef : insaTabRef).current?.focus();
+    }
+  };
+
+  const handleSystemTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
+    const nextTab = event.key === 'ArrowLeft' || event.key === 'Home'
+      ? 'jade'
+      : event.key === 'ArrowRight' || event.key === 'End'
+        ? 'insa'
+        : null;
+    if (!nextTab) return;
+
+    event.preventDefault();
+    selectSystemTab(nextTab, true);
+  };
 
   const handleSetupSubmit = (creds: Credentials): void => {
     saveCredentials(creds);
@@ -45,24 +66,30 @@ function App() {
         </div>
         <div className="system-tabs" role="tablist" aria-label="인사시스템 선택">
           <button
+            ref={jadeTabRef}
             type="button"
             role="tab"
             id="jade-system-tab"
             aria-controls="jade-system-panel"
             aria-selected={systemTab === 'jade'}
+            tabIndex={systemTab === 'jade' ? 0 : -1}
             className={`system-tab ${systemTab === 'jade' ? 'active' : ''}`}
-            onClick={() => setSystemTab('jade')}
+            onClick={() => selectSystemTab('jade')}
+            onKeyDown={handleSystemTabKeyDown}
           >
             기존 시스템
           </button>
           <button
+            ref={insaTabRef}
             type="button"
             role="tab"
             id="insa-system-tab"
             aria-controls="insa-system-panel"
             aria-selected={systemTab === 'insa'}
+            tabIndex={systemTab === 'insa' ? 0 : -1}
             className={`system-tab ${systemTab === 'insa' ? 'active' : ''}`}
-            onClick={() => setSystemTab('insa')}
+            onClick={() => selectSystemTab('insa')}
+            onKeyDown={handleSystemTabKeyDown}
           >
             신규 인사시스템
           </button>
@@ -70,19 +97,26 @@ function App() {
       </header>
 
       <main className="app-main">
-        {systemTab === 'jade' ? (
-          <div role="tabpanel" id="jade-system-panel" aria-labelledby="jade-system-tab">
-            {credentials ? (
+        <div
+          role="tabpanel"
+          id="jade-system-panel"
+          aria-labelledby="jade-system-tab"
+          hidden={systemTab !== 'jade'}
+        >
+          {systemTab === 'jade' && (credentials ? (
               <CalendarPage credentials={credentials}/>
             ) : (
               <Setup onSubmit={handleSetupSubmit}/>
-            )}
-          </div>
-        ) : (
-          <div role="tabpanel" id="insa-system-panel" aria-labelledby="insa-system-tab">
-            <InsaPage />
-          </div>
-        )}
+            ))}
+        </div>
+        <div
+          role="tabpanel"
+          id="insa-system-panel"
+          aria-labelledby="insa-system-tab"
+          hidden={systemTab !== 'insa'}
+        >
+          {systemTab === 'insa' && <InsaPage />}
+        </div>
       </main>
     </div>
   );

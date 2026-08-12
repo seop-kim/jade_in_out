@@ -43,4 +43,58 @@ describe('App system tabs', () => {
 
     expect(screen.queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
   });
+
+  test('keeps both controlled tab panels in the DOM and hides the inactive panel', async () => {
+    render(<App />);
+
+    const jadeTab = screen.getByRole('tab', {name: '기존 시스템'});
+    const insaTab = screen.getByRole('tab', {name: '신규 인사시스템'});
+    const jadePanel = document.getElementById(jadeTab.getAttribute('aria-controls') ?? '');
+    const insaPanel = document.getElementById(insaTab.getAttribute('aria-controls') ?? '');
+    if (!jadePanel || !insaPanel) throw new Error('Controlled tab panel is missing');
+
+    expect(jadeTab).toHaveAttribute('aria-selected', 'true');
+    expect(jadeTab).toHaveAttribute('tabindex', '0');
+    expect(insaTab).toHaveAttribute('aria-selected', 'false');
+    expect(insaTab).toHaveAttribute('tabindex', '-1');
+    expect(jadePanel).toHaveAttribute('id', 'jade-system-panel');
+    expect(jadePanel).toHaveAttribute('role', 'tabpanel');
+    expect(jadePanel).not.toHaveAttribute('hidden');
+    expect(insaPanel).toHaveAttribute('id', 'insa-system-panel');
+    expect(insaPanel).toHaveAttribute('role', 'tabpanel');
+    expect(insaPanel).toHaveAttribute('hidden');
+
+    await userEvent.click(insaTab);
+
+    expect(jadeTab).toHaveAttribute('aria-selected', 'false');
+    expect(jadeTab).toHaveAttribute('tabindex', '-1');
+    expect(insaTab).toHaveAttribute('aria-selected', 'true');
+    expect(insaTab).toHaveAttribute('tabindex', '0');
+    expect(jadePanel).toHaveAttribute('hidden');
+    expect(insaPanel).not.toHaveAttribute('hidden');
+  });
+
+  test('moves tab selection and focus with ArrowLeft, ArrowRight, Home, and End', async () => {
+    render(<App />);
+
+    const jadeTab = screen.getByRole('tab', {name: '기존 시스템'});
+    const insaTab = screen.getByRole('tab', {name: '신규 인사시스템'});
+    jadeTab.focus();
+
+    await userEvent.keyboard('{ArrowRight}');
+    expect(insaTab).toHaveFocus();
+    expect(insaTab).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(jadeTab).toHaveFocus();
+    expect(jadeTab).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('{End}');
+    expect(insaTab).toHaveFocus();
+    expect(insaTab).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('{Home}');
+    expect(jadeTab).toHaveFocus();
+    expect(jadeTab).toHaveAttribute('aria-selected', 'true');
+  });
 });
