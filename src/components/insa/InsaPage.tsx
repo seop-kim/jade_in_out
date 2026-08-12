@@ -150,7 +150,7 @@ function InsaPage() {
   const handleDaySelect = useCallback(async (ymd: string): Promise<void> => {
     if (!cookie) return;
     setSelectedYmd(ymd);
-    if (detailStates[ymd] || detailControllers.current.has(ymd)) return;
+    if (detailStates[ymd]?.status === 'loaded' || detailControllers.current.has(ymd)) return;
 
     const controller = new AbortController();
     detailControllers.current.set(ymd, controller);

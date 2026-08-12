@@ -168,6 +168,32 @@ describe('InsaPage', () => {
     expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
   });
 
+  test('retries team details after a failed request', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const retryRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
+    mockedFetchInsaDayDetails
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockReturnValueOnce(retryRequest.promise);
+
+    render(<InsaPage />);
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await userEvent.click(dayButton);
+    expect(await screen.findByText('팀 상세 조회 실패: temporary failure')).toBeInTheDocument();
+
+    await userEvent.click(dayButton);
+    expect(screen.getByRole('status')).toHaveTextContent('팀 상세 조회 중');
+
+    await act(async () => retryRequest.resolve([{
+      ymd: '2026-08-05',
+      name: '재시도 사용자',
+      scheduleLabel: '시간휴가',
+      durationLabel: '2시간',
+    }]));
+
+    expect(await screen.findByText('재시도 사용자')).toBeInTheDocument();
+    expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(2);
+  });
+
   test('does not reuse a stale detail response after the Cookie is reset', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const oldDetailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
