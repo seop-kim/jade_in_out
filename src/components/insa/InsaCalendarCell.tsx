@@ -26,10 +26,12 @@ function formatYmd(year: number, month: number, day: number): string {
 }
 
 function TeamDetailsTooltip({
+  id,
   state,
   pos,
   dateLabel,
 }: {
+  id: string;
   state?: DetailState;
   pos: TooltipPos;
   dateLabel: string;
@@ -37,6 +39,7 @@ function TeamDetailsTooltip({
   return (
     <div
       className={`insa-team-tooltip ${pos.above ? 'above' : ''}`.trim()}
+      id={id}
       style={{top: pos.top, left: pos.left}}
       role="tooltip"
     >
@@ -85,6 +88,7 @@ function InsaCalendarCell({
   const timeCount = dayData?.teamSchedule?.timeCount ?? 0;
   const hasTeamDetails = vacationCount > 0 || timeCount > 0;
   const dateLabel = `${year}년 ${month + 1}월 ${day}일`;
+  const tooltipId = `insa-team-tooltip-${ymd}`;
 
   const showTooltip = (target: HTMLElement): void => {
     if (!hasTeamDetails) return;
@@ -112,6 +116,7 @@ function InsaCalendarCell({
             type="button"
             className="insa-date-button"
             aria-label={`${dateLabel} 상세`}
+            aria-describedby={tooltip ? tooltipId : undefined}
             onClick={() => onSelectDay(ymd)}
             onFocus={(event) => showTooltip(event.currentTarget)}
             onBlur={handleMouseLeave}
@@ -150,6 +155,7 @@ function InsaCalendarCell({
       </div>
       {tooltip && hasTeamDetails && (
         <TeamDetailsTooltip
+          id={tooltipId}
           state={detailState}
           pos={tooltip}
           dateLabel={`${month + 1}/${day} (${WEEKDAY_LABELS[new Date(year, month, day).getDay()]})`}

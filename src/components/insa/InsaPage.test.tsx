@@ -122,6 +122,91 @@ describe('InsaPage', () => {
     await waitFor(() => expect(screen.queryByText('월간 정보를 조회 중입니다.')).not.toBeInTheDocument());
   });
 
+  test('refresh aborts an in-flight detail request', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
+    mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
+
+    render(<InsaPage />);
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await screen.findByRole('button', {name: '새로고침'});
+    await userEvent.click(dayButton);
+    const detailSignal = mockedFetchInsaDayDetails.mock.calls[0]?.[0].signal;
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', {name: '새로고침'}));
+    });
+
+    expect(detailSignal?.aborted).toBe(true);
+    await act(async () => detailRequest.reject(new DOMException('Aborted', 'AbortError')));
+    await screen.findByRole('button', {name: '새로고침'});
+  });
+
+  test('refresh clears successful detail cache so the next request refetches', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    mockedFetchInsaDayDetails.mockResolvedValue([{
+      ymd: '2026-08-05',
+      name: 'Synthetic Cached Person',
+      scheduleLabel: 'Synthetic schedule',
+      durationLabel: '4 hours',
+    }]);
+
+    render(<InsaPage />);
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await screen.findByRole('button', {name: '새로고침'});
+    await userEvent.click(dayButton);
+    expect(await screen.findByText('Synthetic Cached Person', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', {name: '새로고침'}));
+    });
+    await screen.findByRole('button', {name: '새로고침'});
+    await userEvent.click(await screen.findByRole('button', {name: '2026년 8월 5일 상세'}));
+
+    expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText('Synthetic Cached Person', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
+  });
+
+  test('refresh recomputes the current date across a month boundary', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    jest.setSystemTime(new Date(2026, 7, 31, 23, 59));
+
+    render(<InsaPage />);
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await screen.findByRole('button', {name: '새로고침'});
+    jest.setSystemTime(new Date(2026, 8, 1, 0, 1));
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', {name: '새로고침'}));
+    });
+    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
+      year: 2026,
+      month: 7,
+      today: new Date(2026, 8, 1, 0, 1),
+    }));
+    await screen.findByRole('button', {name: '새로고침'});
+  });
+
+  test('today uses the recomputed date after a month boundary', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    jest.setSystemTime(new Date(2026, 7, 31, 23, 59));
+
+    render(<InsaPage />);
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await screen.findByRole('button', {name: '새로고침'});
+    jest.setSystemTime(new Date(2026, 8, 1, 0, 1));
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', {name: '오늘'}));
+    });
+    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
+      year: 2026,
+      month: 8,
+      today: new Date(2026, 8, 1, 0, 1),
+    }));
+    await screen.findByRole('button', {name: '새로고침'});
+  });
+
   test('loads team details only after selection and reuses cached details', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     mockedFetchInsaDayDetails.mockResolvedValue([{

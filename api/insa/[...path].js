@@ -6,46 +6,22 @@ export const config = {
 
 const TARGET_HOST = 'insa.kwe.co.kr';
 const TARGET_ORIGIN = `https://${TARGET_HOST}`;
-const ALLOWED_METHODS = new Set(['GET', 'POST']);
+const ALLOWED_ROUTES = new Map([
+  ['/main.asp', 'GET'],
+  ['/leave/01_list.asp', 'GET'],
+  ['/worktime/01_list.asp', 'POST'],
+]);
+const REQUEST_HEADER_ALLOWLIST = new Set([
+  'accept',
+  'accept-encoding',
+  'content-type',
+]);
 const SAFE_RESPONSE_HEADERS = new Set([
   'content-type',
   'content-encoding',
   'content-length',
-  'cache-control',
-  'expires',
-  'etag',
-  'last-modified',
   'vary',
 ]);
-
-const HOP_BY_HOP = new Set([
-  'transfer-encoding',
-  'connection',
-  'keep-alive',
-  'proxy-authenticate',
-  'proxy-authorization',
-  'proxy-connection',
-  'te',
-  'trailers',
-  'upgrade',
-]);
-
-const STRIP_INCOMING = new Set([
-  'host',
-  'content-length',
-  'cookie',
-  'forwarded',
-  'x-insa-cookie',
-  'x-real-ip',
-]);
-
-function shouldStripIncoming(name) {
-  const normalized = name.toLowerCase();
-  return HOP_BY_HOP.has(normalized)
-    || STRIP_INCOMING.has(normalized)
-    || normalized.startsWith('x-forwarded-')
-    || normalized.startsWith('x-vercel-');
-}
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -67,36 +43,51 @@ function copyResponseHeaders(upstreamHeaders, res) {
   }
 }
 
+function preventResponseCaching(res) {
+  res.setHeader('Cache-Control', 'no-store, private');
+}
+
+function rejectRequest(res, statusCode, message, allow) {
+  res.statusCode = statusCode;
+  preventResponseCaching(res);
+  if (allow) res.setHeader('Allow', allow);
+  res.end(message);
+}
+
 function sendProxyError(res) {
   if (res.headersSent) {
     res.end();
     return;
   }
   res.statusCode = 502;
+  preventResponseCaching(res);
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.end('Proxy error');
 }
 
 export default async function handler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
-  if (!ALLOWED_METHODS.has(method)) {
-    res.statusCode = 405;
-    res.setHeader('Allow', 'GET, POST');
-    res.end('Method Not Allowed');
-    return;
-  }
-
   const incoming = new URL(req.url || '/', 'http://localhost');
   let pathname = incoming.pathname;
   if (pathname.startsWith('/api/insa')) {
     pathname = pathname.slice('/api/insa'.length) || '/';
   }
+  const allowedMethod = ALLOWED_ROUTES.get(pathname);
+  if (!allowedMethod) {
+    rejectRequest(res, 404, 'Not Found');
+    return;
+  }
+  if (method !== allowedMethod) {
+    rejectRequest(res, 405, 'Method Not Allowed', allowedMethod);
+    return;
+  }
   const upstreamPath = pathname + incoming.search;
 
   const headers = {};
   for (const [name, value] of Object.entries(req.headers)) {
-    if (!shouldStripIncoming(name) && value !== undefined) {
-      headers[name] = value;
+    const normalized = name.toLowerCase();
+    if (REQUEST_HEADER_ALLOWLIST.has(normalized) && value !== undefined) {
+      headers[normalized] = value;
     }
   }
 
@@ -138,6 +129,7 @@ export default async function handler(req, res) {
           const responseBody = Buffer.concat(chunks);
           res.statusCode = upstreamRes.statusCode || 502;
           copyResponseHeaders(upstreamRes.headers, res);
+          preventResponseCaching(res);
           res.end(responseBody);
           console.log(`[insa-proxy] ${method} ${upstreamPath} status=${res.statusCode} bodyLength=${responseBody.length}`);
           resolve();

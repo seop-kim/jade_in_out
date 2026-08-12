@@ -59,7 +59,7 @@ function TeamDetailPanel({ymd, state}: {ymd: string; state?: DetailState}) {
 }
 
 function InsaPage() {
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -71,6 +71,14 @@ function InsaPage() {
   const [detailStates, setDetailStates] = useState<Record<string, DetailState>>({});
   const detailStatesRef = useRef<Record<string, DetailState>>({});
   const detailControllers = useRef(new Map<string, AbortController>());
+
+  const invalidateDayDetails = useCallback((): void => {
+    detailControllers.current.forEach((controller) => controller.abort());
+    detailControllers.current.clear();
+    detailStatesRef.current = {};
+    setDetailStates({});
+    setSelectedYmd(null);
+  }, []);
 
   useEffect(() => () => {
     detailControllers.current.forEach((controller) => controller.abort());
@@ -138,15 +146,23 @@ function InsaPage() {
   };
 
   const handleReset = (): void => {
-    detailControllers.current.forEach((controller) => controller.abort());
-    detailControllers.current.clear();
+    invalidateDayDetails();
     clearInsaCookie();
     setCookie(null);
     setResult(null);
     setPageError(null);
-    setSelectedYmd(null);
-    detailStatesRef.current = {};
-    setDetailStates({});
+  };
+
+  const handleToday = (): void => {
+    const nextToday = new Date();
+    setToday(nextToday);
+    selectMonth(nextToday.getFullYear(), nextToday.getMonth());
+  };
+
+  const handleRefresh = (): void => {
+    invalidateDayDetails();
+    setToday(new Date());
+    setReloadKey((key) => key + 1);
   };
 
   const requestDayDetails = useCallback(async (ymd: string): Promise<void> => {
@@ -208,10 +224,10 @@ function InsaPage() {
           <button type="button" className="btn" aria-label="다음 달" onClick={() => shiftMonth(1)}>›</button>
         </div>
         <div className="toolbar-right">
-          <button type="button" className="btn btn-ghost" onClick={() => selectMonth(today.getFullYear(), today.getMonth())}>
+          <button type="button" className="btn btn-ghost" onClick={handleToday}>
             오늘
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => setReloadKey((key) => key + 1)} disabled={loading}>
+          <button type="button" className="btn btn-primary" onClick={handleRefresh} disabled={loading}>
             {loading ? '조회 중…' : '새로고침'}
           </button>
           <button type="button" className="btn btn-ghost" onClick={handleReset}>연결 재설정</button>

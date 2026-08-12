@@ -70,6 +70,7 @@ describe('Vercel INSA proxy', () => {
   let errorSpy;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -112,6 +113,9 @@ describe('Vercel INSA proxy', () => {
         'x-forwarded-host': 'preview.example.test',
         'x-vercel-id': 'secret-routing-id',
         'x-insa-cookie': FAKE_COOKIE,
+        authorization: 'Bearer synthetic-token',
+        'x-api-key': 'synthetic-api-key',
+        'x-custom-transport': 'must-not-forward',
         'content-type': 'application/x-www-form-urlencoded',
         accept: 'text/html',
       },
@@ -148,31 +152,52 @@ describe('Vercel INSA proxy', () => {
       'content-type': 'text/html; charset=euc-kr',
       'content-encoding': 'gzip',
       'content-length': '4',
-      'cache-control': 'private',
-      expires: 'Wed, 12 Aug 2026 03:00:00 GMT',
-      etag: '"safe-etag"',
-      'last-modified': 'Wed, 12 Aug 2026 02:00:00 GMT',
+      'cache-control': 'no-store, private',
       vary: 'Accept-Encoding',
     });
     expect(JSON.stringify(logSpy.mock.calls)).not.toContain(FAKE_COOKIE);
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(FAKE_COOKIE);
   });
 
-  test('rejects unsupported methods without opening an upstream request', async () => {
-    const req = createRequest({method: 'PUT'});
+  test.each([
+    ['GET', '/api/insa/main.asp?Sel_Year=2026&Sel_Month=8&Sel_Day=1'],
+    ['GET', '/api/insa/leave/01_list.asp'],
+    ['POST', '/api/insa/worktime/01_list.asp'],
+  ])('allows the intended %s %s request', async (method, url) => {
+    arrangeUpstream();
+    const req = createRequest({method, url});
     const res = createResponse();
 
-    await handler(req, res);
+    const pending = handler(req, res);
+    if (method === 'POST') req.emit('end');
+    await pending;
+
+    expect(https.request).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    ['POST', '/api/insa/main.asp', 405, 'GET'],
+    ['GET', '/api/insa/worktime/01_list.asp', 405, 'POST'],
+    ['GET', '/api/insa/main.asp/extra', 404, undefined],
+    ['GET', '/api/insa/admin.asp', 404, undefined],
+  ])('rejects %s %s without opening an upstream request', async (method, url, statusCode, allow) => {
+    arrangeUpstream();
+    const req = createRequest({method, url});
+    const res = createResponse();
+
+    const pending = handler(req, res);
+    if (method === 'POST') req.emit('end');
+    await pending;
 
     expect(https.request).not.toHaveBeenCalled();
-    expect(res.statusCode).toBe(405);
-    expect(res.headers.allow).toBe('GET, POST');
-    expect(res.body.toString()).toBe('Method Not Allowed');
+    expect(res.statusCode).toBe(statusCode);
+    expect(res.headers.allow).toBe(allow);
   });
 
   test('completes with a sanitized 502 when reading the POST body fails', async () => {
     const req = createRequest({
       method: 'POST',
+      url: '/api/insa/worktime/01_list.asp',
       headers: {'x-insa-cookie': FAKE_COOKIE},
     });
     const res = createResponse();

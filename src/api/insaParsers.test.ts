@@ -30,6 +30,72 @@ const leaveFixture = `
     </tr>
   </tbody></table>`;
 
+function buildCompleteHomeFixture(): string {
+  const calendarDays = Array.from({length: 31}, (_, index) => {
+    const day = index + 1;
+    const schedules = day === 5 ? `
+      <table><tbody>
+        <tr><td><img src="/images/icon_dot_schedule0.gif" alt="vacation"></td><td>Vacation <b>1</b></td></tr>
+        <tr><td><img src="/images/icon_dot_schedule1.gif" alt="time"></td><td>Time <b>1</b></td></tr>
+      </tbody></table>` : '';
+    return `<td onclick="location.replace('main.asp?Sel_Year=2026&Sel_Month=8&Sel_Day=${day}')">${schedules}</td>`;
+  }).join('');
+
+  return `
+    <table><tbody><tr>${calendarDays}</tr></tbody></table>
+    <table><tbody>
+      <tr><td>
+        <div class="scroll"><table><tbody>
+          <tr>
+            <td></td><td><img src="/images/icon_dot_schedule0.gif" alt="vacation"></td>
+            <td>Synthetic Person Alpha <span>Synthetic annual leave <font class="cGR font_11">4 hours</font></span></td><td></td>
+          </tr>
+          <tr>
+            <td></td><td><img src="/images/icon_dot_schedule1.gif" alt="time"></td>
+            <td>Synthetic Person Beta <span>Synthetic late arrival <font class="cGR font_11">2 hours</font></span></td><td></td>
+          </tr>
+        </tbody></table></div>
+      </td></tr>
+      <tr><td><img src="/images/main_schedule_detail_bottom.gif" alt="detail end"></td></tr>
+    </tbody></table>`;
+}
+
+function buildCompleteWorktimeFixture(): string {
+  const dates = [
+    '2026-07-28', '2026-07-29', '2026-07-30', '2026-07-31', '2026-08-01',
+    '2026-08-02', '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06',
+    '2026-08-07', '2026-08-08', '2026-08-09', '2026-08-10', '2026-08-11',
+  ];
+  const rows = dates.map((ymd, index) => {
+    const number = index + 1;
+    return `<tr>
+      <td>${number}</td><td>SYN-${String(number).padStart(3, '0')}</td><td>Workday</td><td>${ymd}</td>
+      <td>${number === 10 ? 'Synthetic leave 4h' : ''}</td><td>${number === 10 ? 'Synthetic OT 1h' : ''}</td>
+      <td>09:00</td><td>18:00</td><td>08:55</td><td>18:10</td>
+      <td></td><td></td><td>${number === 10 ? 'Approved' : ''}</td><td>Synthetic note ${number}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="tbltop"><tbody>${rows}</tbody></table>`;
+}
+
+function buildCompleteLeaveFixture(): string {
+  const balanceRows = `
+    <tr><td>2025</td><td>2025-01-01 ~ 2025-12-31</td><td>Annual</td><td><b>80</b></td><td><b>40</b></td><td><b>40</b></td></tr>
+    <tr><td>2026</td><td>2026-01-01 ~ 2026-12-31</td><td>Annual</td><td><b>160</b></td><td><b>48</b></td><td><b>112</b></td></tr>`;
+  const recordRows = Array.from({length: 10}, (_, index) => {
+    const number = index + 1;
+    return `<tr>
+      <td>${number}</td><td>2026-08-${String(number).padStart(2, '0')}</td><td>${number === 4 ? '4 hours' : '1 day'}</td>
+      <td>Synthetic leave type ${number}</td><td>Synthetic reason ${number}</td><td>None</td>
+      <td>2026-07-${String(20 + number).padStart(2, '0')}</td><td>${number === 4 ? 'Approved' : 'Complete'}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <table class="tbltop"><tbody>${balanceRows}</tbody></table>
+    <table class="tbltop"><tbody>${recordRows}</tbody></table>`;
+}
+
 describe('INSA HTML parsers', () => {
   test('parses monthly team counts by schedule icon and ignores adjacent-month cells', () => {
     const html = `
@@ -50,16 +116,67 @@ describe('INSA HTML parsers', () => {
     });
   });
 
-  test('returns no days when a structural calendar has only another month', () => {
+  test('rejects a structural calendar when no date belongs to the requested month', () => {
     const html = `
       <table><tbody><tr>
         <td onclick="location.replace('main.asp?Sel_Year=2026&Sel_Month=7&Sel_Day=31')"></td>
       </tr></tbody></table>`;
 
-    expect(parseInsaHomeHtml(html, 2026, 8)).toEqual({
+    expect(() => parseInsaHomeHtml(html, 2026, 8)).toThrow(
+      'INSA home response format is invalid'
+    );
+  });
+
+  test('parses complete synthetic response structures with reproducible record counts', () => {
+    const homeHtml = buildCompleteHomeFixture();
+    const home = parseInsaHomeHtml(homeHtml, 2026, 8);
+    const details = parseInsaDayDetails(homeHtml, '2026-08-05');
+    const worktime = parseInsaWorktimeHtml(buildCompleteWorktimeFixture());
+    const leave = parseInsaLeaveHtml(buildCompleteLeaveFixture());
+
+    expect(Object.keys(home.days)).toHaveLength(31);
+    expect(home.days['2026-08-05']).toEqual({
+      ymd: '2026-08-05',
+      vacationCount: 1,
+      timeCount: 1,
+    });
+    expect(details).toHaveLength(2);
+    expect(details[1]).toEqual({
+      ymd: '2026-08-05',
+      name: 'Synthetic Person Beta',
+      scheduleLabel: 'Synthetic late arrival',
+      durationLabel: '2 hours',
+    });
+    expect(worktime).toHaveLength(15);
+    expect(worktime[9]).toEqual({
+      ymd: '2026-08-06',
+      scheduledIn: '09:00',
+      scheduledOut: '18:00',
+      actualIn: '08:55',
+      actualOut: '18:10',
+      leaveLabel: 'Synthetic leave 4h',
+      overtimeLabel: 'Synthetic OT 1h',
+      correctionIn: '',
+      correctionOut: '',
+      correctionStatus: 'Approved',
+      note: 'Synthetic note 10',
+    });
+    expect(leave.balances).toHaveLength(2);
+    expect(leave.balances[1]).toEqual({
       year: 2026,
-      month: 8,
-      days: {},
+      period: '2026-01-01 ~ 2026-12-31',
+      accruedHours: 160,
+      usedHours: 48,
+      remainingHours: 112,
+    });
+    expect(leave.records).toHaveLength(10);
+    expect(leave.records[3]).toEqual({
+      ymd: '2026-08-04',
+      durationLabel: '4 hours',
+      type: 'Synthetic leave type 4',
+      reason: 'Synthetic reason 4',
+      appliedAt: '2026-07-24',
+      approvalStatus: 'Approved',
     });
   });
 

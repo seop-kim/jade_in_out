@@ -68,6 +68,7 @@ describe('INSA API', () => {
       headers: {'X-Insa-Cookie': 'test-session'},
       signal: undefined,
       credentials: 'omit',
+      cache: 'no-store',
     });
   });
 
@@ -85,6 +86,7 @@ describe('INSA API', () => {
       body: 'sType=0&sdt=2026-08-01&edt=2026-08-11',
       signal: undefined,
       credentials: 'omit',
+      cache: 'no-store',
     });
   });
 

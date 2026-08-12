@@ -10,10 +10,12 @@ type SystemTab = 'jade' | 'insa';
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
+  const [insaVisited, setInsaVisited] = useState(false);
   const jadeTabRef = useRef<HTMLButtonElement>(null);
   const insaTabRef = useRef<HTMLButtonElement>(null);
 
   const selectSystemTab = (tab: SystemTab, focus = false): void => {
+    if (tab === 'insa') setInsaVisited(true);
     setSystemTab(tab);
     if (focus) {
       (tab === 'jade' ? jadeTabRef : insaTabRef).current?.focus();
@@ -106,11 +108,11 @@ function App() {
           aria-labelledby="jade-system-tab"
           hidden={systemTab !== 'jade'}
         >
-          {systemTab === 'jade' && (credentials ? (
+          {credentials ? (
               <CalendarPage credentials={credentials}/>
             ) : (
               <Setup onSubmit={handleSetupSubmit}/>
-            ))}
+            )}
         </div>
         <div
           role="tabpanel"
@@ -118,7 +120,7 @@ function App() {
           aria-labelledby="insa-system-tab"
           hidden={systemTab !== 'insa'}
         >
-          {systemTab === 'insa' && <InsaPage />}
+          {insaVisited && <InsaPage />}
         </div>
       </main>
     </div>

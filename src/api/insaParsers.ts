@@ -134,6 +134,7 @@ export function parseInsaHomeHtml(
     };
   }
 
+  if (Object.keys(days).length === 0) throw new Error(HOME_FORMAT_ERROR);
   return {year: expectedYear, month: expectedMonth, days};
 }
 

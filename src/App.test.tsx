@@ -1,13 +1,44 @@
-import {render, screen} from '@testing-library/react';
+import {act, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
-import {clearInsaCookie} from './lib/insaStorage';
+import {fetchInsaDayDetails, InsaMonthLoadResult, loadInsaMonth} from './api/insaApi';
+import {clearInsaCookie, saveInsaCookie} from './lib/insaStorage';
 import {clearCredentials, saveCredentials} from './lib/storage';
+
+jest.mock('./api/insaApi', () => ({
+  fetchInsaDayDetails: jest.fn(),
+  loadInsaMonth: jest.fn(),
+}));
+
+const mockedLoadInsaMonth = loadInsaMonth as jest.MockedFunction<typeof loadInsaMonth>;
+const mockedFetchInsaDayDetails = fetchInsaDayDetails as jest.MockedFunction<typeof fetchInsaDayDetails>;
+
+function monthResult(year: number, month: number): InsaMonthLoadResult {
+  const ymd = `${year}-${String(month + 1).padStart(2, '0')}-05`;
+  return {
+    home: {
+      year,
+      month: month + 1,
+      days: {[ymd]: {ymd, vacationCount: 1, timeCount: 0}},
+    },
+    worktime: [],
+    leave: {balances: [], records: []},
+    errors: [],
+  };
+}
 
 describe('App system tabs', () => {
   beforeEach(() => {
     clearCredentials();
     clearInsaCookie();
+    jest.clearAllMocks();
+    mockedLoadInsaMonth.mockImplementation(async ({year, month}) => monthResult(year, month));
+    mockedFetchInsaDayDetails.mockImplementation(async ({ymd}) => [{
+      ymd,
+      name: 'Synthetic Detail Person',
+      scheduleLabel: 'Synthetic leave',
+      durationLabel: '4 hours',
+    }]);
   });
 
   afterEach(() => {
@@ -66,7 +97,9 @@ describe('App system tabs', () => {
     expect(insaPanel).toHaveAttribute('aria-labelledby', insaTab.id);
     expect(insaPanel).toHaveAttribute('hidden');
 
-    await userEvent.click(insaTab);
+    await act(async () => {
+      await userEvent.click(insaTab);
+    });
 
     expect(jadeTab).toHaveAttribute('aria-selected', 'false');
     expect(jadeTab).toHaveAttribute('tabindex', '-1');
@@ -114,5 +147,50 @@ describe('App system tabs', () => {
     await userEvent.keyboard('{ArrowRight}');
     expect(jadeTab).toHaveFocus();
     expect(jadeTab).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('lazily mounts INSA once and preserves both tabs transient state, selected month, and detail cache', async () => {
+    saveInsaCookie('synthetic-session');
+    render(<App />);
+    const jadeDraft = screen.getByLabelText('cURL 명령어');
+    await userEvent.type(jadeDraft, 'synthetic unsaved draft');
+    expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
+
+    const jadeTab = screen.getByRole('tab', {name: '기존 시스템'});
+    const insaTab = screen.getByRole('tab', {name: '신규 인사시스템'});
+    await act(async () => {
+      await userEvent.click(insaTab);
+    });
+    const current = new Date();
+    await screen.findByRole('button', {name: '새로고침'});
+    await screen.findByRole('button', {
+      name: `${current.getFullYear()}년 ${current.getMonth() + 1}월 5일 상세`,
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', {name: '이전 달'}));
+    });
+
+    const previousMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+    await screen.findByRole('button', {name: '새로고침'});
+    await act(async () => {
+      await userEvent.click(await screen.findByRole('button', {
+        name: `${previousMonth.getFullYear()}년 ${previousMonth.getMonth() + 1}월 5일 상세`,
+      }));
+    });
+    expect(await screen.findByText('Synthetic Detail Person', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
+
+    await userEvent.click(jadeTab);
+    expect(screen.getByLabelText(/^cURL 명령어/)).toHaveValue('synthetic unsaved draft');
+    await userEvent.click(insaTab);
+
+    expect(screen.getByRole('button', {
+      name: `${previousMonth.getFullYear()}년 ${previousMonth.getMonth() + 1}월 5일 상세`,
+    })).toBeInTheDocument();
+    expect(screen.getByText('Synthetic Detail Person', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
+    expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(1);
+    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
+      year: previousMonth.getFullYear(),
+      month: previousMonth.getMonth(),
+    }));
   });
 });

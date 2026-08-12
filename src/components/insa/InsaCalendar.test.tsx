@@ -127,13 +127,21 @@ describe('InsaCalendar', () => {
     );
 
     const dayButton = screen.getByRole('button', {name: /2026.*8.*5/});
+    expect(dayButton).not.toHaveAttribute('aria-describedby');
     fireEvent.focus(dayButton);
 
     expect(onRequestDayDetails).toHaveBeenCalledWith('2026-08-05');
-    expect(screen.getByRole('tooltip')).toContainElement(screen.getByRole('status'));
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveAttribute('id', 'insa-team-tooltip-2026-08-05');
+    expect(dayButton).toHaveAttribute('aria-describedby', tooltip.id);
+    expect(tooltip).toContainElement(screen.getByRole('status'));
 
     fireEvent.blur(dayButton);
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(dayButton).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.focus(dayButton);
+    expect(screen.getByRole('tooltip')).toHaveAttribute('id', 'insa-team-tooltip-2026-08-05');
   });
 });
