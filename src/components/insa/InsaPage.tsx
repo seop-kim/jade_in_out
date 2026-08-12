@@ -13,7 +13,7 @@ import InsaCalendar from './InsaCalendar';
 import InsaSetup from './InsaSetup';
 import './Insa.css';
 
-type DetailState =
+export type DetailState =
   | {status: 'loading'}
   | {status: 'loaded'; details: InsaTeamDetail[]}
   | {status: 'error'; message: string};
@@ -69,6 +69,7 @@ function InsaPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [selectedYmd, setSelectedYmd] = useState<string | null>(null);
   const [detailStates, setDetailStates] = useState<Record<string, DetailState>>({});
+  const detailStatesRef = useRef<Record<string, DetailState>>({});
   const detailControllers = useRef(new Map<string, AbortController>());
 
   useEffect(() => () => {
@@ -144,35 +145,52 @@ function InsaPage() {
     setResult(null);
     setPageError(null);
     setSelectedYmd(null);
+    detailStatesRef.current = {};
     setDetailStates({});
   };
 
-  const handleDaySelect = useCallback(async (ymd: string): Promise<void> => {
+  const requestDayDetails = useCallback(async (ymd: string): Promise<void> => {
     if (!cookie) return;
-    setSelectedYmd(ymd);
-    if (detailStates[ymd]?.status === 'loaded' || detailControllers.current.has(ymd)) return;
+    if (detailStatesRef.current[ymd]?.status === 'loaded' || detailControllers.current.has(ymd)) return;
 
     const controller = new AbortController();
     detailControllers.current.set(ymd, controller);
-    setDetailStates((previous) => ({...previous, [ymd]: {status: 'loading'}}));
+    setDetailStates((previous) => {
+      const next = {...previous, [ymd]: {status: 'loading'} as DetailState};
+      detailStatesRef.current = next;
+      return next;
+    });
     try {
       const details = await fetchInsaDayDetails({cookie, ymd, signal: controller.signal});
       if (!controller.signal.aborted) {
-        setDetailStates((previous) => ({...previous, [ymd]: {status: 'loaded', details}}));
+        setDetailStates((previous) => {
+          const next = {...previous, [ymd]: {status: 'loaded', details} as DetailState};
+          detailStatesRef.current = next;
+          return next;
+        });
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        setDetailStates((previous) => ({
-          ...previous,
-          [ymd]: {status: 'error', message: safeMessage(error, cookie)},
-        }));
+        setDetailStates((previous) => {
+          const next = {
+            ...previous,
+            [ymd]: {status: 'error', message: safeMessage(error, cookie)} as DetailState,
+          };
+          detailStatesRef.current = next;
+          return next;
+        });
       }
     } finally {
       if (detailControllers.current.get(ymd) === controller) {
         detailControllers.current.delete(ymd);
       }
     }
-  }, [cookie, detailStates]);
+  }, [cookie]);
+
+  const handleDaySelect = useCallback((ymd: string): void => {
+    setSelectedYmd(ymd);
+    void requestDayDetails(ymd);
+  }, [requestDayDetails]);
 
   if (!cookie) return <InsaSetup onSubmit={handleSetup} />;
 
@@ -229,6 +247,8 @@ function InsaPage() {
         today={today}
         days={days}
         onSelectDay={handleDaySelect}
+        onRequestDayDetails={requestDayDetails}
+        detailStates={detailStates}
       />
 
       {selectedYmd && <TeamDetailPanel ymd={selectedYmd} state={detailStates[selectedYmd]} />}

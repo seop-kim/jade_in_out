@@ -1,4 +1,4 @@
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   fetchInsaDayDetails,
@@ -136,10 +136,48 @@ describe('InsaPage', () => {
     const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
 
     await userEvent.click(dayButton);
-    expect(await screen.findByText('홍길동')).toBeInTheDocument();
+    expect(await screen.findByText('홍길동', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
     expect(screen.getByText('연차휴가 · 종일')).toBeInTheDocument();
     await userEvent.click(dayButton);
 
+    expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(1);
+  });
+
+  test('previews synthetic team details on hover without selecting the day and reuses the result on click', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
+    mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
+
+    const {container} = render(<InsaPage />);
+    const dayButton = await screen.findByRole('button', {name: /2026.*8.*5/});
+
+    await userEvent.hover(dayButton);
+
+    const loadingTooltip = screen.getByRole('tooltip');
+    expect(within(loadingTooltip).getByRole('status')).toBeInTheDocument();
+    expect(container.querySelector('.insa-detail-panel')).not.toBeInTheDocument();
+    expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(1);
+
+    await act(async () => detailRequest.resolve([{
+      ymd: '2026-08-05',
+      name: 'Synthetic Hover Person',
+      scheduleLabel: 'Synthetic schedule',
+      durationLabel: '4 hours',
+    }]));
+
+    const loadedTooltip = await screen.findByRole('tooltip');
+    expect(within(loadedTooltip).getByText('Synthetic Hover Person')).toBeInTheDocument();
+    expect(within(loadedTooltip).getByText('Synthetic schedule')).toBeInTheDocument();
+    expect(within(loadedTooltip).getByText('4 hours')).toBeInTheDocument();
+
+    await userEvent.unhover(dayButton);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(container.querySelector('.insa-detail-panel')).not.toBeInTheDocument();
+
+    await userEvent.click(dayButton);
+
+    expect(await screen.findByText('Synthetic Hover Person', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
     expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(1);
   });
 
@@ -150,11 +188,11 @@ describe('InsaPage', () => {
 
     render(<InsaPage />);
     await userEvent.click(await screen.findByRole('button', {name: '2026년 8월 5일 상세'}));
-    expect(screen.getByRole('status')).toHaveTextContent('팀 상세 조회 중');
+    expect(screen.getByText(/팀 상세 조회 중/)).toHaveAttribute('role', 'status');
 
     await act(async () => detailRequest.resolve([]));
 
-    expect(await screen.findByText('등록된 팀 일정이 없습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('등록된 팀 일정이 없습니다.', {selector: '.insa-detail-panel p'})).toBeInTheDocument();
   });
 
   test('redacts the cookie from team-detail errors', async () => {
@@ -181,7 +219,7 @@ describe('InsaPage', () => {
     expect(await screen.findByText('팀 상세 조회 실패: temporary failure')).toBeInTheDocument();
 
     await userEvent.click(dayButton);
-    expect(screen.getByRole('status')).toHaveTextContent('팀 상세 조회 중');
+    expect(screen.getByText(/팀 상세 조회 중/)).toHaveAttribute('role', 'status');
 
     await act(async () => retryRequest.resolve([{
       ymd: '2026-08-05',
@@ -190,7 +228,7 @@ describe('InsaPage', () => {
       durationLabel: '2시간',
     }]));
 
-    expect(await screen.findByText('재시도 사용자')).toBeInTheDocument();
+    expect(await screen.findByText('재시도 사용자', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
     expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(2);
   });
 
@@ -224,7 +262,7 @@ describe('InsaPage', () => {
     }]));
     await userEvent.click(newSessionDay);
 
-    expect(await screen.findByText('새 세션 사용자')).toBeInTheDocument();
+    expect(await screen.findByText('새 세션 사용자', {selector: '.insa-detail-panel strong'})).toBeInTheDocument();
     expect(screen.queryByText('이전 세션 사용자')).not.toBeInTheDocument();
     expect(mockedFetchInsaDayDetails).toHaveBeenCalledTimes(2);
     expect(mockedFetchInsaDayDetails).toHaveBeenLastCalledWith(expect.objectContaining({

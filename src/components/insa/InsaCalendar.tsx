@@ -1,4 +1,5 @@
 import {InsaCalendarMap} from '../../lib/transformInsa';
+import type {DetailState} from './InsaPage';
 import InsaCalendarCell from './InsaCalendarCell';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -9,13 +10,15 @@ export interface InsaCalendarProps {
   today: Date;
   days: InsaCalendarMap;
   onSelectDay: (ymd: string) => void;
+  onRequestDayDetails: (ymd: string) => void;
+  detailStates: Record<string, DetailState>;
 }
 
 function isTodayDate(today: Date, year: number, month: number, day: number): boolean {
   return today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
 }
 
-function InsaCalendar({year, month, today, days, onSelectDay}: InsaCalendarProps) {
+function InsaCalendar({year, month, today, days, onSelectDay, onRequestDayDetails, detailStates}: InsaCalendarProps) {
   const leadingDays = new Date(year, month, 1).getDay();
   const dayCount = new Date(year, month + 1, 0).getDate();
   const totalCells = Math.ceil((leadingDays + dayCount) / 7) * 7;
@@ -50,6 +53,8 @@ function InsaCalendar({year, month, today, days, onSelectDay}: InsaCalendarProps
                   isToday={isTodayDate(today, year, month, day)}
                   dayData={days[ymd]}
                   onSelectDay={onSelectDay}
+                  onRequestDayDetails={onRequestDayDetails}
+                  detailState={detailStates[ymd]}
                 />
               );
             })}

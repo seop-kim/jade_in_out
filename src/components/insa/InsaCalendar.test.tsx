@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {InsaCalendarMap} from '../../lib/transformInsa';
 import InsaCalendar from './InsaCalendar';
@@ -61,6 +61,8 @@ describe('InsaCalendar', () => {
         today={new Date(2026, 7, 12)}
         days={days}
         onSelectDay={jest.fn()}
+        onRequestDayDetails={jest.fn()}
+        detailStates={{}}
       />
     );
 
@@ -82,6 +84,8 @@ describe('InsaCalendar', () => {
         today={new Date(2026, 7, 12)}
         days={days}
         onSelectDay={jest.fn()}
+        onRequestDayDetails={jest.fn()}
+        detailStates={{}}
       />
     );
 
@@ -97,6 +101,8 @@ describe('InsaCalendar', () => {
         today={new Date(2026, 7, 12)}
         days={days}
         onSelectDay={onSelectDay}
+        onRequestDayDetails={jest.fn()}
+        detailStates={{}}
       />
     );
 
@@ -104,5 +110,30 @@ describe('InsaCalendar', () => {
 
     expect(onSelectDay).toHaveBeenCalledWith('2026-08-05');
     expect(screen.queryByRole('button', {name: '2026년 8월 6일 상세'})).not.toBeInTheDocument();
+  });
+
+  test('requests and shows team details in a tooltip when the date button receives focus', () => {
+    const onRequestDayDetails = jest.fn();
+    render(
+      <InsaCalendar
+        year={2026}
+        month={7}
+        today={new Date(2026, 7, 12)}
+        days={days}
+        onSelectDay={jest.fn()}
+        onRequestDayDetails={onRequestDayDetails}
+        detailStates={{'2026-08-05': {status: 'loading'}}}
+      />
+    );
+
+    const dayButton = screen.getByRole('button', {name: /2026.*8.*5/});
+    fireEvent.focus(dayButton);
+
+    expect(onRequestDayDetails).toHaveBeenCalledWith('2026-08-05');
+    expect(screen.getByRole('tooltip')).toContainElement(screen.getByRole('status'));
+
+    fireEvent.blur(dayButton);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });

@@ -276,6 +276,98 @@
   color: #92400e;
 }
 
+.insa-team-tooltip {
+  position: fixed;
+  z-index: 50;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #111827;
+  color: #f9fafb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.insa-team-tooltip.above {
+  transform: translateY(-100%);
+}
+
+.insa-team-tooltip-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.insa-team-tooltip-title {
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.insa-team-tooltip-date {
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.insa-team-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insa-team-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.insa-team-tooltip-name {
+  color: #f9fafb;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.insa-team-tooltip-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #d1d5db;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.insa-team-tooltip-duration {
+  color: #93c5fd;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.insa-team-tooltip-status,
+.insa-team-tooltip-error {
+  margin: 0;
+  color: #d1d5db;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.insa-team-tooltip-error {
+  color: #fecaca;
+}
+
 .insa-detail-panel {
   scroll-margin-top: 16px;
 }
