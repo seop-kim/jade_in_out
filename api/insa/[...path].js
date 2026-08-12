@@ -7,6 +7,16 @@ export const config = {
 const TARGET_HOST = 'insa.kwe.co.kr';
 const TARGET_ORIGIN = `https://${TARGET_HOST}`;
 const ALLOWED_METHODS = new Set(['GET', 'POST']);
+const SAFE_RESPONSE_HEADERS = new Set([
+  'content-type',
+  'content-encoding',
+  'content-length',
+  'cache-control',
+  'expires',
+  'etag',
+  'last-modified',
+  'vary',
+]);
 
 const HOP_BY_HOP = new Set([
   'transfer-encoding',
@@ -52,7 +62,7 @@ function cookieHeaderValue(value) {
 
 function copyResponseHeaders(upstreamHeaders, res) {
   for (const [name, value] of Object.entries(upstreamHeaders)) {
-    if (HOP_BY_HOP.has(name.toLowerCase()) || value === undefined) continue;
+    if (!SAFE_RESPONSE_HEADERS.has(name.toLowerCase()) || value === undefined) continue;
     res.setHeader(name, value);
   }
 }
@@ -99,8 +109,8 @@ export default async function handler(req, res) {
   let body = Buffer.alloc(0);
   try {
     if (method === 'POST') body = await readRawBody(req);
-  } catch (error) {
-    console.error('[insa-proxy] request body error:', error.message);
+  } catch {
+    console.error('[insa-proxy] request body error');
     sendProxyError(res);
     return;
   }
@@ -132,16 +142,16 @@ export default async function handler(req, res) {
           console.log(`[insa-proxy] ${method} ${upstreamPath} status=${res.statusCode} bodyLength=${responseBody.length}`);
           resolve();
         });
-        upstreamRes.on('error', (error) => {
-          console.error('[insa-proxy] response error:', error.message);
+        upstreamRes.on('error', () => {
+          console.error('[insa-proxy] response error');
           sendProxyError(res);
           resolve();
         });
       }
     );
 
-    upstreamReq.on('error', (error) => {
-      console.error('[insa-proxy] upstream error:', error.message);
+    upstreamReq.on('error', () => {
+      console.error('[insa-proxy] upstream error');
       sendProxyError(res);
       resolve();
     });
