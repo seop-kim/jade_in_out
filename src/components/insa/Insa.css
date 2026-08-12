@@ -82,6 +82,7 @@
 }
 
 .insa-calendar-shell {
+  position: relative;
   overflow: hidden;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -95,6 +96,46 @@
   overscroll-behavior-inline: contain;
 }
 
+.insa-calendar-loading-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.68);
+  cursor: wait;
+}
+
+.insa-calendar-loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid rgba(209, 213, 219, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
+}
+
+.insa-calendar-loading-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: insa-calendar-spin 0.8s linear infinite;
+}
+
+@keyframes insa-calendar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .insa-calendar {
   min-width: 672px;
 }
@@ -102,7 +143,11 @@
 .insa-calendar-weekdays,
 .insa-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.insa-calendar-grid {
+  grid-auto-rows: minmax(110px, auto);
 }
 
 .insa-calendar-weekdays {
@@ -111,10 +156,11 @@
 }
 
 .insa-weekday {
-  padding: 11px 4px;
+  padding: 12px 0;
   color: #4b5563;
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   text-align: center;
 }
 
@@ -127,11 +173,14 @@
 }
 
 .insa-calendar-cell {
-  min-height: 132px;
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
   border-right: 1px solid #f3f4f6;
   border-bottom: 1px solid #f3f4f6;
   background: #ffffff;
+  transition: background-color 0.15s ease;
 }
 
 .insa-calendar-cell:nth-child(7n) {
@@ -142,38 +191,72 @@
   background: #fafafa;
 }
 
+.insa-calendar-cell.is-out-month {
+  background: #fafafa;
+}
+
 .insa-calendar-cell.is-today {
-  background: #eff6ff;
+  background: #eef4ff;
+}
+
+.insa-calendar-cell:hover {
+  background: #fafafa;
 }
 
 .insa-cell-header {
-  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .insa-date,
 .insa-date-button {
   display: inline-flex;
-  width: 27px;
-  height: 27px;
+  width: 24px;
+  height: 24px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 0;
   color: #111827;
   font-size: 13px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  flex: 0 0 24px;
+  min-width: 24px;
 }
 
 .insa-date-button {
   appearance: none;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
 }
 
-.insa-date-button:hover {
-  border-color: #60a5fa;
-  background: #dbeafe;
+.insa-calendar-cell.sun .insa-date,
+.insa-calendar-cell.sun .insa-date-button {
+  color: #dc2626;
+}
+
+.insa-calendar-cell.sat .insa-date,
+.insa-calendar-cell.sat .insa-date-button {
+  color: #2563eb;
+}
+
+.insa-calendar-cell.is-out-month .insa-date,
+.insa-calendar-cell.is-out-month .insa-date-button {
+  color: #c7cbd1;
+}
+
+.insa-calendar-cell.is-today .insa-date,
+.insa-calendar-cell.is-today .insa-date-button {
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .insa-date-button:focus-visible {
@@ -181,32 +264,28 @@
   outline-offset: 2px;
 }
 
-.insa-calendar-cell.is-today .insa-date,
-.insa-calendar-cell.is-today .insa-date-button {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #ffffff;
-}
-
 .insa-cell-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 4px;
   font-size: 12px;
-  line-height: 1.35;
 }
 
 .insa-own-leave,
 .insa-overtime {
+  display: inline-block;
   max-width: 100%;
-  padding: 2px 6px;
-  overflow-wrap: anywhere;
+  padding: 1px 6px;
   border-radius: 4px;
-  background: #cffafe;
-  color: #155e75;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.insa-own-leave {
+  background: #cffafe;
+  color: #155e75;
 }
 
 .insa-own-leave.is-fallback {
@@ -214,15 +293,35 @@
   color: #4b5563;
 }
 
-.insa-attendance {
-  color: #1f2937;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+.insa-attendance-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.insa-planned-time {
-  color: #6b7280;
+.insa-attendance-label {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
   font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.insa-attendance-label.in {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.insa-attendance-label.out {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.insa-attendance-time {
+  color: #1f2937;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -231,29 +330,30 @@
   color: #3730a3;
 }
 
-.insa-team-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 2px;
-}
-
 .insa-team-badge {
-  padding: 2px 6px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #cffafe;
+  color: #155e75;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
   white-space: nowrap;
 }
 
-.insa-team-badge.vacation {
+.insa-holiday-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
   background: #fce7f3;
   color: #9d174d;
-}
-
-.insa-team-badge.time {
-  background: #fef3c7;
-  color: #92400e;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .insa-team-tooltip {
@@ -297,13 +397,54 @@
   white-space: nowrap;
 }
 
+.insa-team-tooltip-scheduled {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.2);
+}
+
+.insa-team-tooltip-scheduled-value {
+  color: #f9fafb;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.insa-team-tooltip-leave-section {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.insa-team-tooltip-list-title {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .insa-team-tooltip-list {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.insa-team-tooltip-list-right {
+  justify-self: end;
+  width: 100%;
+  text-align: right;
 }
 
 .insa-team-tooltip-row {
@@ -313,6 +454,11 @@
   gap: 10px;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.insa-team-tooltip-list-right .insa-team-tooltip-row {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .insa-team-tooltip-name {

@@ -81,7 +81,7 @@ describe('InsaPage', () => {
       year: 2026,
       month: 7,
     })));
-    expect(await screen.findByText('팀 휴가 1')).toBeInTheDocument();
+    expect(await screen.findByText(/연차/)).toBeInTheDocument();
     expect(screen.queryByDisplayValue(/private-session/)).not.toBeInTheDocument();
   });
 
@@ -90,23 +90,48 @@ describe('InsaPage', () => {
 
     render(<InsaPage />);
 
-    expect(await screen.findByText('팀 휴가 1')).toBeInTheDocument();
+    expect(await screen.findByText(/연차/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: '2026년 휴가 현황'})).not.toBeInTheDocument();
   });
 
   test('shows partial source errors without hiding successful balance and calendar data', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const onError = jest.fn();
     mockedLoadInsaMonth.mockResolvedValue({
       ...monthResult,
       worktime: null,
       errors: [{source: 'worktime', message: 'HTTP 500 private-session'}],
     });
 
+    render(<InsaPage onError={onError} />);
+
+    await screen.findByText(/연차/);
+    expect(onError).toHaveBeenCalledWith('근태 조회 실패');
+    expect(onError).not.toHaveBeenCalledWith(expect.stringContaining('HTTP 500'));
+    expect(screen.queryByText('근태 조회 실패: HTTP 500 [redacted]')).not.toBeInTheDocument();
+    expect(screen.getByText(/연차/)).toBeInTheDocument();
+    expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
+  });
+
+  test('visually locks the calendar while monthly data is loading', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const monthRequest = deferred<InsaMonthLoadResult>();
+    mockedLoadInsaMonth.mockReturnValue(monthRequest.promise);
+
     render(<InsaPage />);
 
-    expect(await screen.findByText('근태 조회 실패: HTTP 500 [redacted]')).toBeInTheDocument();
-    expect(screen.getByText('팀 휴가 1')).toBeInTheDocument();
-    expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
+    const calendar = document.querySelector<HTMLElement>('.insa-calendar-shell');
+    if (!calendar) throw new Error('INSA calendar is missing');
+    await waitFor(() => expect(calendar).toHaveClass('is-loading'));
+    expect(calendar).toHaveAttribute('aria-busy', 'true');
+    expect(within(calendar).getByRole('status')).toHaveTextContent('데이터를 불러오는 중입니다.');
+    expect(screen.queryByText('월간 정보를 조회 중입니다.')).not.toBeInTheDocument();
+
+    await act(async () => monthRequest.resolve(monthResult));
+
+    await waitFor(() => expect(calendar).not.toHaveClass('is-loading'));
+    expect(calendar).toHaveAttribute('aria-busy', 'false');
+    expect(within(calendar).queryByRole('status')).not.toBeInTheDocument();
   });
 
   test('aborts a stale monthly request when the viewed month changes', async () => {
@@ -258,9 +283,8 @@ describe('InsaPage', () => {
     }]));
 
     const loadedTooltip = await screen.findByRole('tooltip');
-    expect(within(loadedTooltip).getByText('Synthetic Hover Person')).toBeInTheDocument();
-    expect(within(loadedTooltip).getByText('Synthetic schedule')).toBeInTheDocument();
-    expect(within(loadedTooltip).getByText('4 hours')).toBeInTheDocument();
+    expect(within(loadedTooltip).getByText('Synthetic Hover Person 4 hours')).toBeInTheDocument();
+    expect(within(loadedTooltip).queryByText('Synthetic schedule')).not.toBeInTheDocument();
 
     await userEvent.unhover(dayButton);
 
@@ -289,12 +313,15 @@ describe('InsaPage', () => {
 
   test('redacts the cookie from team-detail errors', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const onError = jest.fn();
     mockedFetchInsaDayDetails.mockRejectedValue(new Error('failed private-session'));
 
-    render(<InsaPage />);
+    render(<InsaPage onError={onError} />);
     await userEvent.click(await screen.findByRole('button', {name: '2026년 8월 5일 상세'}));
 
     expect(await screen.findByText('팀 상세 조회 실패: failed [redacted]')).toBeInTheDocument();
+    expect(onError).toHaveBeenCalledWith('팀 상세 조회 실패');
+    expect(onError).not.toHaveBeenCalledWith(expect.stringContaining('failed'));
     expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
   });
 
@@ -336,9 +363,9 @@ describe('InsaPage', () => {
         durationLabel: '2시간',
       }]);
 
-    render(<InsaPage />);
+    const {rerender} = render(<InsaPage resetRequest={0} />);
     await userEvent.click(await screen.findByRole('button', {name: '2026년 8월 5일 상세'}));
-    await userEvent.click(screen.getByRole('button', {name: '연결 재설정'}));
+    rerender(<InsaPage resetRequest={1} />);
 
     await userEvent.type(screen.getByLabelText('INSA Cookie'), 'new-session');
     await act(async () => {

@@ -58,7 +58,13 @@ function TeamDetailPanel({ymd, state}: {ymd: string; state?: DetailState}) {
   );
 }
 
-function InsaPage() {
+export interface InsaPageProps {
+  resetRequest?: number;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (message: string) => void;
+}
+
+function InsaPage({resetRequest = 0, onConnectionChange, onError}: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -66,7 +72,6 @@ function InsaPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<InsaMonthLoadResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pageError, setPageError] = useState<string | null>(null);
   const [selectedYmd, setSelectedYmd] = useState<string | null>(null);
   const [detailStates, setDetailStates] = useState<Record<string, DetailState>>({});
   const detailStatesRef = useRef<Record<string, DetailState>>({});
@@ -86,12 +91,15 @@ function InsaPage() {
   }, []);
 
   useEffect(() => {
+    onConnectionChange?.(Boolean(cookie));
+  }, [cookie, onConnectionChange]);
+
+  useEffect(() => {
     if (!cookie) return undefined;
     const controller = new AbortController();
     let cancelled = false;
 
     setLoading(true);
-    setPageError(null);
     setResult(null);
     setSelectedYmd(null);
 
@@ -103,12 +111,17 @@ function InsaPage() {
       signal: controller.signal,
     })
       .then((nextResult) => {
-        if (!cancelled) setResult(nextResult);
+        if (!cancelled) {
+          setResult(nextResult);
+          nextResult.errors.forEach((error) => {
+            onError?.(`${SOURCE_LABELS[error.source]} 조회 실패`);
+          });
+        }
       })
       .catch((error: {name?: string} | unknown) => {
         if (cancelled) return;
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        setPageError(safeMessage(error, cookie));
+        onError?.('월간 조회 실패');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -118,7 +131,7 @@ function InsaPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [cookie, reloadKey, today, viewMonth, viewYear]);
+  }, [cookie, onError, reloadKey, today, viewMonth, viewYear]);
 
   const days = useMemo(() => buildInsaCalendarMap(
     viewYear,
@@ -143,13 +156,16 @@ function InsaPage() {
     setCookie(nextCookie);
   };
 
-  const handleReset = (): void => {
+  const handleReset = useCallback((): void => {
     invalidateDayDetails();
     clearInsaCookie();
     setCookie(null);
     setResult(null);
-    setPageError(null);
-  };
+  }, [invalidateDayDetails]);
+
+  useEffect(() => {
+    if (resetRequest > 0) handleReset();
+  }, [handleReset, resetRequest]);
 
   const handleToday = (): void => {
     const nextToday = new Date();
@@ -193,13 +209,14 @@ function InsaPage() {
           detailStatesRef.current = next;
           return next;
         });
+        onError?.('팀 상세 조회 실패');
       }
     } finally {
       if (detailControllers.current.get(ymd) === controller) {
         detailControllers.current.delete(ymd);
       }
     }
-  }, [cookie]);
+  }, [cookie, onError]);
 
   const handleDaySelect = useCallback((ymd: string): void => {
     setSelectedYmd(ymd);
@@ -228,17 +245,8 @@ function InsaPage() {
           <button type="button" className="btn btn-primary" onClick={handleRefresh} disabled={loading}>
             {loading ? '조회 중…' : '새로고침'}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={handleReset}>연결 재설정</button>
         </div>
       </div>
-
-      {loading && <p className="insa-page-status" role="status">월간 정보를 조회 중입니다.</p>}
-      {pageError && <div className="insa-error-box" role="alert">월간 조회 실패: {pageError}</div>}
-      {result?.errors.map((error) => (
-        <div className="insa-error-box" role="alert" key={error.source}>
-          {SOURCE_LABELS[error.source]} 조회 실패: {safeMessage(error.message, cookie)}
-        </div>
-      ))}
 
       <InsaCalendar
         year={viewYear}
@@ -248,6 +256,7 @@ function InsaPage() {
         onSelectDay={handleDaySelect}
         onRequestDayDetails={requestDayDetails}
         detailStates={detailStates}
+        loading={loading}
       />
 
       {selectedYmd && <TeamDetailPanel ymd={selectedYmd} state={detailStates[selectedYmd]} />}

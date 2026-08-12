@@ -21,23 +21,23 @@ body {
 
 .system-tabs {
   display: flex;
-  gap: 4px;
+  flex-shrink: 0;
+  gap: 2px;
   width: fit-content;
-  margin-top: 20px;
-  padding: 4px;
+  padding: 2px;
   background: #e5e7eb;
-  border-radius: 10px;
+  border-radius: 7px;
 }
 
 .system-tab {
   appearance: none;
   border: 0;
-  border-radius: 7px;
-  padding: 8px 12px;
+  border-radius: 5px;
+  padding: 4px 8px;
   background: transparent;
   color: #4b5563;
   font: inherit;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -64,6 +64,17 @@ body {
   gap: 16px;
 }
 
+.app-header-main {
+  min-width: 0;
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .app-title {
   margin: 0 0 4px;
   font-size: 22px;
@@ -81,6 +92,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.jade-calendar-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
 }
 
 .toolbar {
