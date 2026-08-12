@@ -58,7 +58,7 @@ describe('INSA API', () => {
     expect(getWorktimeRange(2026, 7, new Date(2026, 7, 1))).toBeNull();
   });
 
-  test('gets the selected home month with one-based INSA query values and only the INSA cookie header', async () => {
+  test('gets the selected home month with one-based INSA query values and omits ambient credentials', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(encodedHtmlResponse(homeHtml));
 
     await fetchInsaHomeMonth({cookie: 'test-session', year: 2026, month: 7});
@@ -67,6 +67,7 @@ describe('INSA API', () => {
       method: 'GET',
       headers: {'X-Insa-Cookie': 'test-session'},
       signal: undefined,
+      credentials: 'omit',
     });
   });
 
@@ -80,6 +81,7 @@ describe('INSA API', () => {
       headers: {'X-Insa-Cookie': 'test-session'},
       body: 'sType=0&sdt=2026-08-01&edt=2026-08-11',
       signal: undefined,
+      credentials: 'omit',
     });
   });
 

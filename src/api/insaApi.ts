@@ -75,6 +75,7 @@ async function requestHtml(
 ): Promise<string> {
   const response = await fetch(`/api/insa${path}`, {
     ...init,
+    credentials: 'omit',
     signal,
     headers: {...init.headers, 'X-Insa-Cookie': cookie},
   });
