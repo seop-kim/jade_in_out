@@ -19,11 +19,60 @@ body {
   margin-bottom: 24px;
 }
 
+.system-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  width: fit-content;
+  padding: 2px;
+  background: #e5e7eb;
+  border-radius: 7px;
+}
+
+.system-tab {
+  appearance: none;
+  border: 0;
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: transparent;
+  color: #4b5563;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.system-tab:hover {
+  color: #111827;
+}
+
+.system-tab:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.system-tab.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+
 .app-header-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+}
+
+.app-header-main {
+  min-width: 0;
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .app-title {
@@ -43,6 +92,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.jade-calendar-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
 }
 
 .toolbar {

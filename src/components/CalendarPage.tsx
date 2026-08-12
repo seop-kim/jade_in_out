@@ -11,6 +11,7 @@ import {dateKey, ymdToKey} from '../lib/format';
 
 interface CalendarPageProps {
   credentials: Credentials;
+  onError?: (message: string) => void;
 }
 
 function buildLoadingMap(year: number, month: number): AttendanceMap {
@@ -22,14 +23,13 @@ function buildLoadingMap(year: number, month: number): AttendanceMap {
   return out;
 }
 
-function CalendarPage({credentials}: CalendarPageProps) {
+function CalendarPage({credentials, onError}: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(today.getMonth());
 
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
 
   const goPrev = (): void => {
@@ -58,7 +58,6 @@ function CalendarPage({credentials}: CalendarPageProps) {
     let cancelled = false;
 
     setLoading(true);
-    setError(null);
     setAttendance(buildLoadingMap(viewYear, viewMonth));
 
     fetchAttendanceForMonth({
@@ -85,7 +84,7 @@ function CalendarPage({credentials}: CalendarPageProps) {
       .catch((err: {name?: string; message?: string}) => {
         if (cancelled) return;
         if (err.name === 'CanceledError' || err.name === 'AbortError') return;
-        setError(err.message ?? '조회 실패');
+        onError?.('출퇴근 기록 조회 실패');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -95,10 +94,10 @@ function CalendarPage({credentials}: CalendarPageProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [viewYear, viewMonth, credentials, reloadKey, today]);
+  }, [viewYear, viewMonth, credentials, onError, reloadKey, today]);
 
   return (
-    <>
+    <div className="jade-calendar-page">
       <div className="toolbar">
         <div className="toolbar-left">
           <button className="btn" onClick={goPrev} aria-label="이전 달" disabled={loading}>‹</button>
@@ -119,15 +118,13 @@ function CalendarPage({credentials}: CalendarPageProps) {
         </div>
       </div>
 
-      {error && <div className="error-box">조회 실패: {error}</div>}
-
       <Calendar
         year={viewYear}
         month={viewMonth}
         today={today}
         attendance={attendance}
       />
-    </>
+    </div>
   );
 }
 
