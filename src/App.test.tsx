@@ -59,9 +59,11 @@ describe('App system tabs', () => {
     expect(insaTab).toHaveAttribute('tabindex', '-1');
     expect(jadePanel).toHaveAttribute('id', 'jade-system-panel');
     expect(jadePanel).toHaveAttribute('role', 'tabpanel');
+    expect(jadePanel).toHaveAttribute('aria-labelledby', jadeTab.id);
     expect(jadePanel).not.toHaveAttribute('hidden');
     expect(insaPanel).toHaveAttribute('id', 'insa-system-panel');
     expect(insaPanel).toHaveAttribute('role', 'tabpanel');
+    expect(insaPanel).toHaveAttribute('aria-labelledby', insaTab.id);
     expect(insaPanel).toHaveAttribute('hidden');
 
     await userEvent.click(insaTab);
@@ -94,6 +96,22 @@ describe('App system tabs', () => {
     expect(insaTab).toHaveAttribute('aria-selected', 'true');
 
     await userEvent.keyboard('{Home}');
+    expect(jadeTab).toHaveFocus();
+    expect(jadeTab).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('wraps ArrowLeft and ArrowRight selection and focus at the tab boundaries', async () => {
+    render(<App />);
+
+    const jadeTab = screen.getByRole('tab', {name: '기존 시스템'});
+    const insaTab = screen.getByRole('tab', {name: '신규 인사시스템'});
+    jadeTab.focus();
+
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(insaTab).toHaveFocus();
+    expect(insaTab).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('{ArrowRight}');
     expect(jadeTab).toHaveFocus();
     expect(jadeTab).toHaveAttribute('aria-selected', 'true');
   });

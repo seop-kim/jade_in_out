@@ -21,11 +21,14 @@ function App() {
   };
 
   const handleSystemTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    const nextTab = event.key === 'ArrowLeft' || event.key === 'Home'
+    const currentTab: SystemTab = event.currentTarget.id === 'jade-system-tab' ? 'jade' : 'insa';
+    const nextTab = event.key === 'Home'
       ? 'jade'
-      : event.key === 'ArrowRight' || event.key === 'End'
+      : event.key === 'End'
         ? 'insa'
-        : null;
+        : event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+          ? currentTab === 'jade' ? 'insa' : 'jade'
+          : null;
     if (!nextTab) return;
 
     event.preventDefault();
