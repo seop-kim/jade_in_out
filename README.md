@@ -262,7 +262,7 @@ Cookie는 로그인 세션 값이므로 다른 사람에게 전달하거나 소�
 | --- | --- | --- |
 | 홈 일정 | `GET /main.asp` | 날짜별 팀 휴가·시간 일정과 선택일 상세 |
 | 개인 출퇴근 | `POST /worktime/01_list.asp` | 지정 기간의 개인 출퇴근 기록 조회 |
-| 내 휴가 | `GET /leave/01_list.asp` | 개인 휴가 사용내역과 발생·사용·잔여시간 조회 |
+| 내 휴가 | `GET /leave/01_list.asp` | 개인 휴가 사용내역 조회 |
 
 브라우저는 위 경로 앞에 `/api/insa`를 붙여 호출합니다. 개발 환경에서는 `src/setupProxy.js`, Vercel 배포에서는 `api/insa/[...path].js`가 `X-Insa-Cookie`를 upstream `Cookie`로 바꾸고 INSA에 전달합니다. 프록시는 Cookie 원문이나 요청 헤더 전체를 로그에 출력하지 않습니다.
 

@@ -81,8 +81,17 @@ describe('InsaPage', () => {
       year: 2026,
       month: 7,
     })));
-    expect(await screen.findByText('잔여 104시간')).toBeInTheDocument();
+    expect(await screen.findByText('팀 휴가 1')).toBeInTheDocument();
     expect(screen.queryByDisplayValue(/private-session/)).not.toBeInTheDocument();
+  });
+
+  test('does not show the annual INSA leave balance card', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+
+    render(<InsaPage />);
+
+    expect(await screen.findByText('팀 휴가 1')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: '2026년 휴가 현황'})).not.toBeInTheDocument();
   });
 
   test('shows partial source errors without hiding successful balance and calendar data', async () => {
@@ -96,8 +105,6 @@ describe('InsaPage', () => {
     render(<InsaPage />);
 
     expect(await screen.findByText('근태 조회 실패: HTTP 500 [redacted]')).toBeInTheDocument();
-    expect(screen.getByText('잔여 104시간')).toBeInTheDocument();
-    expect(screen.queryByText('잔여 40시간')).not.toBeInTheDocument();
     expect(screen.getByText('팀 휴가 1')).toBeInTheDocument();
     expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
   });

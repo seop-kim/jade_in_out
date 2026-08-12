@@ -128,8 +128,6 @@ function InsaPage() {
     result?.leave?.records ?? []
   ), [result, viewMonth, viewYear]);
 
-  const balance = result?.leave?.balances.find((item) => item.year === viewYear);
-
   const selectMonth = (year: number, month: number): void => {
     setViewYear(year);
     setViewMonth(month);
@@ -241,21 +239,6 @@ function InsaPage() {
           {SOURCE_LABELS[error.source]} 조회 실패: {safeMessage(error.message, cookie)}
         </div>
       ))}
-
-      {result?.leave && (
-        <section className="insa-card insa-balance" aria-labelledby="insa-balance-title">
-          <h2 id="insa-balance-title" className="insa-section-title">{viewYear}년 휴가 현황</h2>
-          {balance ? (
-            <div className="insa-balance-values">
-              <span>발생 {balance.accruedHours}시간</span>
-              <span>사용 {balance.usedHours}시간</span>
-              <strong>잔여 {balance.remainingHours}시간</strong>
-            </div>
-          ) : (
-            <p className="insa-detail-empty">해당 연도의 휴가 현황이 없습니다.</p>
-          )}
-        </section>
-      )}
 
       <InsaCalendar
         year={viewYear}
