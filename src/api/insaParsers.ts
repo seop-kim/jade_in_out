@@ -103,6 +103,7 @@ export function parseInsaHomeHtml(
 ): InsaHomeMonthData {
   const doc = parseDocument(html);
   const dateCells = Array.from(doc.querySelectorAll<HTMLTableCellElement>('td[onclick*="Sel_Day="]'));
+  if (dateCells.length === 0) throw new Error(HOME_FORMAT_ERROR);
   const days: Record<string, InsaHomeDaySummary> = {};
 
   for (const cell of dateCells) {
@@ -124,7 +125,6 @@ export function parseInsaHomeHtml(
     };
   }
 
-  if (Object.keys(days).length === 0) throw new Error(HOME_FORMAT_ERROR);
   return {year: expectedYear, month: expectedMonth, days};
 }
 

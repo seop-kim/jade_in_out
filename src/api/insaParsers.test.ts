@@ -50,6 +50,19 @@ describe('INSA HTML parsers', () => {
     });
   });
 
+  test('returns no days when a structural calendar has only another month', () => {
+    const html = `
+      <table><tbody><tr>
+        <td onclick="location.replace('main.asp?Sel_Year=2026&Sel_Month=7&Sel_Day=31')"></td>
+      </tr></tbody></table>`;
+
+    expect(parseInsaHomeHtml(html, 2026, 8)).toEqual({
+      year: 2026,
+      month: 8,
+      days: {},
+    });
+  });
+
   test('parses selected-day team details from direct cells', () => {
     const html = `
       <table class="tbltop"><tbody>
