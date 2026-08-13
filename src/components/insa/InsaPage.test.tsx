@@ -66,9 +66,17 @@ describe('InsaPage', () => {
 
     expect(screen.getByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: '인사시스템 열기'})).toBeInTheDocument();
-    const bookmarkletLink = screen.getByRole('link', {name: '인사 연결 즐겨찾기'});
+    const bookmarkletLink = screen.getByRole('link', {name: '인사 연결'});
     expect(bookmarkletLink).toHaveAttribute('href', expect.stringMatching(/^javascript:/));
     expect(bookmarkletLink).not.toHaveAttribute('href', expect.stringContaining('React has blocked'));
+    expect(screen.getByText('인사 연결을 북마크에 끌어다 놓아 저장합니다.')).toBeInTheDocument();
+    expect(screen.getByText('인사시스템 열기를 클릭하여 엽니다.')).toBeInTheDocument();
+    expect(screen.getByText('달력에 휴가·출퇴근 정보가 표시되면 연결이 완료됩니다.')).toBeInTheDocument();
+    expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
+    expect(screen.queryByText('위 순서대로 인사 연결을 설정해주세요.')).not.toBeInTheDocument();
+    expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('insa-auto-connect-card');
+    expect(screen.getByText('자동 연결을 사용할 수 없는 경우에는 아래 순서대로 인사시스템의 Cookie를 복사해 입력하세요.')).toBeInTheDocument();
+    expect(screen.getByText('Headers에서 Cookie 값을 복사합니다.')).toBeInTheDocument();
     expect(screen.getByLabelText('INSA Cookie')).toHaveAttribute('type', 'password');
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
   });
@@ -76,7 +84,7 @@ describe('InsaPage', () => {
   test('explains the bookmarklet drag action when its setup link is clicked directly', async () => {
     render(<InsaPage />);
 
-    await userEvent.click(screen.getByRole('link', {name: '인사 연결 즐겨찾기'}));
+    await userEvent.click(screen.getByRole('link', {name: '인사 연결'}));
 
     expect(screen.getByRole('status')).toHaveTextContent('즐겨찾기 바');
   });

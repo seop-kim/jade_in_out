@@ -170,7 +170,7 @@ describe('App system tabs', () => {
       }));
     });
 
-    expect(screen.getByRole('status')).toHaveTextContent('연결 즐겨찾기가 실행되었습니다');
+    expect(screen.getByRole('status')).toHaveTextContent('Jade 연결이 실행되었습니다');
     openSpy.mockRestore();
   });
 

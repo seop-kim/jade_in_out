@@ -24,7 +24,8 @@
   margin: 0;
   color: #111827;
   font-size: 18px;
-  font-weight: 650;
+  line-height: 1.4;
+  font-weight: 600;
 }
 
 .insa-setup-description {
@@ -39,11 +40,40 @@
   background: #f8fbff;
 }
 
+.insa-auto-connect-card .insa-setup-title {
+  margin-bottom: 8px;
+}
+
+.insa-auto-connect-card .insa-setup-description {
+  margin: 0 0 16px;
+}
+
 .insa-auto-connect-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.insa-setup-steps {
+  margin: 0;
+  padding-left: 22px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.insa-setup-notes {
+  margin: 0;
+  padding-left: 20px;
+  color: #b45309;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.insa-manual-steps {
+  margin-bottom: 12px;
 }
 
 .insa-bookmarklet-link {

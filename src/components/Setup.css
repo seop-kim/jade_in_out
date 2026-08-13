@@ -27,7 +27,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.setup-auto-card > .setup-desc {
+  margin-bottom: 16px;
 }
 
 .setup-bookmarklet-link {
@@ -60,6 +65,7 @@
 .setup-title {
   margin: 0 0 8px;
   font-size: 18px;
+  line-height: 1.4;
   font-weight: 600;
   color: #111827;
 }
@@ -265,4 +271,11 @@
   text-align: right;
   font-size: 12px;
   color: #b45309;
+}
+
+.setup-connection-notes {
+  padding-left: 20px;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.6;
 }

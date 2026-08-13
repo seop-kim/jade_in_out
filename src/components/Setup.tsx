@@ -83,7 +83,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
       <section className="setup-card setup-auto-card">
         <h2 className="setup-title">Jade 자동 연결</h2>
         <p className="setup-desc">
-          Jade에 로그인한 뒤 즐겨찾기 버튼을 한 번 누르면 Cookie를 직접 입력하지 않고 연결할 수 있습니다.
+          아래 순서대로 진행하면 cURL을 직접 입력하지 않고 로그인된 Jade와 연결할 수 있습니다.
         </p>
         <div className="setup-auto-actions">
           <button type="button" className="btn btn-primary" onClick={onOpenAutomatic}>
@@ -100,22 +100,29 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             }}
             onDragStart={() => setBookmarkletClicked(false)}
           >
-            Jade 연결 즐겨찾기
+            Jade 연결
           </a>
         </div>
+        <ol className="setup-steps setup-connection-steps">
+          <li>Jade 연결을 북마크에 끌어다 놓아 저장합니다.</li>
+          <li>Jade 시스템 열기를 클릭하여 엽니다.</li>
+          <li>Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러줍니다.</li>
+          <li>출퇴근관리 탭으로 이동해줍니다.</li>
+          <li>조회버튼을 한번 클릭하면 연결이 됩니다.</li>
+        </ol>
         <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
           {bridgeStatus === 'ready'
-            ? '연결 즐겨찾기가 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
+            ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
             : bridgeStatus === 'waiting'
-              ? '새 탭에서 로그인한 뒤 Jade 연결 즐겨찾기를 눌러 주세요.'
+              ? '새 탭에서 로그인한 뒤 Jade 연결을 눌러 주세요.'
             : bookmarkletClicked
-              ? '이 링크를 즐겨찾기 바에 끌어다 놓은 뒤, Jade 시스템 탭에서 눌러 주세요.'
-              : '위 링크를 즐겨찾기 바에 끌어다 놓은 뒤 사용하세요.'}
+              ? '이 링크를 즐겨찾기 바에 저장한 뒤, Jade 시스템 탭에서 눌러 주세요.'
+              : '위 순서대로 Jade 연결을 설정해 주세요.'}
         </p>
+        <ul className="setup-hint setup-connection-notes">
+          <li>Jade 브라우저를 종료하지 말아주세요.</li>
+        </ul>
       </section>
-      <p className="setup-hint setup-bridge-note">
-        화면을 이미 연 뒤 즐겨찾기를 눌렀다면 출퇴근 기록에서 날짜 조회를 한 번 다시 실행해 주세요.
-      </p>
       <section className="setup-card setup-header-card">
         <h2 className="setup-title">Jade 인증 정보 입력</h2>
 
@@ -147,7 +154,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             </p>
             <ol className="setup-steps">
               <li>
-                <a href="https://ehr.jadehr.co.kr" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                 에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
               </li>
               <li>
@@ -168,7 +175,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             </p>
             <ol className="setup-steps">
               <li>
-                <a href="https://ehr.jadehr.co.kr" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                 에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
               </li>
               <li>

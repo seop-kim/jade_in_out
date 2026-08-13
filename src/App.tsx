@@ -116,9 +116,16 @@ function App() {
     const client = new JadeBridgeClient(
       jadeWindow,
       window.location.origin,
-      () => setJadeBridgeStatus('ready'),
+      () => {
+        console.info('[jade-bridge] app-ready');
+        setJadeBridgeStatus('ready');
+      },
       undefined,
       (body, response) => {
+        console.info('[jade-bridge] app-attendance-candidate', {
+          bodyLength: body.length,
+          responseLength: response.length,
+        });
         if (!isJadeAttendanceResponse(response)) return;
         const parsedBody = parseBody(body);
         if (!parsedBody['S_STD_YMD']) return;

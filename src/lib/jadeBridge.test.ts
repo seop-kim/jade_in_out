@@ -26,7 +26,13 @@ describe('Jade browser bridge', () => {
     expect(bookmarklet).toContain('XMLHttpRequest');
     expect(bookmarklet).toContain('commonAction.do');
     expect(bookmarklet).toContain(JADE_APP_WINDOW_NAME);
+    expect(bookmarklet).toContain('__jadeBridgeInstalled_v4__');
+    expect(bookmarklet).toContain('window.frames');
+    expect(bookmarklet).not.toContain('e.origin!==A||e.source!==P');
     expect(bookmarklet).not.toContain('document.cookie');
+    const script = bookmarklet.slice('javascript:'.length);
+    expect(() => new Function(script)).not.toThrow();
+    expect(script.indexOf('var hookFrame')).toBeLessThan(script.lastIndexOf('send({type:R,version:1})})()'));
   });
 
   test('recognizes the attendance XML shape and ignores unrelated Jade responses', () => {
