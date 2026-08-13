@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {toYmd} from '../lib/format';
+import {JadeBridgeTransport} from '../lib/jadeBridge';
 
 const ENDPOINT = '/api/jade/commonAction.do';
 
@@ -211,10 +212,11 @@ function parseAttendanceXml(xmlText: string): RawEtc {
 }
 
 export interface FetchDateOptions {
-  cookie: string;
+  cookie?: string;
   parsedBody: Record<string, string>;
   ymd: string;
   signal?: AbortSignal;
+  transport?: JadeBridgeTransport;
 }
 
 export async function fetchAttendanceForDate({
@@ -222,8 +224,14 @@ export async function fetchAttendanceForDate({
   parsedBody,
   ymd,
   signal,
+  transport,
 }: FetchDateOptions): Promise<RawEtc> {
   const body = buildFormBody(parsedBody, ymd);
+  if (transport) {
+    const responseText = await transport.post('/commonAction.do', body.toString(), signal);
+    return parseAttendanceXml(responseText);
+  }
+  if (!cookie) throw new Error('Jade authentication is not configured');
   const res = await client.post(ENDPOINT, body, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -290,7 +298,7 @@ export interface ProgressInfo {
 }
 
 export interface FetchMonthOptions {
-  cookie: string;
+  cookie?: string;
   parsedBody: Record<string, string>;
   year: number;
   month: number;
@@ -298,6 +306,7 @@ export interface FetchMonthOptions {
   signal?: AbortSignal;
   onProgress?: (info: ProgressInfo) => void;
   onDayResult?: (ymd: string, result: AttendanceResult) => void;
+  transport?: JadeBridgeTransport;
 }
 
 export async function fetchAttendanceForMonth({
@@ -309,6 +318,7 @@ export async function fetchAttendanceForMonth({
   signal,
   onProgress,
   onDayResult,
+  transport,
 }: FetchMonthOptions): Promise<Record<string, AttendanceResult>> {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const queue: number[] = [];
@@ -326,7 +336,7 @@ export async function fetchAttendanceForMonth({
       const ymd = toYmd(year, month, day);
       let dayResult: AttendanceResult;
       try {
-        const etc = await fetchAttendanceForDate({cookie, parsedBody, ymd, signal});
+        const etc = await fetchAttendanceForDate({cookie, parsedBody, ymd, signal, transport});
         dayResult = buildRecord(ymd, etc);
       } catch (err) {
         const error = err as {name?: string; message?: string; response?: {status?: number}};

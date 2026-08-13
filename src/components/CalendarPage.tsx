@@ -8,9 +8,11 @@ import {
 } from '../lib/transformAttendance';
 import {Credentials} from '../lib/storage';
 import {dateKey, ymdToKey} from '../lib/format';
+import {JadeBridgeTransport} from '../lib/jadeBridge';
 
 interface CalendarPageProps {
   credentials: Credentials;
+  transport?: JadeBridgeTransport;
   onError?: (message: string) => void;
 }
 
@@ -23,7 +25,7 @@ function buildLoadingMap(year: number, month: number): AttendanceMap {
   return out;
 }
 
-function CalendarPage({credentials, onError}: CalendarPageProps) {
+function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(today.getMonth());
@@ -80,6 +82,7 @@ function CalendarPage({credentials, onError}: CalendarPageProps) {
           return next;
         });
       },
+      transport,
     })
       .catch((err: {name?: string; message?: string}) => {
         if (cancelled) return;
@@ -94,7 +97,7 @@ function CalendarPage({credentials, onError}: CalendarPageProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [viewYear, viewMonth, credentials, onError, reloadKey, today]);
+  }, [viewYear, viewMonth, credentials, onError, reloadKey, today, transport]);
 
   return (
     <div className="jade-calendar-page">

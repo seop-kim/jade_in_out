@@ -1,7 +1,9 @@
 import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import {fetchAttendanceForMonth} from './api/jadeApi';
 import {fetchInsaDayDetails, InsaMonthLoadResult, loadInsaMonth} from './api/insaApi';
+import {JADE_BRIDGE_ATTENDANCE, JADE_BRIDGE_ORIGIN} from './lib/jadeBridge';
 import {clearInsaCookie, saveInsaCookie} from './lib/insaStorage';
 import {clearCredentials, saveCredentials} from './lib/storage';
 
@@ -9,9 +11,14 @@ jest.mock('./api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
   loadInsaMonth: jest.fn(),
 }));
+jest.mock('./api/jadeApi', () => ({
+  fetchAttendanceForMonth: jest.fn(),
+}));
 
 const mockedLoadInsaMonth = loadInsaMonth as jest.MockedFunction<typeof loadInsaMonth>;
 const mockedFetchInsaDayDetails = fetchInsaDayDetails as jest.MockedFunction<typeof fetchInsaDayDetails>;
+const mockedFetchAttendanceForMonth = fetchAttendanceForMonth as jest.MockedFunction<typeof fetchAttendanceForMonth>;
+const normalJadeResponse = '<SHEET><ETC-DATA><ETC KEY="YMD"><![CDATA[20260812]]></ETC><ETC KEY="EMP_ID"><![CDATA[20250304]]></ETC><ETC KEY="WORK_TYPE_NM"><![CDATA[기본근무]]></ETC></ETC-DATA></SHEET>';
 
 function monthResult(year: number, month: number): InsaMonthLoadResult {
   const ymd = `${year}-${String(month + 1).padStart(2, '0')}-05`;
@@ -32,6 +39,7 @@ describe('App system tabs', () => {
     clearCredentials();
     clearInsaCookie();
     jest.clearAllMocks();
+    mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
     mockedLoadInsaMonth.mockImplementation(async ({year, month}) => monthResult(year, month));
     mockedFetchInsaDayDetails.mockImplementation(async ({ymd}) => [{
       ymd,
@@ -104,6 +112,104 @@ describe('App system tabs', () => {
 
     expect(await screen.findByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
     expect(within(header).queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+  });
+
+  test('connects Jade through the logged-in tab without storing a Cookie', async () => {
+    const jadeTab = {
+      closed: false,
+      postMessage: jest.fn(),
+    } as unknown as Window;
+    const openSpy = jest.spyOn(window, 'open').mockReturnValue(jadeTab);
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', {name: 'Jade 시스템 열기'}));
+
+    expect(openSpy).toHaveBeenCalledWith('https://ehr.jadehr.co.kr/', '_blank');
+
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: JADE_BRIDGE_ORIGIN,
+        source: jadeTab,
+        data: {type: 'jade-bridge-ready', version: 1},
+      }));
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: JADE_BRIDGE_ORIGIN,
+        source: jadeTab,
+        data: {
+          type: JADE_BRIDGE_ATTENDANCE,
+          body: 'S_STD_YMD=20260812&S_EMP_ID=20250304&S_EMP_NM=홍길동',
+          response: normalJadeResponse,
+        },
+      }));
+    });
+
+    await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledWith(expect.objectContaining({
+      cookie: '',
+      parsedBody: expect.objectContaining({S_STD_YMD: '20260812', S_EMP_ID: '20250304'}),
+      transport: expect.any(Object),
+    })));
+    expect(screen.queryByRole('heading', {name: 'Jade 인증 정보 입력'})).not.toBeInTheDocument();
+    openSpy.mockRestore();
+  });
+
+  test('shows that the Jade bookmarklet was executed while waiting for attendance XML', async () => {
+    const jadeTab = {
+      closed: false,
+      postMessage: jest.fn(),
+    } as unknown as Window;
+    const openSpy = jest.spyOn(window, 'open').mockReturnValue(jadeTab);
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', {name: 'Jade 시스템 열기'}));
+
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: JADE_BRIDGE_ORIGIN,
+        source: jadeTab,
+        data: {type: 'jade-bridge-ready', version: 1},
+      }));
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Jade 연결이 실행되었습니다');
+    openSpy.mockRestore();
+  });
+
+  test('does not restart the Jade calendar request when the bridge reports the same body again', async () => {
+    const jadeTab = {
+      closed: false,
+      postMessage: jest.fn(),
+    } as unknown as Window;
+    const openSpy = jest.spyOn(window, 'open').mockReturnValue(jadeTab);
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', {name: 'Jade 시스템 열기'}));
+
+    const bodyMessage = {
+      origin: JADE_BRIDGE_ORIGIN,
+      source: jadeTab,
+      data: {
+        type: JADE_BRIDGE_ATTENDANCE,
+        body: 'S_STD_YMD=20260812&S_EMP_ID=20250304&S_EMP_NM=홍길동',
+        response: normalJadeResponse,
+      },
+    };
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: JADE_BRIDGE_ORIGIN,
+        source: jadeTab,
+        data: {type: 'jade-bridge-ready', version: 1},
+      }));
+      window.dispatchEvent(new MessageEvent('message', bodyMessage));
+    });
+
+    await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', bodyMessage));
+    });
+
+    expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(1);
+    openSpy.mockRestore();
   });
 
   test('shows a green toast while an INSA request is in flight and removes it on completion', async () => {

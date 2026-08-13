@@ -15,8 +15,9 @@ export interface InsaWorktimeRange {
 }
 
 export interface InsaRequestOptions {
-  cookie: string;
+  cookie?: string;
   signal?: AbortSignal;
+  requestHtml?: (path: string, init: RequestInit, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface FetchInsaHomeMonthOptions extends InsaRequestOptions {
@@ -26,6 +27,10 @@ export interface FetchInsaHomeMonthOptions extends InsaRequestOptions {
 
 export interface FetchInsaDayDetailsOptions extends InsaRequestOptions {
   ymd: string;
+}
+
+export interface FetchInsaWorktimeOptions extends InsaRequestOptions {
+  range: InsaWorktimeRange;
 }
 
 export type InsaMonthSource = 'home' | 'worktime' | 'leave';
@@ -71,16 +76,18 @@ export function getWorktimeRange(year: number, month: number, today: Date): Insa
 
 async function requestHtml(
   path: string,
-  cookie: string,
+  options: InsaRequestOptions,
   init: RequestInit,
-  signal?: AbortSignal
+  signal = options.signal
 ): Promise<string> {
+  if (options.requestHtml) return options.requestHtml(path, init, signal);
+  if (!options.cookie) throw new Error('INSA authentication is not configured');
   const response = await fetch(`/api/insa${path}`, {
     ...init,
     credentials: 'omit',
     cache: 'no-store',
     signal,
-    headers: {...init.headers, 'X-Insa-Cookie': cookie},
+    headers: {...init.headers, 'X-Insa-Cookie': options.cookie},
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return new TextDecoder('euc-kr').decode(await response.arrayBuffer());
@@ -90,7 +97,7 @@ export async function fetchInsaHomeMonth(options: FetchInsaHomeMonthOptions): Pr
   const insaMonth = options.month + 1;
   const html = await requestHtml(
     `/main.asp?Sel_Year=${options.year}&Sel_Month=${insaMonth}&Sel_Day=1`,
-    options.cookie,
+    options,
     {method: 'GET'},
     options.signal
   );
@@ -101,37 +108,32 @@ export async function fetchInsaDayDetails(options: FetchInsaDayDetailsOptions): 
   const [year, month, day] = options.ymd.split('-');
   const html = await requestHtml(
     `/main.asp?Sel_Year=${year}&Sel_Month=${Number(month)}&Sel_Day=${Number(day)}`,
-    options.cookie,
+    options,
     {method: 'GET'},
     options.signal
   );
   return parseInsaDayDetails(html, options.ymd);
 }
 
-export async function fetchInsaWorktime(
-  cookie: string,
-  range: InsaWorktimeRange,
-  signal?: AbortSignal
-): Promise<InsaWorktimeRecord[]> {
+export async function fetchInsaWorktime(options: FetchInsaWorktimeOptions): Promise<InsaWorktimeRecord[]> {
   const html = await requestHtml(
     '/worktime/01_list.asp',
-    cookie,
+    options,
     {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `sType=0&sdt=${range.start}&edt=${range.end}`,
-    },
-    signal
+      body: `sType=0&sdt=${options.range.start}&edt=${options.range.end}`,
+    }
   );
   return parseInsaWorktimeHtml(html);
 }
 
-export async function fetchInsaLeave(cookie: string, signal?: AbortSignal): Promise<InsaLeavePageData> {
-  const html = await requestHtml('/leave/01_list.asp', cookie, {method: 'GET'}, signal);
+export async function fetchInsaLeave(options: InsaRequestOptions): Promise<InsaLeavePageData> {
+  const html = await requestHtml('/leave/01_list.asp', options, {method: 'GET'});
   return parseInsaLeaveHtml(html);
 }
 
-function errorMessage(reason: unknown, cookie: string): string {
+function errorMessage(reason: unknown, cookie?: string): string {
   const message = reason instanceof Error ? reason.message : 'Request failed';
   return cookie ? message.replaceAll(cookie, '[redacted]') : message;
 }
@@ -139,7 +141,7 @@ function errorMessage(reason: unknown, cookie: string): string {
 function sourceResult<T>(
   source: InsaMonthSource,
   result: PromiseSettledResult<T>,
-  cookie: string,
+  cookie: string | undefined,
   errors: InsaMonthLoadError[]
 ): T | null {
   if (result.status === 'fulfilled') return result.value;
@@ -160,9 +162,18 @@ export async function loadInsaMonth(options: LoadInsaMonthOptions): Promise<Insa
   const worktimeRange = getWorktimeRange(options.year, options.month, options.today);
   const homeRequest = trackMonthlyRequest('home', fetchInsaHomeMonth(options), options);
   const worktimeRequest = worktimeRange
-    ? trackMonthlyRequest('worktime', fetchInsaWorktime(options.cookie, worktimeRange, options.signal), options)
+    ? trackMonthlyRequest('worktime', fetchInsaWorktime({
+      cookie: options.cookie,
+      range: worktimeRange,
+      signal: options.signal,
+      requestHtml: options.requestHtml,
+    }), options)
     : Promise.resolve([]);
-  const leaveRequest = trackMonthlyRequest('leave', fetchInsaLeave(options.cookie, options.signal), options);
+  const leaveRequest = trackMonthlyRequest('leave', fetchInsaLeave({
+    cookie: options.cookie,
+    signal: options.signal,
+    requestHtml: options.requestHtml,
+  }), options);
   const [homeResult, worktimeResult, leaveResult] = await Promise.allSettled([
     homeRequest,
     worktimeRequest,

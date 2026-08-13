@@ -4,6 +4,14 @@ import Setup from './components/Setup';
 import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
+import {
+  JADE_APP_WINDOW_NAME,
+  createJadeBookmarklet,
+  isJadeAttendanceResponse,
+  JadeBridgeClient,
+  JadeBridgeTransport,
+} from './lib/jadeBridge';
+import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 
 type SystemTab = 'jade' | 'insa';
@@ -16,8 +24,16 @@ interface InsaRequestToastState {
   removeTimer?: number;
 }
 
+interface JadeBridgeConnection {
+  credentials: Credentials;
+  transport: JadeBridgeTransport;
+}
+
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
+  const [jadeBridgeConnection, setJadeBridgeConnection] = useState<JadeBridgeConnection | null>(null);
+  const [jadeBridgeStatus, setJadeBridgeStatus] = useState<'idle' | 'waiting' | 'ready'>('idle');
+  const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
   const [insaVisited, setInsaVisited] = useState(false);
   const [insaConnected, setInsaConnected] = useState(false);
@@ -27,6 +43,11 @@ function App() {
   const jadeTabRef = useRef<HTMLButtonElement>(null);
   const insaTabRef = useRef<HTMLButtonElement>(null);
   const nextToastId = useRef(0);
+  const jadeBridgeClientRef = useRef<JadeBridgeClient | null>(null);
+
+  useEffect(() => {
+    window.name = JADE_APP_WINDOW_NAME;
+  }, []);
 
   const selectSystemTab = (tab: SystemTab, focus = false): void => {
     if (tab === 'insa') setInsaVisited(true);
@@ -51,12 +72,25 @@ function App() {
     selectSystemTab(nextTab, true);
   };
 
+  const closeJadeBridge = useCallback((closeTab = false): void => {
+    jadeBridgeClientRef.current?.dispose();
+    jadeBridgeClientRef.current = null;
+    if (closeTab && jadeBridgeWindow && !jadeBridgeWindow.closed) {
+      jadeBridgeWindow.close();
+    }
+    setJadeBridgeWindow(null);
+    setJadeBridgeStatus('idle');
+    setJadeBridgeConnection(null);
+  }, [jadeBridgeWindow]);
+
   const handleSetupSubmit = (creds: Credentials): void => {
+    closeJadeBridge(true);
     saveCredentials(creds);
     setCredentials(creds);
   };
 
   const handleResetCredentials = (): void => {
+    closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
   };
@@ -70,6 +104,59 @@ function App() {
     nextToastId.current = id;
     setToasts((current) => [...current, {id, message}]);
   }, []);
+
+  const handleOpenJadeAutomatic = useCallback((): void => {
+    closeJadeBridge(true);
+    const jadeWindow = window.open('https://ehr.jadehr.co.kr/', '_blank');
+    if (!jadeWindow) {
+      showErrorToast('Jade 시스템 창을 열지 못했습니다');
+      return;
+    }
+
+    const client = new JadeBridgeClient(
+      jadeWindow,
+      window.location.origin,
+      () => {
+        console.info('[jade-bridge] app-ready');
+        setJadeBridgeStatus('ready');
+      },
+      undefined,
+      (body, response) => {
+        console.info('[jade-bridge] app-attendance-candidate', {
+          bodyLength: body.length,
+          responseLength: response.length,
+        });
+        if (!isJadeAttendanceResponse(response)) return;
+        const parsedBody = parseBody(body);
+        if (!parsedBody['S_STD_YMD']) return;
+        setJadeBridgeConnection((current) => current ?? {
+          credentials: {cookie: '', body, parsedBody},
+          transport: jadeBridgeClientRef.current!,
+        });
+      },
+    );
+    jadeBridgeClientRef.current = client;
+    setJadeBridgeWindow(jadeWindow);
+    setJadeBridgeStatus('waiting');
+  }, [closeJadeBridge, showErrorToast]);
+
+  useEffect(() => () => {
+    jadeBridgeClientRef.current?.dispose();
+    jadeBridgeClientRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (!jadeBridgeWindow || credentials) return undefined;
+    const timer = window.setInterval(() => {
+      if (!jadeBridgeWindow.closed) return;
+      jadeBridgeClientRef.current?.dispose();
+      jadeBridgeClientRef.current = null;
+      setJadeBridgeWindow(null);
+      setJadeBridgeStatus('idle');
+      setJadeBridgeConnection(null);
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [credentials, jadeBridgeWindow]);
 
   const handleInsaApiRequestChange = useCallback((request: InsaApiRequest, active: boolean): void => {
     const current = insaRequestToasts.current.get(request.key);
@@ -143,8 +230,10 @@ function App() {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const empName = credentials?.parsedBody['S_EMP_NM'] ?? '';
-  const empId = credentials?.parsedBody['S_EMP_ID'] ?? '';
+  const activeJadeCredentials = credentials ?? jadeBridgeConnection?.credentials ?? null;
+  const activeJadeTransport = credentials ? undefined : jadeBridgeConnection?.transport;
+  const empName = activeJadeCredentials?.parsedBody['S_EMP_NM'] ?? '';
+  const empId = activeJadeCredentials?.parsedBody['S_EMP_ID'] ?? '';
   const userLabel = `${empName} ${empId ? `(${empId})` : ''}`.trim();
 
   return (
@@ -186,12 +275,12 @@ function App() {
               </div>
             </div>
             <p className="app-subtitle">
-              {credentials
+              {activeJadeCredentials
                 ? userLabel || '날짜별 출근/퇴근 시간을 한눈에 확인하세요'
                 : '시작하려면 먼저 Jade 인증 정보를 입력해주세요'}
             </p>
           </div>
-          {systemTab === 'jade' && credentials && (
+          {systemTab === 'jade' && activeJadeCredentials && (
             <button className="btn btn-ghost" onClick={handleResetCredentials}>
               인증 정보 초기화
             </button>
@@ -211,10 +300,19 @@ function App() {
           aria-labelledby="jade-system-tab"
           hidden={systemTab !== 'jade'}
         >
-          {credentials ? (
-              <CalendarPage credentials={credentials} onError={showErrorToast}/>
+          {activeJadeCredentials ? (
+              <CalendarPage
+                credentials={activeJadeCredentials}
+                transport={activeJadeTransport}
+                onError={showErrorToast}
+              />
             ) : (
-              <Setup onSubmit={handleSetupSubmit}/>
+              <Setup
+                onSubmit={handleSetupSubmit}
+                onOpenAutomatic={handleOpenJadeAutomatic}
+                bridgeStatus={jadeBridgeStatus}
+                bookmarkletHref={createJadeBookmarklet(window.location.origin)}
+              />
             )}
         </div>
         <div

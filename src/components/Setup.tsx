@@ -1,4 +1,4 @@
-import {FormEvent, useMemo, useState} from 'react';
+import {FormEvent, useEffect, useMemo, useRef, useState} from 'react';
 import './Setup.css';
 import {ParsedBody, parseBody, parseCurl} from '../lib/parseCurl';
 import {Credentials} from '../lib/storage';
@@ -7,6 +7,9 @@ const REQUIRED_KEY = 'S_STD_YMD';
 
 interface SetupProps {
   onSubmit: (credentials: Credentials) => void;
+  onOpenAutomatic: () => void;
+  bridgeStatus: 'idle' | 'waiting' | 'ready';
+  bookmarkletHref: string;
 }
 
 type Tab = 'curl' | 'manual';
@@ -19,8 +22,14 @@ interface ActiveInput {
   hasContent: boolean;
 }
 
-function Setup({onSubmit}: SetupProps) {
+function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: SetupProps) {
   const [tab, setTab] = useState<Tab>('curl');
+  const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const bookmarkletRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    bookmarkletRef.current?.setAttribute('href', bookmarkletHref);
+  }, [bookmarkletHref]);
 
   const [curlText, setCurlText] = useState('');
   const curlParsed = useMemo(() => parseCurl(curlText), [curlText]);
@@ -71,6 +80,49 @@ function Setup({onSubmit}: SetupProps) {
 
   return (
     <form className="setup" onSubmit={handleSubmit}>
+      <section className="setup-card setup-auto-card">
+        <h2 className="setup-title">Jade 자동 연결</h2>
+        <p className="setup-desc">
+          아래 순서대로 진행하면 cURL을 직접 입력하지 않고 로그인된 Jade와 연결할 수 있습니다.
+        </p>
+        <div className="setup-auto-actions">
+          <button type="button" className="btn btn-primary" onClick={onOpenAutomatic}>
+            Jade 시스템 열기
+          </button>
+          <a
+            ref={bookmarkletRef}
+            className="setup-bookmarklet-link"
+            href="#jade-bookmarklet"
+            draggable="true"
+            onClick={(event) => {
+              event.preventDefault();
+              setBookmarkletClicked(true);
+            }}
+            onDragStart={() => setBookmarkletClicked(false)}
+          >
+            Jade 연결
+          </a>
+        </div>
+        <ol className="setup-steps setup-connection-steps">
+          <li>Jade 연결을 북마크에 끌어다 놓아 저장합니다.</li>
+          <li>Jade 시스템 열기를 클릭하여 엽니다.</li>
+          <li>Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러줍니다.</li>
+          <li>출퇴근관리 탭으로 이동해줍니다.</li>
+          <li>조회버튼을 한번 클릭하면 연결이 됩니다.</li>
+        </ol>
+        <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
+          {bridgeStatus === 'ready'
+            ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
+            : bridgeStatus === 'waiting'
+              ? '새 탭에서 로그인한 뒤 Jade 연결을 눌러 주세요.'
+            : bookmarkletClicked
+              ? '이 링크를 즐겨찾기 바에 저장한 뒤, Jade 시스템 탭에서 눌러 주세요.'
+              : '위 순서대로 Jade 연결을 설정해 주세요.'}
+        </p>
+        <ul className="setup-hint setup-connection-notes">
+          <li>Jade 브라우저를 종료하지 말아주세요.</li>
+        </ul>
+      </section>
       <section className="setup-card setup-header-card">
         <h2 className="setup-title">Jade 인증 정보 입력</h2>
 
@@ -102,7 +154,7 @@ function Setup({onSubmit}: SetupProps) {
             </p>
             <ol className="setup-steps">
               <li>
-                <a href="https://ehr.jadehr.co.kr" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                 에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
               </li>
               <li>
@@ -123,7 +175,7 @@ function Setup({onSubmit}: SetupProps) {
             </p>
             <ol className="setup-steps">
               <li>
-                <a href="https://ehr.jadehr.co.kr" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                 에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
               </li>
               <li>
