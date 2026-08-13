@@ -75,7 +75,10 @@ describe('INSA API', () => {
   test('posts form-urlencoded worktime criteria through the INSA proxy', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(encodedHtmlResponse(worktimeHtml));
 
-    await fetchInsaWorktime('test-session', {start: '2026-08-01', end: '2026-08-11'});
+    await fetchInsaWorktime({
+      cookie: 'test-session',
+      range: {start: '2026-08-01', end: '2026-08-11'},
+    });
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/insa/worktime/01_list.asp', {
       method: 'POST',
@@ -106,7 +109,11 @@ describe('INSA API', () => {
     const controller = new AbortController();
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(encodedHtmlResponse(worktimeHtml));
 
-    await fetchInsaWorktime('test-session', {start: '2026-08-01', end: '2026-08-11'}, controller.signal);
+    await fetchInsaWorktime({
+      cookie: 'test-session',
+      range: {start: '2026-08-01', end: '2026-08-11'},
+      signal: controller.signal,
+    });
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/insa/worktime/01_list.asp', expect.objectContaining({
       signal: controller.signal,
@@ -153,5 +160,27 @@ describe('INSA API', () => {
     expect(completed).toEqual(expect.arrayContaining(['home', 'worktime', 'leave']));
     expect(started).toHaveLength(3);
     expect(completed).toHaveLength(3);
+  });
+
+  test('uses an injected browser transport for all monthly pages without sending a cookie', async () => {
+    const requestHtml = jest.fn()
+      .mockResolvedValueOnce(homeHtml)
+      .mockResolvedValueOnce(worktimeHtml)
+      .mockResolvedValueOnce(leaveHtml);
+
+    await loadInsaMonth({
+      year: 2026,
+      month: 7,
+      today: new Date(2026, 7, 12),
+      requestHtml,
+    });
+
+    expect(requestHtml).toHaveBeenNthCalledWith(1, '/main.asp?Sel_Year=2026&Sel_Month=8&Sel_Day=1', {method: 'GET'}, undefined);
+    expect(requestHtml).toHaveBeenNthCalledWith(2, '/worktime/01_list.asp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'sType=0&sdt=2026-08-01&edt=2026-08-11',
+    }, undefined);
+    expect(requestHtml).toHaveBeenNthCalledWith(3, '/leave/01_list.asp', {method: 'GET'}, undefined);
   });
 });

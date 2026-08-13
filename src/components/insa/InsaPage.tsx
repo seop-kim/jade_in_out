@@ -6,6 +6,11 @@ import {
   loadInsaMonth,
 } from '../../api/insaApi';
 import {InsaTeamDetail} from '../../api/insaParsers';
+import {
+  INSA_BRIDGE_ORIGIN,
+  InsaBridgeClient,
+  createInsaBookmarklet,
+} from '../../lib/insaBridge';
 import {clearInsaCookie, loadInsaCookie, saveInsaCookie} from '../../lib/insaStorage';
 import {buildInsaCalendarMap} from '../../lib/transformInsa';
 import MonthPicker from '../MonthPicker';
@@ -70,9 +75,14 @@ export interface InsaPageProps {
   onError?: (message: string) => void;
 }
 
+const INSA_POPUP_URL = `${INSA_BRIDGE_ORIGIN}/`;
+
 function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onError}: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
+  const [bridgeReady, setBridgeReady] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState<'idle' | 'waiting'>('idle');
+  const [bridgeWindow, setBridgeWindow] = useState<Window | null>(null);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [reloadKey, setReloadKey] = useState(0);
@@ -82,6 +92,38 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   const [detailStates, setDetailStates] = useState<Record<string, DetailState>>({});
   const detailStatesRef = useRef<Record<string, DetailState>>({});
   const detailControllers = useRef(new Map<string, AbortController>());
+  const bridgeClientRef = useRef<InsaBridgeClient | null>(null);
+
+  const disposeBridge = useCallback((closePopup = false): void => {
+    bridgeClientRef.current?.dispose();
+    bridgeClientRef.current = null;
+    if (closePopup && bridgeWindow && !bridgeWindow.closed) bridgeWindow.close();
+    setBridgeWindow(null);
+    setBridgeReady(false);
+    setBridgeStatus('idle');
+  }, [bridgeWindow]);
+
+  const handleOpenAutomatic = useCallback((): void => {
+    const insaWindow = window.open(INSA_POPUP_URL, '_blank');
+    if (!insaWindow) {
+      onError?.('인사시스템 창을 열지 못했습니다');
+      return;
+    }
+    bridgeClientRef.current?.dispose();
+    setBridgeWindow(insaWindow);
+    setBridgeReady(false);
+    setBridgeStatus('waiting');
+    bridgeClientRef.current = new InsaBridgeClient(insaWindow, window.location.origin, () => {
+      setBridgeReady(true);
+      setBridgeStatus('idle');
+    });
+  }, [onError]);
+
+  const requestHtmlViaBridge = useCallback((path: string, init: RequestInit, signal?: AbortSignal): Promise<string> => {
+    const client = bridgeClientRef.current;
+    if (!client) return Promise.reject(new Error('인사시스템 연결이 준비되지 않았습니다.'));
+    return client.request(path, init, signal);
+  }, []);
 
   const invalidateDayDetails = useCallback((): void => {
     detailControllers.current.forEach((controller) => controller.abort());
@@ -94,11 +136,25 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   useEffect(() => () => {
     detailControllers.current.forEach((controller) => controller.abort());
     detailControllers.current.clear();
+    bridgeClientRef.current?.dispose();
   }, []);
 
   useEffect(() => {
-    onConnectionChange?.(Boolean(cookie));
-  }, [cookie, onConnectionChange]);
+    onConnectionChange?.(Boolean(cookie || bridgeReady));
+  }, [bridgeReady, cookie, onConnectionChange]);
+
+  useEffect(() => {
+    if (!bridgeWindow || cookie) return undefined;
+    const timer = window.setInterval(() => {
+      if (!bridgeWindow.closed) return;
+      bridgeClientRef.current?.dispose();
+      bridgeClientRef.current = null;
+      setBridgeWindow(null);
+      setBridgeReady(false);
+      setBridgeStatus('idle');
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [bridgeWindow, cookie]);
 
   const handleMonthlyRequestChange = useCallback((source: InsaMonthSource, active: boolean): void => {
     const isWorktime = source === 'worktime';
@@ -111,7 +167,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   }, [onApiRequestChange]);
 
   useEffect(() => {
-    if (!cookie) return undefined;
+    if (!cookie && !bridgeReady) return undefined;
     const controller = new AbortController();
     let cancelled = false;
 
@@ -120,7 +176,8 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
     setSelectedYmd(null);
 
     loadInsaMonth({
-      cookie,
+      cookie: cookie ?? undefined,
+      requestHtml: cookie ? undefined : requestHtmlViaBridge,
       year: viewYear,
       month: viewMonth,
       today,
@@ -149,7 +206,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
       cancelled = true;
       controller.abort();
     };
-  }, [cookie, handleMonthlyRequestChange, onError, reloadKey, today, viewMonth, viewYear]);
+  }, [bridgeReady, cookie, handleMonthlyRequestChange, onError, reloadKey, requestHtmlViaBridge, today, viewMonth, viewYear]);
 
   const days = useMemo(() => buildInsaCalendarMap(
     viewYear,
@@ -170,17 +227,19 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   };
 
   const handleSetup = (nextCookie: string): void => {
+    disposeBridge(true);
     saveInsaCookie(nextCookie);
     setCookie(nextCookie);
   };
 
   const handleReset = useCallback((): void => {
     invalidateDayDetails();
+    disposeBridge(true);
     clearInsaCookie();
     setCookie(null);
     setResult(null);
     setLoading(false);
-  }, [invalidateDayDetails]);
+  }, [disposeBridge, invalidateDayDetails]);
 
   useEffect(() => {
     if (resetRequest > 0) handleReset();
@@ -199,7 +258,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   };
 
   const requestDayDetails = useCallback(async (ymd: string): Promise<void> => {
-    if (!cookie) return;
+    if (!cookie && !bridgeReady) return;
     if (detailStatesRef.current[ymd]?.status === 'loaded' || detailControllers.current.has(ymd)) return;
 
     const controller = new AbortController();
@@ -217,7 +276,12 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
       return next;
     });
     try {
-      const details = await fetchInsaDayDetails({cookie, ymd, signal: controller.signal});
+      const details = await fetchInsaDayDetails({
+        cookie: cookie ?? undefined,
+        requestHtml: cookie ? undefined : requestHtmlViaBridge,
+        ymd,
+        signal: controller.signal,
+      });
       if (!controller.signal.aborted) {
         setDetailStates((previous) => {
           const next = {...previous, [ymd]: {status: 'loaded', details} as DetailState};
@@ -230,7 +294,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
         setDetailStates((previous) => {
           const next = {
             ...previous,
-            [ymd]: {status: 'error', message: safeMessage(error, cookie)} as DetailState,
+            [ymd]: {status: 'error', message: safeMessage(error, cookie ?? '')} as DetailState,
           };
           detailStatesRef.current = next;
           return next;
@@ -243,14 +307,23 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
       }
       onApiRequestChange?.(request, false);
     }
-  }, [cookie, days, onApiRequestChange, onError]);
+  }, [bridgeReady, cookie, days, onApiRequestChange, onError, requestHtmlViaBridge]);
 
   const handleDaySelect = useCallback((ymd: string): void => {
     setSelectedYmd(ymd);
     void requestDayDetails(ymd);
   }, [requestDayDetails]);
 
-  if (!cookie) return <InsaSetup onSubmit={handleSetup} />;
+  if (!cookie && !bridgeReady) {
+    return (
+      <InsaSetup
+        onSubmit={handleSetup}
+        onOpenAutomatic={handleOpenAutomatic}
+        bridgeStatus={bridgeStatus}
+        bookmarkletHref={createInsaBookmarklet(window.location.origin)}
+      />
+    );
+  }
 
   return (
     <div className="insa-page">

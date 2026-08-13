@@ -5,6 +5,7 @@ import {
   InsaMonthLoadResult,
   loadInsaMonth,
 } from '../../api/insaApi';
+import {INSA_BRIDGE_ORIGIN} from '../../lib/insaBridge';
 import {INSA_COOKIE_STORAGE_KEY} from '../../lib/insaStorage';
 import InsaPage from './InsaPage';
 
@@ -64,8 +65,48 @@ describe('InsaPage', () => {
     render(<InsaPage />);
 
     expect(screen.getByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '인사시스템 열기'})).toBeInTheDocument();
+    const bookmarkletLink = screen.getByRole('link', {name: '인사 연결 즐겨찾기'});
+    expect(bookmarkletLink).toHaveAttribute('href', expect.stringMatching(/^javascript:/));
+    expect(bookmarkletLink).not.toHaveAttribute('href', expect.stringContaining('React has blocked'));
     expect(screen.getByLabelText('INSA Cookie')).toHaveAttribute('type', 'password');
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
+  });
+
+  test('explains the bookmarklet drag action when its setup link is clicked directly', async () => {
+    render(<InsaPage />);
+
+    await userEvent.click(screen.getByRole('link', {name: '인사 연결 즐겨찾기'}));
+
+    expect(screen.getByRole('status')).toHaveTextContent('즐겨찾기 바');
+  });
+
+  test('loads through the logged-in INSA popup after the bookmarklet sends a ready message', async () => {
+    const popup = {
+      closed: false,
+      postMessage: jest.fn(),
+    } as unknown as Window;
+    const openSpy = jest.spyOn(window, 'open').mockReturnValue(popup);
+
+    render(<InsaPage />);
+    await userEvent.click(screen.getByRole('button', {name: '인사시스템 열기'}));
+
+    expect(openSpy).toHaveBeenCalledWith('https://insa.kwe.co.kr/', '_blank');
+
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: INSA_BRIDGE_ORIGIN,
+        source: popup,
+        data: {type: 'insa-bridge-ready', version: 1},
+      }));
+    });
+
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledWith(expect.objectContaining({
+      cookie: undefined,
+      requestHtml: expect.any(Function),
+    })));
+    expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
+    openSpy.mockRestore();
   });
 
   test('stores the independent cookie and loads the current INSA month', async () => {

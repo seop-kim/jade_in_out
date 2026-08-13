@@ -1,4 +1,4 @@
-import {FormEvent, useMemo, useState} from 'react';
+import {FormEvent, useEffect, useMemo, useRef, useState} from 'react';
 import './Setup.css';
 import {ParsedBody, parseBody, parseCurl} from '../lib/parseCurl';
 import {Credentials} from '../lib/storage';
@@ -7,6 +7,9 @@ const REQUIRED_KEY = 'S_STD_YMD';
 
 interface SetupProps {
   onSubmit: (credentials: Credentials) => void;
+  onOpenAutomatic: () => void;
+  bridgeStatus: 'idle' | 'waiting' | 'ready';
+  bookmarkletHref: string;
 }
 
 type Tab = 'curl' | 'manual';
@@ -19,8 +22,14 @@ interface ActiveInput {
   hasContent: boolean;
 }
 
-function Setup({onSubmit}: SetupProps) {
+function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: SetupProps) {
   const [tab, setTab] = useState<Tab>('curl');
+  const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const bookmarkletRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    bookmarkletRef.current?.setAttribute('href', bookmarkletHref);
+  }, [bookmarkletHref]);
 
   const [curlText, setCurlText] = useState('');
   const curlParsed = useMemo(() => parseCurl(curlText), [curlText]);
@@ -71,6 +80,42 @@ function Setup({onSubmit}: SetupProps) {
 
   return (
     <form className="setup" onSubmit={handleSubmit}>
+      <section className="setup-card setup-auto-card">
+        <h2 className="setup-title">Jade 자동 연결</h2>
+        <p className="setup-desc">
+          Jade에 로그인한 뒤 즐겨찾기 버튼을 한 번 누르면 Cookie를 직접 입력하지 않고 연결할 수 있습니다.
+        </p>
+        <div className="setup-auto-actions">
+          <button type="button" className="btn btn-primary" onClick={onOpenAutomatic}>
+            Jade 시스템 열기
+          </button>
+          <a
+            ref={bookmarkletRef}
+            className="setup-bookmarklet-link"
+            href="#jade-bookmarklet"
+            draggable="true"
+            onClick={(event) => {
+              event.preventDefault();
+              setBookmarkletClicked(true);
+            }}
+            onDragStart={() => setBookmarkletClicked(false)}
+          >
+            Jade 연결 즐겨찾기
+          </a>
+        </div>
+        <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
+          {bridgeStatus === 'ready'
+            ? '연결 즐겨찾기가 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
+            : bridgeStatus === 'waiting'
+              ? '새 탭에서 로그인한 뒤 Jade 연결 즐겨찾기를 눌러 주세요.'
+            : bookmarkletClicked
+              ? '이 링크를 즐겨찾기 바에 끌어다 놓은 뒤, Jade 시스템 탭에서 눌러 주세요.'
+              : '위 링크를 즐겨찾기 바에 끌어다 놓은 뒤 사용하세요.'}
+        </p>
+      </section>
+      <p className="setup-hint setup-bridge-note">
+        화면을 이미 연 뒤 즐겨찾기를 눌렀다면 출퇴근 기록에서 날짜 조회를 한 번 다시 실행해 주세요.
+      </p>
       <section className="setup-card setup-header-card">
         <h2 className="setup-title">Jade 인증 정보 입력</h2>
 
