@@ -104,7 +104,7 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
   }, [bridgeWindow]);
 
   const handleOpenAutomatic = useCallback((): void => {
-    const insaWindow = window.open(INSA_POPUP_URL, '_blank');
+    const insaWindow = window.open(INSA_POPUP_URL, 'insa-system-window');
     if (!insaWindow) {
       onError?.('인사시스템 창을 열지 못했습니다');
       return;
