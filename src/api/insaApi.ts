@@ -8,6 +8,7 @@ import {
   parseInsaLeaveHtml,
   parseInsaWorktimeHtml,
 } from './insaParsers';
+import {appConfig} from '../config';
 
 export interface InsaWorktimeRange {
   start: string;
@@ -82,7 +83,7 @@ async function requestHtml(
 ): Promise<string> {
   if (options.requestHtml) return options.requestHtml(path, init, signal);
   if (!options.cookie) throw new Error('INSA authentication is not configured');
-  const response = await fetch(`/api/insa${path}`, {
+  const response = await fetch(`${appConfig.insa.apiBasePath}${path}`, {
     ...init,
     credentials: 'omit',
     cache: 'no-store',
@@ -96,7 +97,7 @@ async function requestHtml(
 export async function fetchInsaHomeMonth(options: FetchInsaHomeMonthOptions): Promise<InsaHomeMonthData> {
   const insaMonth = options.month + 1;
   const html = await requestHtml(
-    `/main.asp?Sel_Year=${options.year}&Sel_Month=${insaMonth}&Sel_Day=1`,
+    `${appConfig.insa.paths.home}?${appConfig.insa.query.year}=${options.year}&${appConfig.insa.query.month}=${insaMonth}&${appConfig.insa.query.day}=1`,
     options,
     {method: 'GET'},
     options.signal
@@ -107,7 +108,7 @@ export async function fetchInsaHomeMonth(options: FetchInsaHomeMonthOptions): Pr
 export async function fetchInsaDayDetails(options: FetchInsaDayDetailsOptions): Promise<InsaTeamDetail[]> {
   const [year, month, day] = options.ymd.split('-');
   const html = await requestHtml(
-    `/main.asp?Sel_Year=${year}&Sel_Month=${Number(month)}&Sel_Day=${Number(day)}`,
+    `${appConfig.insa.paths.home}?${appConfig.insa.query.year}=${year}&${appConfig.insa.query.month}=${Number(month)}&${appConfig.insa.query.day}=${Number(day)}`,
     options,
     {method: 'GET'},
     options.signal
@@ -117,19 +118,19 @@ export async function fetchInsaDayDetails(options: FetchInsaDayDetailsOptions): 
 
 export async function fetchInsaWorktime(options: FetchInsaWorktimeOptions): Promise<InsaWorktimeRecord[]> {
   const html = await requestHtml(
-    '/worktime/01_list.asp',
+    appConfig.insa.paths.worktime,
     options,
     {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `sType=0&sdt=${options.range.start}&edt=${options.range.end}`,
+      body: `${appConfig.insa.worktimeForm.typeField}=${appConfig.insa.worktimeForm.typeValue}&${appConfig.insa.worktimeForm.startField}=${options.range.start}&${appConfig.insa.worktimeForm.endField}=${options.range.end}`,
     }
   );
   return parseInsaWorktimeHtml(html);
 }
 
 export async function fetchInsaLeave(options: InsaRequestOptions): Promise<InsaLeavePageData> {
-  const html = await requestHtml('/leave/01_list.asp', options, {method: 'GET'});
+  const html = await requestHtml(appConfig.insa.paths.leave, options, {method: 'GET'});
   return parseInsaLeaveHtml(html);
 }
 

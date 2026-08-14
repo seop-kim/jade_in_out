@@ -1,9 +1,10 @@
 import {FormEvent, useEffect, useMemo, useRef, useState} from 'react';
 import './Setup.css';
+import {appConfig} from '../config';
 import {ParsedBody, parseBody, parseCurl} from '../lib/parseCurl';
 import {Credentials} from '../lib/storage';
 
-const REQUIRED_KEY = 'S_STD_YMD';
+const REQUIRED_KEY = appConfig.jade.fields.requestDate;
 
 interface SetupProps {
   onSubmit: (credentials: Credentials) => void;
@@ -60,8 +61,8 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const fieldCount = Object.keys(active.parsedBody).length;
   const hasBody = fieldCount > 0;
   const hasRequired = REQUIRED_KEY in active.parsedBody;
-  const empId = active.parsedBody['S_EMP_ID'] ?? '';
-  const empName = active.parsedBody['S_EMP_NM'] ?? '';
+  const empId = active.parsedBody[appConfig.jade.fields.employeeId] ?? '';
+  const empName = active.parsedBody[appConfig.jade.fields.employeeName] ?? '';
   const canSubmit = hasCookie && hasBody && hasRequired;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -195,14 +196,14 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
               {inputMode === 'curl' ? (
                 <>
                   <p className="setup-desc">
-                    DevTools의 <code>commonAction.do</code> 요청을 우클릭 → <strong>Copy → Copy as cURL</strong>로 복사해서 아래에 그대로 붙여 넣으세요. Cookie와 Body가 자동으로 파싱됩니다.
+                    DevTools의 <code>{appConfig.jade.requestPath.slice(1)}</code> 요청을 우클릭 → <strong>Copy → Copy as cURL</strong>로 복사해서 아래에 그대로 붙여 넣으세요. Cookie와 Body가 자동으로 파싱됩니다.
                   </p>
                   <ol className="setup-steps">
                     <li>
-                      <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                      <a href={`${appConfig.jade.origin}/`} target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                       에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
                     </li>
-                    <li><kbd>F12</kbd> → Network 탭에서 <code>commonAction.do</code> 요청을 찾습니다.</li>
+                    <li><kbd>F12</kbd> → Network 탭에서 <code>{appConfig.jade.requestPath.slice(1)}</code> 요청을 찾습니다.</li>
                     <li>
                       요청을 <strong>우클릭 → Copy → Copy as cURL</strong> 선택.
                       <br />
@@ -218,10 +219,10 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                   </p>
                   <ol className="setup-steps">
                     <li>
-                      <a href="https://ehr.jadehr.co.kr/" target="_blank" rel="noopener noreferrer">Jade 시스템</a>
+                      <a href={`${appConfig.jade.origin}/`} target="_blank" rel="noopener noreferrer">Jade 시스템</a>
                       에 로그인하고 출퇴근 메뉴(<code>ess_tam_402_m01</code>)를 엽니다.
                     </li>
-                    <li><kbd>F12</kbd> → Network 탭에서 <code>commonAction.do</code> 요청을 찾습니다.</li>
+                    <li><kbd>F12</kbd> → Network 탭에서 <code>{appConfig.jade.requestPath.slice(1)}</code> 요청을 찾습니다.</li>
                     <li>Headers 탭의 <code>Cookie</code> 값을 복사해 Cookie 칸에 붙여넣기.</li>
                     <li>Payload 탭의 Request Body 전체를 복사해 Request Body 칸에 붙여넣기.</li>
                   </ol>
@@ -242,7 +243,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     id="curl"
                     className="field-textarea curl"
                     rows={13}
-                    placeholder={`curl 'https://ehr.jadehr.co.kr/commonAction.do' \\\n+  -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \\\n+  -b 'SAVE_ID=...; JSESSIONID=...' \\\n+  --data-raw 'S_DSCLASS=...&S_STD_YMD=20260513&S_EMP_NM=...&S_EMP_ID=...'`}
+                    placeholder={`curl '${appConfig.jade.origin}${appConfig.jade.requestPath}' \\\n+  -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \\\n+  -b 'SESSION=...' \\\n+  --data-raw '${appConfig.jade.fields.datasetClass}=...&${appConfig.jade.fields.requestDate}=20260513&${appConfig.jade.fields.employeeName}=...&${appConfig.jade.fields.employeeId}=...'`}
                     value={curlText}
                     onChange={(event) => setCurlText(event.target.value)}
                     spellCheck={false}
@@ -273,7 +274,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     id="body"
                     className="field-textarea body"
                     rows={9}
-                    placeholder={`S_DSCLASS:...\nS_DSMETHOD:...\nF_STD_YMD:2026.05.07\nS_EMP_NM:홍길동\nS_EMP_ID:20250304\n...\nS_STD_YMD:20260501\n...`}
+                    placeholder={`${appConfig.jade.fields.datasetClass}:...\n${appConfig.jade.fields.datasetMethod}:...\n${appConfig.jade.fields.formDate}:2026.05.07\n${appConfig.jade.fields.employeeName}:홍길동\n${appConfig.jade.fields.employeeId}:20250304\n...\n${appConfig.jade.fields.requestDate}:20260501\n...`}
                     value={bodyText}
                     onChange={(event) => setBodyText(event.target.value)}
                     spellCheck={false}

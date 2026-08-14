@@ -116,6 +116,22 @@ describe('INSA HTML parsers', () => {
     });
   });
 
+  test('parses a holiday label from the monthly calendar cell', () => {
+    const html = `
+      <table><tbody><tr>
+        <td onclick="location.replace('main.asp?Sel_Year=2026&Sel_Month=8&Sel_Day=17')">
+          <table><tbody><tr><td class="font_11 C"><font color="#FF9900">대체공휴일</font></td></tr></tbody></table>
+        </td>
+      </tr></tbody></table>`;
+
+    expect(parseInsaHomeHtml(html, 2026, 8).days['2026-08-17']).toEqual({
+      ymd: '2026-08-17',
+      vacationCount: 0,
+      timeCount: 0,
+      holidayLabel: '대체 공휴일',
+    });
+  });
+
   test('rejects a structural calendar when no date belongs to the requested month', () => {
     const html = `
       <table><tbody><tr>

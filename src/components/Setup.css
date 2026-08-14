@@ -330,3 +330,86 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+html[data-theme='dark'] .setup-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme='dark'] .setup-auto-card {
+  background: #172b46;
+  border-color: #315b89;
+}
+
+html[data-theme='dark'] .setup-auth-tabs {
+  background: #172b46;
+  border-color: #315b89;
+}
+
+html[data-theme='dark'] .setup-auth-tab.active,
+html[data-theme='dark'] .setup-tab.active {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-accent-hover);
+}
+
+html[data-theme='dark'] .setup-bookmarklet-link {
+  background: var(--color-surface);
+  border-color: #4b78aa;
+  color: var(--color-accent-hover);
+}
+
+html[data-theme='dark'] .setup-title,
+html[data-theme='dark'] .field-label,
+html[data-theme='dark'] .setup-steps strong {
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .setup-desc,
+html[data-theme='dark'] .setup-steps,
+html[data-theme='dark'] .setup-bridge-help,
+html[data-theme='dark'] .setup-steps small,
+html[data-theme='dark'] .setup-steps strong,
+html[data-theme='dark'] .setup-steps a {
+  color: #ffffff;
+}
+
+html[data-theme='dark'] .setup-steps code {
+  background: #374151;
+  color: #ffffff;
+}
+
+html[data-theme='dark'] .setup-steps kbd {
+  border-color: #6b7280;
+  background: #273449;
+  color: #ffffff;
+}
+
+html[data-theme='dark'] .setup-tabs {
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] .setup-tab:hover:not(.active) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .field-textarea {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .field-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+html[data-theme='dark'] .parsed-summary {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] .summary-value {
+  color: var(--color-text);
+}

@@ -4,8 +4,8 @@
 
 body {
   margin: 0;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--color-page);
+  color: var(--color-text);
 }
 
 .app {
@@ -25,7 +25,7 @@ body {
   gap: 2px;
   width: fit-content;
   padding: 2px;
-  background: #e5e7eb;
+  background: var(--color-border);
   border-radius: 7px;
 }
 
@@ -35,7 +35,7 @@ body {
   border-radius: 5px;
   padding: 4px 8px;
   background: transparent;
-  color: #4b5563;
+  color: var(--color-muted-strong);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -43,7 +43,7 @@ body {
 }
 
 .system-tab:hover {
-  color: #111827;
+  color: var(--color-text);
 }
 
 .system-tab:focus-visible {
@@ -52,9 +52,9 @@ body {
 }
 
 .system-tab.active {
-  background: #ffffff;
-  color: #1d4ed8;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+  background: var(--color-surface);
+  color: var(--color-accent-hover);
+  box-shadow: var(--shadow-card);
 }
 
 .app-header-row {
@@ -65,6 +65,15 @@ body {
 }
 
 .app-header-main {
+  min-width: 0;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -79,13 +88,14 @@ body {
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .app-subtitle {
   margin: 0;
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .app-main {
@@ -119,7 +129,7 @@ body {
   margin: 0 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text);
   min-width: 130px;
   text-align: center;
 }
@@ -140,8 +150,8 @@ body {
 }
 
 .month-title-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #e5e7eb;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
 }
 
 .month-title-btn:disabled {
@@ -155,10 +165,10 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.12);
+  box-shadow: var(--shadow-popover);
   padding: 12px;
   min-width: 260px;
 }
@@ -174,7 +184,7 @@ body {
 .month-picker-year-label {
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .month-picker-grid {
@@ -185,43 +195,61 @@ body {
 
 .month-picker-cell {
   appearance: none;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 10px 0;
   font-size: 14px;
   font-weight: 500;
-  color: #111827;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .month-picker-cell:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-strong);
 }
 
 .month-picker-cell.is-today {
   border-color: #93c5fd;
-  color: #1d4ed8;
+  color: var(--color-accent-hover);
 }
 
 .month-picker-cell.is-current {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: #ffffff;
 }
 
 .month-picker-cell.is-current:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+}
+
+.refresh-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .btn {
   appearance: none;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
   height: 36px;
   min-width: 36px;
   padding: 0 12px;
@@ -233,8 +261,8 @@ body {
 }
 
 .btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-strong);
 }
 
 .btn:disabled {
@@ -243,33 +271,51 @@ body {
 }
 
 .btn-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.refresh-button {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: #6b7280;
+}
+
+.refresh-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: #6b7280;
+}
+
+html[data-theme='dark'] .refresh-button,
+html[data-theme='dark'] .refresh-button:hover:not(:disabled) {
+  color: #ffffff;
 }
 
 .btn-ghost {
   background: transparent;
   border-color: transparent;
-  color: #4b5563;
+  color: var(--color-muted-strong);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .progress {
   position: relative;
   height: 28px;
-  background: #f3f4f6;
+  background: var(--color-surface-muted);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 }
 
 .progress-bar {

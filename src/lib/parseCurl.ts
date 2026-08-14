@@ -1,3 +1,5 @@
+import {appConfig} from '../config';
+
 export type ParsedBody = Record<string, string>;
 
 export interface CurlParseResult {
@@ -98,7 +100,7 @@ export function parseCurl(rawText: string): CurlParseResult {
       body,
       parsedBody,
       error:
-        'Cookie와 Body를 찾지 못했어요. DevTools의 commonAction.do 요청을 "Copy as cURL"로 복사했는지 확인해주세요.',
+        `Cookie와 Body를 찾지 못했어요. DevTools의 ${appConfig.jade.requestPath.slice(1)} 요청을 "Copy as cURL"로 복사했는지 확인해주세요.`,
     };
   }
 

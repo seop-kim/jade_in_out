@@ -1,4 +1,5 @@
 import {FormEvent, useEffect, useRef, useState} from 'react';
+import {appConfig} from '../../config';
 
 interface InsaSetupProps {
   onSubmit: (cookie: string) => void;
@@ -118,7 +119,7 @@ function InsaSetup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: I
               </p>
               <ol className="insa-setup-steps insa-manual-steps">
                 <li>
-                  <a href="https://insa.kwe.co.kr/" target="_blank" rel="noopener noreferrer">인사시스템</a>에 로그인합니다.
+                  <a href={`${appConfig.insa.origin}/`} target="_blank" rel="noopener noreferrer">인사시스템</a>에 로그인합니다.
                 </li>
                 <li><kbd>F12</kbd> → Network 탭에서 인사시스템 요청을 찾습니다.</li>
                 <li>Headers에서 Cookie 값을 복사합니다.</li>

@@ -1,9 +1,11 @@
-export const INSA_BRIDGE_ORIGIN = 'https://insa.kwe.co.kr';
+import {appConfig} from '../config';
+
+export const INSA_BRIDGE_ORIGIN = appConfig.insa.origin;
 export const INSA_BRIDGE_READY = 'insa-bridge-ready';
 export const INSA_BRIDGE_REQUEST = 'insa-bridge-request';
 export const INSA_BRIDGE_RESPONSE = 'insa-bridge-response';
 
-const SUPPORTED_PATHS = ['/main.asp', '/worktime/01_list.asp', '/leave/01_list.asp'];
+const SUPPORTED_PATHS = Object.values(appConfig.insa.paths);
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export interface InsaBridgeRequestMessage {

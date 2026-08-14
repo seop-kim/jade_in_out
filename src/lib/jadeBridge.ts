@@ -1,4 +1,6 @@
-export const JADE_BRIDGE_ORIGIN = 'https://ehr.jadehr.co.kr';
+import {appConfig} from '../config';
+
+export const JADE_BRIDGE_ORIGIN = appConfig.jade.origin;
 export const JADE_APP_WINDOW_NAME = 'jade-in-out-app';
 export const JADE_BRIDGE_READY = 'jade-bridge-ready';
 export const JADE_BRIDGE_BODY = 'jade-bridge-body';
@@ -6,24 +8,30 @@ export const JADE_BRIDGE_ATTENDANCE = 'jade-bridge-attendance';
 export const JADE_BRIDGE_REQUEST = 'jade-bridge-request';
 export const JADE_BRIDGE_RESPONSE = 'jade-bridge-response';
 
-const JADE_REQUEST_PATH = '/commonAction.do';
+const JADE_REQUEST_PATH = appConfig.jade.requestPath;
 const REQUEST_TIMEOUT_MS = 30_000;
+const JADE_ATTENDANCE_KEYS = [
+  appConfig.jade.fields.attendanceDate,
+  appConfig.jade.fields.attendanceEmployeeId,
+  appConfig.jade.fields.workType,
+];
 
 export interface JadeBridgeTransport {
   post: (path: string, body: string, signal?: AbortSignal) => Promise<string>;
 }
 
 export function isJadeAttendanceResponse(text: string): boolean {
-  return ['YMD', 'EMP_ID', 'WORK_TYPE_NM'].every((key) => (
+  return JADE_ATTENDANCE_KEYS.every((key) => (
     new RegExp(`<ETC\\b[^>]*\\bKEY\\s*=\\s*["']${key}["']`, 'i').test(text)
   ));
 }
 
 export function createJadeBookmarklet(appOrigin: string): string {
+  const attendanceTokens = JADE_ATTENDANCE_KEYS.map((key) => `KEY="${key}"`);
   const script = [
-    `(function(){var A=${JSON.stringify(appOrigin)},O=${JSON.stringify(JADE_BRIDGE_ORIGIN)},R=${JSON.stringify(JADE_BRIDGE_READY)},B=${JSON.stringify(JADE_BRIDGE_BODY)},D=${JSON.stringify(JADE_BRIDGE_ATTENDANCE)},Q=${JSON.stringify(JADE_BRIDGE_REQUEST)},S=${JSON.stringify(JADE_BRIDGE_RESPONSE)},T=${JSON.stringify(JADE_REQUEST_PATH)},N=${JSON.stringify(JADE_APP_WINDOW_NAME)},M='__jadeBridgeInstalled_v4__',P=window.opener||window.open('',N);console.info('[jade-bridge] bookmarklet-start',{origin:location.origin,opener:!!window.opener,appWindow:!!P,installKey:M});`,
+    `(function(){var A=${JSON.stringify(appOrigin)},O=${JSON.stringify(JADE_BRIDGE_ORIGIN)},R=${JSON.stringify(JADE_BRIDGE_READY)},B=${JSON.stringify(JADE_BRIDGE_BODY)},D=${JSON.stringify(JADE_BRIDGE_ATTENDANCE)},Q=${JSON.stringify(JADE_BRIDGE_REQUEST)},S=${JSON.stringify(JADE_BRIDGE_RESPONSE)},T=${JSON.stringify(JADE_REQUEST_PATH)},N=${JSON.stringify(JADE_APP_WINDOW_NAME)},K=${JSON.stringify(attendanceTokens)},M='__jadeBridgeInstalled_v4__',P=window.opener||window.open('',N);console.info('[jade-bridge] bookmarklet-start',{origin:location.origin,opener:!!window.opener,appWindow:!!P,installKey:M});`,
     `if(location.origin!==O){console.warn('[jade-bridge] wrong-origin',location.origin);alert('Open this bookmarklet on the Jade system page.');return}if(!P){console.warn('[jade-bridge] no-app-window');alert('The Jade system tab must be opened from this app.');return}`,
-    `var send=function(m){P.postMessage(m,'*')},isTarget=function(url){try{return !!url&&new URL(url,location.origin).pathname===T}catch(_){return false}},isAttendance=function(text){return typeof text==='string'&&text.indexOf('KEY="YMD"')>=0&&text.indexOf('KEY="EMP_ID"')>=0&&text.indexOf('KEY="WORK_TYPE_NM"')>=0},report=function(body){if(typeof body==='string'&&body)send({type:B,body:body})},reportAttendance=function(body,response){var matched=!!body&&isAttendance(response);console.info('[jade-bridge] response-seen',{matched:matched,bodyLength:body?body.length:0,responseLength:typeof response==='string'?response.length:0});if(matched)send({type:D,body:body,response:response})};`,
+    `var send=function(m){P.postMessage(m,'*')},isTarget=function(url){try{return !!url&&new URL(url,location.origin).pathname===T}catch(_){return false}},isAttendance=function(text){return typeof text==='string'&&K.every(function(token){return text.indexOf(token)>=0})},report=function(body){if(typeof body==='string'&&body)send({type:B,body:body})},reportAttendance=function(body,response){var matched=!!body&&isAttendance(response);console.info('[jade-bridge] response-seen',{matched:matched,bodyLength:body?body.length:0,responseLength:typeof response==='string'?response.length:0});if(matched)send({type:D,body:body,response:response})};`,
     `if(window[M]){send({type:R,version:1});return}window[M]=true;`,
     `var originalOpen=XMLHttpRequest.prototype.open,originalSend=XMLHttpRequest.prototype.send;XMLHttpRequest.prototype.open=function(method,url){this.__jadePath=String(url);return originalOpen.apply(this,arguments)};XMLHttpRequest.prototype.send=function(body){var currentBody=typeof body==='string'?body:'';if(isTarget(this.__jadePath)){console.info('[jade-bridge] xhr-request',this.__jadePath);report(currentBody);this.addEventListener('load',function(){try{reportAttendance(currentBody,this.responseText)}catch(_){}})}return originalSend.apply(this,arguments)};`,
     `var originalFetch=window.fetch;if(originalFetch){window.fetch=function(input,init){var url=typeof input==='string'?input:input&&input.url,body=init&&typeof init.body==='string'?init.body:'',tracked=isTarget(url);if(tracked){console.info('[jade-bridge] fetch-request',url);report(body)}return originalFetch.apply(this,arguments).then(function(response){if(!tracked)return response;try{return response.clone().text().then(function(text){reportAttendance(body,text);return response}).catch(function(){return response})}catch(_){return response}})}}`,

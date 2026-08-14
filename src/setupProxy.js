@@ -1,13 +1,10 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const {serverConfig} = require('../api/config');
 
-const TARGET = 'https://ehr.jadehr.co.kr';
-const INSA_TARGET = 'https://insa.kwe.co.kr';
-const INSA_HOST = 'insa.kwe.co.kr';
-const INSA_ROUTES = new Map([
-  ['/main.asp', 'GET'],
-  ['/leave/01_list.asp', 'GET'],
-  ['/worktime/01_list.asp', 'POST'],
-]);
+const TARGET = serverConfig.jade.origin;
+const INSA_TARGET = serverConfig.insa.origin;
+const INSA_HOST = serverConfig.insa.host;
+const INSA_ROUTES = serverConfig.insa.routes;
 const INSA_REQUEST_HEADER_ALLOWLIST = new Set([
   'accept',
   'accept-encoding',

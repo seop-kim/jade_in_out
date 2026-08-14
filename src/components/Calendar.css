@@ -322,3 +322,55 @@
   max-width: 100%;
 }
 
+html[data-theme='dark'] .calendar {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme='dark'] .calendar-weekdays {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] .weekday,
+html[data-theme='dark'] .cell-date,
+html[data-theme='dark'] .record-time {
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .cell,
+html[data-theme='dark'] .cell.out-month,
+html[data-theme='dark'] .cell:hover {
+  background: var(--color-surface);
+}
+
+html[data-theme='dark'] .cell.out-month,
+html[data-theme='dark'] .cell.out-month .cell-date,
+html[data-theme='dark'] .cell-empty {
+  color: var(--color-disabled-text);
+}
+
+html[data-theme='dark'] .cell.today {
+  background: var(--color-accent-soft);
+}
+
+html[data-theme='dark'] .cell {
+  border-color: var(--color-grid-border);
+}
+
+html[data-theme='dark'] .spinner {
+  border-color: var(--color-border);
+  border-top-color: var(--color-muted-strong);
+}
+
+html[data-theme='dark'] .work-tooltip {
+  background: #0b1220;
+  color: #f9fafb;
+}
+
+html[data-theme='dark'] .cell-error {
+  background: #4c1d1d;
+  color: #fecaca;
+}
+

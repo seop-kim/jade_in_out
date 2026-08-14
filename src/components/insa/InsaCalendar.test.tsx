@@ -188,6 +188,39 @@ describe('InsaCalendar', () => {
     expect(within(cell).queryByText('--:--')).not.toBeInTheDocument();
   });
 
+  test('shows a holiday badge and holiday label in the tooltip', () => {
+    render(
+      <InsaCalendar
+        year={2026}
+        month={7}
+        today={new Date(2026, 7, 12)}
+        days={{
+          '2026-08-17': {
+            ymd: '2026-08-17',
+            ownLeave: [],
+            teamSchedule: {
+              ymd: '2026-08-17',
+              vacationCount: 0,
+              timeCount: 0,
+              holidayLabel: '대체 공휴일',
+            },
+          },
+        }}
+        onSelectDay={jest.fn()}
+        onRequestDayDetails={jest.fn()}
+        detailStates={{}}
+      />
+    );
+
+    const cell = document.querySelector<HTMLElement>('[data-ymd="2026-08-17"]');
+    if (!cell) throw new Error('Holiday label cell is missing');
+    expect(within(cell).getByText('휴일')).toHaveClass('insa-holiday-badge');
+
+    fireEvent.mouseEnter(cell);
+
+    expect(within(screen.getByRole('tooltip')).getByText('대체 공휴일')).toBeInTheDocument();
+  });
+
   test('shows actual attendance on a holiday when attendance was recorded', () => {
     const holidayWithAttendance = days['2026-08-06']!;
     render(
@@ -355,7 +388,7 @@ describe('InsaCalendar', () => {
     fireEvent.focus(dayButton);
 
     const tooltip = screen.getByRole('tooltip');
-    const leaveSection = within(tooltip).getByText('연차 목록 :').closest('.insa-team-tooltip-leave-section');
+    const leaveSection = within(tooltip).getByText('연차 목록').closest('.insa-team-tooltip-leave-section');
     expect(leaveSection).toBeInTheDocument();
     expect(leaveSection?.querySelector('.insa-team-tooltip-list')).toHaveClass('insa-team-tooltip-list-right');
     expect(leaveSection).toContainElement(within(tooltip).getByText('연차휴가 (오전)'));
