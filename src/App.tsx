@@ -15,7 +15,7 @@ import {
 } from './lib/jadeBridge';
 import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
-import {getSystemTheme, loadThemePreference, saveThemePreference, Theme} from './lib/theme';
+import {loadThemePreference, saveThemePreference, Theme} from './lib/theme';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -38,7 +38,7 @@ function App() {
   const [jadeBridgeStatus, setJadeBridgeStatus] = useState<'idle' | 'waiting' | 'ready'>('idle');
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
-  const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? getSystemTheme());
+  const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? 'light');
   const [insaVisited, setInsaVisited] = useState(false);
   const [insaConnected, setInsaConnected] = useState(false);
   const [insaResetRequest, setInsaResetRequest] = useState(0);

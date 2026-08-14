@@ -140,20 +140,20 @@ describe('App system tabs', () => {
     expect(screen.queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
   });
 
-  test('follows the system theme until the user changes the dark mode setting', async () => {
+  test('starts in light mode until the user enables the dark mode setting', async () => {
     window.matchMedia = jest.fn().mockReturnValue({matches: true}) as typeof window.matchMedia;
     render(<App />);
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
     const darkModeSwitch = screen.getByRole('switch', {name: '다크모드'});
-    expect(darkModeSwitch).toBeChecked();
+    expect(darkModeSwitch).not.toBeChecked();
 
     await userEvent.click(darkModeSwitch);
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
-    expect(localStorage.getItem('jade_in_out_theme_v1')).toBe('light');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem('jade_in_out_theme_v1')).toBe('dark');
   });
 
   test('closes the settings menu with Escape', async () => {

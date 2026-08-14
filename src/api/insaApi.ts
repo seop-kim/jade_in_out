@@ -136,7 +136,14 @@ export async function fetchInsaLeave(options: InsaRequestOptions): Promise<InsaL
 
 function errorMessage(reason: unknown, cookie?: string): string {
   const message = reason instanceof Error ? reason.message : 'Request failed';
-  return cookie ? message.replaceAll(cookie, '[redacted]') : message;
+  return cookie ? message.split(cookie).join('[redacted]') : message;
+}
+
+function settlePromise<T>(promise: Promise<T>): Promise<PromiseSettledResult<T>> {
+  return promise.then(
+    (value) => ({status: 'fulfilled', value}),
+    (reason) => ({status: 'rejected', reason}),
+  );
 }
 
 function sourceResult<T>(
@@ -175,10 +182,10 @@ export async function loadInsaMonth(options: LoadInsaMonthOptions): Promise<Insa
     signal: options.signal,
     requestHtml: options.requestHtml,
   }), options);
-  const [homeResult, worktimeResult, leaveResult] = await Promise.allSettled([
-    homeRequest,
-    worktimeRequest,
-    leaveRequest,
+  const [homeResult, worktimeResult, leaveResult] = await Promise.all([
+    settlePromise(homeRequest),
+    settlePromise(worktimeRequest),
+    settlePromise(leaveRequest),
   ]);
   const errors: InsaMonthLoadError[] = [];
 

@@ -36,7 +36,7 @@ const SOURCE_LABELS: Record<InsaMonthSource, string> = {
 
 function safeMessage(reason: unknown, cookie: string): string {
   const message = reason instanceof Error ? reason.message : String(reason || '조회 실패');
-  return cookie ? message.replaceAll(cookie, '[redacted]') : message;
+  return cookie ? message.split(cookie).join('[redacted]') : message;
 }
 
 function ymdLabel(ymd: string): string {

@@ -139,6 +139,31 @@ describe('INSA API', () => {
     expect(result.errors).toEqual([{source: 'worktime', message: 'HTTP 500'}]);
   });
 
+  test('loads monthly sources without relying on Promise.allSettled', async () => {
+    const originalAllSettled = Promise.allSettled;
+    Object.defineProperty(Promise, 'allSettled', {value: undefined, configurable: true});
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(encodedHtmlResponse(homeHtml))
+      .mockResolvedValueOnce(encodedHtmlResponse(worktimeHtml))
+      .mockResolvedValueOnce(encodedHtmlResponse(leaveHtml));
+
+    try {
+      const result = await loadInsaMonth({
+        cookie: 'test-session',
+        year: 2026,
+        month: 7,
+        today: new Date(2026, 7, 12),
+      });
+
+      expect(result.errors).toEqual([]);
+      expect(result.home).not.toBeNull();
+      expect(result.worktime).not.toBeNull();
+      expect(result.leave).not.toBeNull();
+    } finally {
+      Object.defineProperty(Promise, 'allSettled', {value: originalAllSettled, configurable: true});
+    }
+  });
+
   test('reports each monthly source when its request starts and completes', async () => {
     jest.spyOn(global, 'fetch')
       .mockResolvedValueOnce(encodedHtmlResponse(homeHtml))
