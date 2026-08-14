@@ -14,6 +14,7 @@ import {
 import {clearInsaCookie, loadInsaCookie, saveInsaCookie} from '../../lib/insaStorage';
 import {buildInsaCalendarMap} from '../../lib/transformInsa';
 import {ConnectionStatus} from '../../lib/connectionStatus';
+import {isMonthCacheFresh} from '../../lib/monthCache';
 import MonthPicker from '../MonthPicker';
 import LastFetchedLabel from '../LastFetchedLabel';
 import InsaCalendar from './InsaCalendar';
@@ -196,7 +197,9 @@ function InsaPage({
     const controller = new AbortController();
     let cancelled = false;
     const key = monthKey(viewYear, viewMonth);
-    const cached = monthCache.current.get(key);
+    const cachedEntry = monthCache.current.get(key);
+    const cached = cachedEntry && isMonthCacheFresh(cachedEntry.fetchedAt) ? cachedEntry : undefined;
+    if (cachedEntry && !cached) monthCache.current.delete(key);
 
     setLoading(true);
     setResult(null);

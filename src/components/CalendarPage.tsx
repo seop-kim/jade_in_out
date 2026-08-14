@@ -11,6 +11,7 @@ import {Credentials} from '../lib/storage';
 import {dateKey, ymdToKey} from '../lib/format';
 import {JadeBridgeTransport} from '../lib/jadeBridge';
 import {ConnectionStatus} from '../lib/connectionStatus';
+import {isMonthCacheFresh} from '../lib/monthCache';
 
 interface CalendarPageProps {
   credentials: Credentials;
@@ -92,7 +93,9 @@ function CalendarPage({
     const controller = new AbortController();
     let cancelled = false;
     const key = monthKey(viewYear, viewMonth);
-    const cached = monthCache.current.get(key);
+    const cachedEntry = monthCache.current.get(key);
+    const cached = cachedEntry && isMonthCacheFresh(cachedEntry.fetchedAt) ? cachedEntry : undefined;
+    if (cachedEntry && !cached) monthCache.current.delete(key);
 
     setLoading(true);
     setAttendance(buildLoadingMap(viewYear, viewMonth));
