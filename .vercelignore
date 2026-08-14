@@ -2,3 +2,5 @@
 *.md
 /docs/
 /.superpowers/
+/.idea/
+/.claude/
