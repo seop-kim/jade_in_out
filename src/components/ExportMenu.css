@@ -365,8 +365,9 @@
 .export-columns-panel {
   display: flex;
   flex-direction: column;
+  align-self: start;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   padding: 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
