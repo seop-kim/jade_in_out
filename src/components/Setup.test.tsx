@@ -3,7 +3,28 @@ import userEvent from '@testing-library/user-event';
 import Setup from './Setup';
 
 describe('Jade setup', () => {
-  test('offers automatic Jade connection without removing manual setup', async () => {
+  test('shows automatic auth by default and keeps manual setup hidden', () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+
+    expect(screen.getByRole('tab', {name: '자동인증'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: '수동인증'})).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('button', {name: 'Jade 시스템 열기'})).toBeInTheDocument();
+    expect(screen.queryByLabelText('cURL 명령어')).not.toBeInTheDocument();
+  });
+
+  test('switches to manual auth and keeps the inner tabs available', async () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
+
+    expect(screen.queryByRole('button', {name: 'Jade 시스템 열기'})).not.toBeInTheDocument();
+    expect(document.getElementById('jade-manual-panel')).toHaveClass('setup-manual-panel');
+    expect(screen.getByLabelText('cURL 명령어')).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: 'cURL 붙여넣기'})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: 'Cookie + Body 직접 입력'})).toBeInTheDocument();
+  });
+
+  test('keeps the automatic connection guide in the automatic tab', () => {
     render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
 
     expect(screen.getByRole('button', {name: 'Jade 시스템 열기'})).toBeInTheDocument();
@@ -14,7 +35,7 @@ describe('Jade setup', () => {
     expect(screen.getByText('Jade 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
     expect(screen.queryByText('위 순서대로 Jade 연결을 설정해주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('Jade 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('setup-auto-card');
-    expect(screen.getByLabelText('cURL 명령어')).toBeInTheDocument();
+    expect(screen.queryByLabelText('cURL 명령어')).not.toBeInTheDocument();
   });
 
   test('explains what to do when the bookmarklet link is clicked directly', async () => {

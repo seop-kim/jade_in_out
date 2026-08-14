@@ -64,14 +64,15 @@ describe('App system tabs', () => {
     expect(screen.getByRole('tab', {name: '기존'})).toHaveAttribute('aria-selected', 'true');
     expect(titleRow).toContainElement(screen.getByRole('tab', {name: '기존'}));
     expect(titleRow).toContainElement(screen.getByRole('tab', {name: '신규'}));
-    expect(screen.getByRole('heading', {name: 'Jade 인증 정보 입력'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Jade 자동 연결'})).toBeInTheDocument();
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('tab', {name: '신규'}));
 
     expect(screen.getByRole('tab', {name: '신규'})).toHaveAttribute('aria-selected', 'true');
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     expect(screen.getByLabelText('INSA Cookie')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', {name: 'Jade 인증 정보 입력'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
   });
 
   test('shows the Jade credential reset only on the active Jade tab', async () => {
@@ -377,6 +378,7 @@ describe('App system tabs', () => {
   test('lazily mounts INSA once and preserves both tabs transient state, selected month, and detail cache', async () => {
     saveInsaCookie('synthetic-session');
     render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     const jadeDraft = screen.getByLabelText('cURL 명령어');
     await userEvent.type(jadeDraft, 'synthetic unsaved draft');
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();

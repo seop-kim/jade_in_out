@@ -11,6 +11,11 @@
 # production
 /build
 
+# local planning and design documents
+*.md
+/docs/
+/.superpowers/
+
 # misc
 .DS_Store
 .env

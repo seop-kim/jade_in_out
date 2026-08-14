@@ -1,0 +1,4 @@
+# Documentation and local planning artifacts are not deployment assets.
+*.md
+/docs/
+/.superpowers/
