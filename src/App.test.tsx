@@ -38,6 +38,7 @@ describe('App system tabs', () => {
   beforeEach(() => {
     clearCredentials();
     clearInsaCookie();
+    localStorage.removeItem('jade_in_out_theme_v1');
     jest.clearAllMocks();
     mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
     mockedLoadInsaMonth.mockImplementation(async ({year, month}) => monthResult(year, month));
@@ -52,11 +53,13 @@ describe('App system tabs', () => {
   afterEach(() => {
     clearCredentials();
     clearInsaCookie();
+    localStorage.removeItem('jade_in_out_theme_v1');
   });
 
   test('keeps Jade setup as the default and opens the independent INSA screen', async () => {
     render(<App />);
 
+    expect(screen.queryByText('시작하려면 먼저 Jade 인증 정보를 입력해주세요')).not.toBeInTheDocument();
     const pageTitle = screen.getByRole('heading', {name: '출퇴근 기록'});
     const titleRow = pageTitle.closest('.app-title-row');
     if (!titleRow) throw new Error('App title row is missing');
@@ -75,7 +78,25 @@ describe('App system tabs', () => {
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
   });
 
-  test('shows the Jade credential reset only on the active Jade tab', async () => {
+  test('places the authenticated Jade user label immediately left of settings', () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {S_EMP_NM: '김태섭', S_EMP_ID: '20250304'},
+    });
+
+    render(<App />);
+
+    const headerActions = document.querySelector('.app-header-actions');
+    const userLabel = screen.getByText('김태섭 (20250304)');
+    const settingsButton = screen.getByRole('button', {name: '설정'});
+
+    expect(headerActions).toContainElement(userLabel);
+    expect(headerActions).toContainElement(settingsButton);
+    expect(userLabel.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('places the Jade credential reset inside the settings menu', async () => {
     saveCredentials({
       cookie: 'jade-session',
       body: 'S_STD_YMD=20260812',
@@ -83,14 +104,19 @@ describe('App system tabs', () => {
     });
     render(<App />);
 
+    expect(screen.queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+    const settingsButton = screen.getByRole('button', {name: '설정'});
+    expect(settingsButton.querySelector('svg')).toHaveClass('settings-icon');
+    await userEvent.click(settingsButton);
     expect(screen.getByRole('button', {name: '인증 정보 초기화'})).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('tab', {name: '신규'}));
 
-    expect(screen.queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('button', {name: '인증 정보 초기화'})).toBeDisabled();
   });
 
-  test('shows the INSA connection reset in the app header when the new system is connected', async () => {
+  test('places the INSA connection reset inside the settings menu', async () => {
     saveInsaCookie('synthetic-session');
     render(<App />);
 
@@ -104,15 +130,41 @@ describe('App system tabs', () => {
       await Promise.resolve();
     });
 
-    const header = document.querySelector<HTMLElement>('.app-header');
-    if (!header) throw new Error('App header is missing');
-    const resetButton = await within(header).findByRole('button', {name: '인증 정보 초기화'});
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    const resetButton = await screen.findByRole('button', {name: '인증 정보 초기화'});
     expect(screen.getAllByRole('button', {name: '인증 정보 초기화'})).toHaveLength(1);
 
     await userEvent.click(resetButton);
 
     expect(await screen.findByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
-    expect(within(header).queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: '인증 정보 초기화'})).not.toBeInTheDocument();
+  });
+
+  test('follows the system theme until the user changes the dark mode setting', async () => {
+    window.matchMedia = jest.fn().mockReturnValue({matches: true}) as typeof window.matchMedia;
+    render(<App />);
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    const darkModeSwitch = screen.getByRole('switch', {name: '다크모드'});
+    expect(darkModeSwitch).toBeChecked();
+
+    await userEvent.click(darkModeSwitch);
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(localStorage.getItem('jade_in_out_theme_v1')).toBe('light');
+  });
+
+  test('closes the settings menu with Escape', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('dialog', {name: '설정'})).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog', {name: '설정'})).not.toBeInTheDocument();
   });
 
   test('connects Jade through the logged-in tab without storing a Cookie', async () => {

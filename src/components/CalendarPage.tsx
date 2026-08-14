@@ -44,10 +44,6 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
   };
-  const goToday = (): void => {
-    setViewYear(today.getFullYear());
-    setViewMonth(today.getMonth());
-  };
   const refresh = useCallback((): void => setReloadKey((k) => k + 1), []);
 
   const handlePickerSelect = (year: number, month: number): void => {
@@ -114,9 +110,17 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
           <button className="btn" onClick={goNext} aria-label="다음 달" disabled={loading}>›</button>
         </div>
         <div className="toolbar-right">
-          <button className="btn btn-ghost" onClick={goToday} disabled={loading}>오늘</button>
-          <button className="btn btn-primary" onClick={refresh} disabled={loading}>
-            {loading ? '조회 중…' : '새로고침'}
+          <button
+            type="button"
+            className="btn btn-primary refresh-button"
+            onClick={refresh}
+            disabled={loading}
+            aria-label="새로고침"
+            title="새로고침"
+          >
+            <svg className="refresh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M20 11a8 8 0 0 0-14.7-4L4 9m0 0V5m0 4h4M4 13a8 8 0 0 0 14.7 4L20 15m0 0v4m0-4h-4" />
+            </svg>
           </button>
         </div>
       </div>

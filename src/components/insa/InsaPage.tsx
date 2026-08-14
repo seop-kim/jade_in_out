@@ -245,12 +245,6 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
     if (resetRequest > 0) handleReset();
   }, [handleReset, resetRequest]);
 
-  const handleToday = (): void => {
-    const nextToday = new Date();
-    setToday(nextToday);
-    selectMonth(nextToday.getFullYear(), nextToday.getMonth());
-  };
-
   const handleRefresh = (): void => {
     invalidateDayDetails();
     setToday(new Date());
@@ -339,11 +333,17 @@ function InsaPage({resetRequest = 0, onConnectionChange, onApiRequestChange, onE
           <button type="button" className="btn" aria-label="다음 달" onClick={() => shiftMonth(1)}>›</button>
         </div>
         <div className="toolbar-right">
-          <button type="button" className="btn btn-ghost" onClick={handleToday}>
-            오늘
-          </button>
-          <button type="button" className="btn btn-primary" onClick={handleRefresh} disabled={loading}>
-            {loading ? '조회 중…' : '새로고침'}
+          <button
+            type="button"
+            className="btn btn-primary refresh-button"
+            onClick={handleRefresh}
+            disabled={loading}
+            aria-label="새로고침"
+            title="새로고침"
+          >
+            <svg className="refresh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M20 11a8 8 0 0 0-14.7-4L4 9m0 0V5m0 4h4M4 13a8 8 0 0 0 14.7 4L20 15m0 0v4m0-4h-4" />
+            </svg>
           </button>
         </div>
       </div>

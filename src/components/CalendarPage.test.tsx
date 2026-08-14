@@ -1,4 +1,4 @@
-import {render, waitFor} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import CalendarPage from './CalendarPage';
 import {fetchAttendanceForMonth} from '../api/jadeApi';
 
@@ -25,6 +25,27 @@ describe('CalendarPage layout', () => {
     );
 
     expect(container.querySelector('.jade-calendar-page')).toBeInTheDocument();
+  });
+
+  it('uses an accessible refresh icon and removes the Today action', () => {
+    mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
+
+    const {container} = render(
+      <CalendarPage
+        credentials={{
+          cookie: 'test-cookie',
+          body: 'test-body',
+          parsedBody: {},
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', {name: '오늘'})).not.toBeInTheDocument();
+    const refreshButton = screen.getByRole('button', {name: '새로고침'});
+    expect(refreshButton).toBeInTheDocument();
+    expect(refreshButton.querySelector('svg')).toHaveClass('refresh-icon');
+    expect(container.querySelector('.toolbar-right')).toContainElement(refreshButton);
+    expect(container.querySelector('.toolbar-left')).not.toContainElement(refreshButton);
   });
 
   it('sends attendance errors to the toast callback', async () => {

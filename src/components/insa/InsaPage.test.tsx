@@ -306,24 +306,75 @@ describe('InsaPage', () => {
     await screen.findByRole('button', {name: '새로고침'});
   });
 
-  test('today uses the recomputed date after a month boundary', async () => {
+  test('removes the Today action and uses the accessible refresh icon', async () => {
     localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
-    jest.setSystemTime(new Date(2026, 7, 31, 23, 59));
+
+    const {container} = render(<InsaPage />);
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    expect(screen.queryByRole('button', {name: '오늘'})).not.toBeInTheDocument();
+    const refreshButton = await screen.findByRole('button', {name: '새로고침'});
+    expect(refreshButton.querySelector('svg')).toHaveClass('refresh-icon');
+    expect(container.querySelector('.toolbar-right')).toContainElement(refreshButton);
+    expect(container.querySelector('.toolbar-left')).not.toContainElement(refreshButton);
+  });
+
+  test('shows attendance and overtime values in the day tooltip', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult,
+      worktime: [{
+        ymd: '2026-08-05',
+        scheduledIn: '09:00',
+        scheduledOut: '18:00',
+        actualIn: '08:51',
+        actualOut: '',
+        leaveLabel: '',
+        overtimeLabel: '12h',
+        correctionIn: '',
+        correctionOut: '',
+        correctionStatus: '',
+        note: '',
+      }],
+    });
 
     render(<InsaPage />);
-    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
-    await screen.findByRole('button', {name: '새로고침'});
-    jest.setSystemTime(new Date(2026, 8, 1, 0, 1));
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await userEvent.hover(dayButton);
 
-    await act(async () => {
-      await userEvent.click(screen.getByRole('button', {name: '오늘'}));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getByText('출근 시간')).toBeInTheDocument();
+    expect(within(tooltip).getByText('08:51')).toBeInTheDocument();
+    expect(within(tooltip).getByText('퇴근 시간')).toBeInTheDocument();
+    expect(within(tooltip).getByText('--:--')).toBeInTheDocument();
+    expect(within(tooltip).getByText('연장 시간')).toBeInTheDocument();
+    expect(within(tooltip).getByText('12h')).toBeInTheDocument();
+  });
+
+  test('omits the overtime row when no overtime value exists', async () => {
+    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult,
+      worktime: [{
+        ymd: '2026-08-05',
+        scheduledIn: '09:00',
+        scheduledOut: '18:00',
+        actualIn: '08:51',
+        actualOut: '18:00',
+        leaveLabel: '',
+        overtimeLabel: '',
+        correctionIn: '',
+        correctionOut: '',
+        correctionStatus: '',
+        note: '',
+      }],
     });
-    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
-      year: 2026,
-      month: 8,
-      today: new Date(2026, 8, 1, 0, 1),
-    }));
-    await screen.findByRole('button', {name: '새로고침'});
+
+    render(<InsaPage />);
+    const dayButton = await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await userEvent.hover(dayButton);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).queryByText('연장 시간')).not.toBeInTheDocument();
   });
 
   test('loads team details only after selection and reuses cached details', async () => {

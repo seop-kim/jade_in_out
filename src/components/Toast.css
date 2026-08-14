@@ -70,6 +70,35 @@
   background: #dcfce7;
 }
 
+html[data-theme='dark'] .toast {
+  border-color: #7f1d1d;
+  background: #351717;
+  color: #fecaca;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme='dark'] .toast-success {
+  border-color: #166534;
+  background: #142b1c;
+  color: #bbf7d0;
+}
+
+html[data-theme='dark'] .toast-dismiss {
+  color: #fca5a5;
+}
+
+html[data-theme='dark'] .toast-dismiss:hover {
+  background: #4c1d1d;
+}
+
+html[data-theme='dark'] .toast-success .toast-dismiss {
+  color: #86efac;
+}
+
+html[data-theme='dark'] .toast-success .toast-dismiss:hover {
+  background: #14532d;
+}
+
 .toast-dismiss:focus-visible {
   outline: 2px solid #dc2626;
   outline-offset: 1px;

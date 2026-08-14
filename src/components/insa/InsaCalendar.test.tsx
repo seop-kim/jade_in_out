@@ -355,7 +355,7 @@ describe('InsaCalendar', () => {
     fireEvent.focus(dayButton);
 
     const tooltip = screen.getByRole('tooltip');
-    const leaveSection = within(tooltip).getByText('연차 목록 :').closest('.insa-team-tooltip-leave-section');
+    const leaveSection = within(tooltip).getByText('연차 목록').closest('.insa-team-tooltip-leave-section');
     expect(leaveSection).toBeInTheDocument();
     expect(leaveSection?.querySelector('.insa-team-tooltip-list')).toHaveClass('insa-team-tooltip-list-right');
     expect(leaveSection).toContainElement(within(tooltip).getByText('연차휴가 (오전)'));

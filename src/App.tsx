@@ -4,6 +4,7 @@ import Setup from './components/Setup';
 import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
+import SettingsMenu from './components/SettingsMenu';
 import {appConfig} from './config';
 import {
   JADE_APP_WINDOW_NAME,
@@ -14,6 +15,7 @@ import {
 } from './lib/jadeBridge';
 import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
+import {getSystemTheme, loadThemePreference, saveThemePreference, Theme} from './lib/theme';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -36,6 +38,7 @@ function App() {
   const [jadeBridgeStatus, setJadeBridgeStatus] = useState<'idle' | 'waiting' | 'ready'>('idle');
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
+  const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? getSystemTheme());
   const [insaVisited, setInsaVisited] = useState(false);
   const [insaConnected, setInsaConnected] = useState(false);
   const [insaResetRequest, setInsaResetRequest] = useState(0);
@@ -45,6 +48,10 @@ function App() {
   const insaTabRef = useRef<HTMLButtonElement>(null);
   const nextToastId = useRef(0);
   const jadeBridgeClientRef = useRef<JadeBridgeClient | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   useEffect(() => {
     window.name = JADE_APP_WINDOW_NAME;
@@ -95,6 +102,11 @@ function App() {
     clearCredentials();
     setCredentials(null);
   };
+
+  const handleThemeChange = useCallback((nextTheme: Theme): void => {
+    saveThemePreference(nextTheme);
+    setTheme(nextTheme);
+  }, []);
 
   const handleInsaConnectionChange = useCallback((connected: boolean): void => {
     setInsaConnected(connected);
@@ -236,6 +248,11 @@ function App() {
   const empName = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeName] ?? '';
   const empId = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const userLabel = `${empName} ${empId ? `(${empId})` : ''}`.trim();
+  const canResetCredentials = systemTab === 'jade' ? Boolean(activeJadeCredentials) : insaConnected;
+  const handleResetCurrentCredentials = (): void => {
+    if (systemTab === 'jade') handleResetCredentials();
+    else setInsaResetRequest((request) => request + 1);
+  };
 
   return (
     <div className="app">
@@ -275,22 +292,20 @@ function App() {
                 </button>
               </div>
             </div>
-            <p className="app-subtitle">
-              {activeJadeCredentials
-                ? userLabel || '날짜별 출근/퇴근 시간을 한눈에 확인하세요'
-                : '시작하려면 먼저 Jade 인증 정보를 입력해주세요'}
-            </p>
           </div>
-          {systemTab === 'jade' && activeJadeCredentials && (
-            <button className="btn btn-ghost" onClick={handleResetCredentials}>
-              인증 정보 초기화
-            </button>
-          )}
-          {systemTab === 'insa' && insaConnected && (
-            <button className="btn btn-ghost" onClick={() => setInsaResetRequest((request) => request + 1)}>
-              인증 정보 초기화
-            </button>
-          )}
+          <div className="app-header-actions">
+            {activeJadeCredentials && (
+              <p className="app-subtitle">
+                {userLabel || '날짜별 출근/퇴근 시간을 한눈에 확인하세요'}
+              </p>
+            )}
+            <SettingsMenu
+              theme={theme}
+              onThemeChange={handleThemeChange}
+              canResetCredentials={canResetCredentials}
+              onResetCredentials={handleResetCurrentCredentials}
+            />
+          </div>
         </div>
       </header>
 

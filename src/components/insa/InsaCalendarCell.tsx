@@ -1,4 +1,5 @@
 import {MouseEvent, useState} from 'react';
+import {InsaWorktimeRecord} from '../../api/insaParsers';
 import {InsaCalendarDay} from '../../lib/transformInsa';
 import type {DetailState} from './InsaPage';
 
@@ -61,6 +62,7 @@ function TeamDetailsTooltip({
   pos,
   dateLabel,
   hasTeamDetails,
+  worktime,
   scheduledIn,
   scheduledOut,
 }: {
@@ -69,6 +71,7 @@ function TeamDetailsTooltip({
   pos: TooltipPos;
   dateLabel: string;
   hasTeamDetails: boolean;
+  worktime?: InsaWorktimeRecord;
   scheduledIn?: string;
   scheduledOut?: string;
 }) {
@@ -91,9 +94,27 @@ function TeamDetailsTooltip({
           </span>
         </div>
       )}
+      {worktime && (
+        <div className="insa-team-tooltip-worktime">
+          <div className="insa-team-tooltip-worktime-row">
+            <span className="insa-team-tooltip-title">출근 시간</span>
+            <span className="insa-team-tooltip-worktime-value">{worktime.actualIn || '--:--'}</span>
+          </div>
+          <div className="insa-team-tooltip-worktime-row">
+            <span className="insa-team-tooltip-title">퇴근 시간</span>
+            <span className="insa-team-tooltip-worktime-value">{worktime.actualOut || '--:--'}</span>
+          </div>
+          {worktime.overtimeLabel && (
+            <div className="insa-team-tooltip-worktime-row">
+              <span className="insa-team-tooltip-title">연장 시간</span>
+              <span className="insa-team-tooltip-worktime-value">{worktime.overtimeLabel}</span>
+            </div>
+          )}
+        </div>
+      )}
       {hasTeamDetails && (
         <div className="insa-team-tooltip-leave-section">
-          <div className="insa-team-tooltip-list-title">연차 목록 :</div>
+          <div className="insa-team-tooltip-list-title">연차 목록</div>
           <TeamDetailsContent state={state} />
         </div>
       )}
@@ -129,8 +150,7 @@ function InsaCalendarCell({
   const hasLeaveBadge = hasTeamDetails || hasOwnLeave;
   const isHoliday = Boolean(worktime) && !worktime?.scheduledIn && !worktime?.scheduledOut;
   const hasActualAttendance = Boolean(worktime?.actualIn || worktime?.actualOut);
-  const hasScheduledTime = Boolean(worktime?.scheduledIn || worktime?.scheduledOut);
-  const hasTooltipContent = hasTeamDetails || hasScheduledTime;
+  const hasTooltipContent = hasTeamDetails || Boolean(worktime);
   const dayOfWeek = new Date(year, month, day).getDay();
   const dateLabel = `${year}년 ${month + 1}월 ${day}일`;
   const tooltipId = `insa-team-tooltip-${ymd}`;
@@ -217,6 +237,7 @@ function InsaCalendarCell({
           pos={tooltip}
           dateLabel={`${month + 1}/${day} (${WEEKDAY_LABELS[new Date(year, month, day).getDay()]})`}
           hasTeamDetails={hasTeamDetails}
+          worktime={worktime}
           scheduledIn={worktime?.scheduledIn}
           scheduledOut={worktime?.scheduledOut}
         />
