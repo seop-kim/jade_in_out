@@ -244,7 +244,8 @@ function ExportMenu({
               </button>
             </div>
 
-            <div className="export-date-picker-section">
+            <div className="export-settings-grid">
+              <div className="export-date-picker-section">
               <div className="export-date-picker-heading">
                 <div>
                   <strong>조회 기간</strong>
@@ -292,46 +293,49 @@ function ExportMenu({
                   ) : <span className="export-calendar-empty" key={`empty-${index}`} />)}
                 </div>
               </div>
-            </div>
+              </div>
 
-            <div className="export-columns-heading">
-              <span>내보낼 항목</span>
-              <span className="export-columns-hint">순서대로 저장됩니다</span>
-            </div>
-            <div className="export-column-list">
-              {orderedColumns.map((column, index) => (
-                <div className="export-column-row" key={column.key}>
-                  <label className="export-column-check">
-                    <input
-                      type="checkbox"
-                      aria-label={`${column.label} 포함`}
-                      checked={selectedKeys.includes(column.key)}
-                      onChange={() => toggleColumn(column.key)}
-                    />
-                    <span data-testid="export-column-label">{column.label}</span>
-                  </label>
-                  <span className="export-column-actions">
-                    <button
-                      type="button"
-                      className="export-move-button"
-                      aria-label={`${column.label} 위로 이동`}
-                      disabled={index === 0}
-                      onClick={() => moveColumn(column.key, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="export-move-button"
-                      aria-label={`${column.label} 아래로 이동`}
-                      disabled={index === orderedColumns.length - 1}
-                      onClick={() => moveColumn(column.key, 1)}
-                    >
-                      ↓
-                    </button>
-                  </span>
+              <div className="export-columns-panel">
+                <div className="export-columns-heading">
+                  <span>내보낼 항목</span>
+                  <span className="export-columns-hint">순서대로 저장됩니다</span>
                 </div>
-              ))}
+                <div className="export-column-list">
+                  {orderedColumns.map((column, index) => (
+                    <div className="export-column-row" key={column.key}>
+                      <label className="export-column-check">
+                        <input
+                          type="checkbox"
+                          aria-label={`${column.label} 포함`}
+                          checked={selectedKeys.includes(column.key)}
+                          onChange={() => toggleColumn(column.key)}
+                        />
+                        <span data-testid="export-column-label">{column.label}</span>
+                      </label>
+                      <span className="export-column-actions">
+                        <button
+                          type="button"
+                          className="export-move-button"
+                          aria-label={`${column.label} 위로 이동`}
+                          disabled={index === 0}
+                          onClick={() => moveColumn(column.key, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="export-move-button"
+                          aria-label={`${column.label} 아래로 이동`}
+                          disabled={index === orderedColumns.length - 1}
+                          onClick={() => moveColumn(column.key, 1)}
+                        >
+                          ↓
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="export-preview-section" aria-label="CSV 미리보기">

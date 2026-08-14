@@ -29,6 +29,9 @@ describe('ExportMenu', () => {
     userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
 
     expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+    expect(document.querySelector('.export-settings-grid')).toBeInTheDocument();
+    expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
+    expect(document.querySelector('.export-preview-section')).toBeInTheDocument();
     expect(screen.getByText('시작일을 선택하세요')).toBeInTheDocument();
     expect(screen.getByText('종료일을 선택하세요')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', {name: '날짜 포함'})).toBeChecked();
