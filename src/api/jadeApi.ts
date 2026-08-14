@@ -1,8 +1,7 @@
 import axios from 'axios';
+import {appConfig} from '../config';
 import {toYmd} from '../lib/format';
 import {JadeBridgeTransport} from '../lib/jadeBridge';
-
-const ENDPOINT = '/api/jade/commonAction.do';
 
 const client = axios.create({
   timeout: 15000,
@@ -35,13 +34,6 @@ export interface WorkListRow {
 }
 
 export interface RawEtc {
-  I_IN_HM?: string;
-  I_OUT_HM?: string;
-  C_IN_HM?: string;
-  C_OUT_HM?: string;
-  WORK_DAY?: string;
-  WORK_TYPE_NM?: string;
-  WORK_DETAIL?: string;
   __message?: string;
   [key: string]: string | undefined;
 }
@@ -82,14 +74,14 @@ function buildFormBody(parsedBody: Record<string, string>, ymd: string): URLSear
   const params = new URLSearchParams();
   let stdYmdSet = false;
   for (const [key, value] of Object.entries(parsedBody)) {
-    if (key === 'S_STD_YMD') {
+    if (key === appConfig.jade.fields.requestDate) {
       params.append(key, ymd);
       stdYmdSet = true;
     } else {
       params.append(key, value ?? '');
     }
   }
-  if (!stdYmdSet) params.append('S_STD_YMD', ymd);
+  if (!stdYmdSet) params.append(appConfig.jade.fields.requestDate, ymd);
   return params;
 }
 
@@ -228,11 +220,11 @@ export async function fetchAttendanceForDate({
 }: FetchDateOptions): Promise<RawEtc> {
   const body = buildFormBody(parsedBody, ymd);
   if (transport) {
-    const responseText = await transport.post('/commonAction.do', body.toString(), signal);
+    const responseText = await transport.post(appConfig.jade.requestPath, body.toString(), signal);
     return parseAttendanceXml(responseText);
   }
   if (!cookie) throw new Error('Jade authentication is not configured');
-  const res = await client.post(ENDPOINT, body, {
+  const res = await client.post(`${appConfig.jade.apiBasePath}${appConfig.jade.requestPath}`, body, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'X-Jade-Cookie': cookie,
@@ -243,19 +235,19 @@ export async function fetchAttendanceForDate({
 }
 
 function buildRecord(ymd: string, etc: RawEtc): AttendanceRecord {
-  const rows = parseWorkListRows(etc.WORK_DETAIL ?? '');
+  const rows = parseWorkListRows(etc[appConfig.jade.fields.workDetail] ?? '');
 
-  let clockIn = etc.I_IN_HM ?? '';
+  let clockIn = etc[appConfig.jade.fields.clockIn] ?? '';
   let clockInChanged = false;
-  if (!clockIn && etc.C_IN_HM) {
-    clockIn = etc.C_IN_HM;
+  if (!clockIn && etc[appConfig.jade.fields.correctedClockIn]) {
+    clockIn = etc[appConfig.jade.fields.correctedClockIn] ?? '';
     clockInChanged = true;
   }
 
-  let clockOut = etc.I_OUT_HM ?? '';
+  let clockOut = etc[appConfig.jade.fields.clockOut] ?? '';
   let clockOutChanged = false;
-  if (!clockOut && etc.C_OUT_HM) {
-    clockOut = etc.C_OUT_HM;
+  if (!clockOut && etc[appConfig.jade.fields.correctedClockOut]) {
+    clockOut = etc[appConfig.jade.fields.correctedClockOut] ?? '';
     clockOutChanged = true;
   }
 
@@ -275,8 +267,8 @@ function buildRecord(ymd: string, etc: RawEtc): AttendanceRecord {
 
   return {
     ymd,
-    workDay: etc.WORK_DAY ?? '',
-    workType: etc.WORK_TYPE_NM ?? '',
+    workDay: etc[appConfig.jade.fields.workDay] ?? '',
+    workType: etc[appConfig.jade.fields.workType] ?? '',
     vacation: vacationFromRows(rows),
     overtime: overtimeFromRows(rows),
     dayOffWork: dayOffWorkFromRows(rows),

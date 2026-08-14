@@ -4,6 +4,7 @@ import Setup from './components/Setup';
 import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
+import {appConfig} from './config';
 import {
   JADE_APP_WINDOW_NAME,
   createJadeBookmarklet,
@@ -107,7 +108,7 @@ function App() {
 
   const handleOpenJadeAutomatic = useCallback((): void => {
     closeJadeBridge(true);
-    const jadeWindow = window.open('https://ehr.jadehr.co.kr/', '_blank');
+    const jadeWindow = window.open(`${appConfig.jade.origin}/`, '_blank');
     if (!jadeWindow) {
       showErrorToast('Jade 시스템 창을 열지 못했습니다');
       return;
@@ -128,7 +129,7 @@ function App() {
         });
         if (!isJadeAttendanceResponse(response)) return;
         const parsedBody = parseBody(body);
-        if (!parsedBody['S_STD_YMD']) return;
+        if (!parsedBody[appConfig.jade.fields.requestDate]) return;
         setJadeBridgeConnection((current) => current ?? {
           credentials: {cookie: '', body, parsedBody},
           transport: jadeBridgeClientRef.current!,
@@ -232,8 +233,8 @@ function App() {
 
   const activeJadeCredentials = credentials ?? jadeBridgeConnection?.credentials ?? null;
   const activeJadeTransport = credentials ? undefined : jadeBridgeConnection?.transport;
-  const empName = activeJadeCredentials?.parsedBody['S_EMP_NM'] ?? '';
-  const empId = activeJadeCredentials?.parsedBody['S_EMP_ID'] ?? '';
+  const empName = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeName] ?? '';
+  const empId = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const userLabel = `${empName} ${empId ? `(${empId})` : ''}`.trim();
 
   return (

@@ -1,16 +1,13 @@
 import https from 'node:https';
+const {serverConfig} = require('../config');
 
 export const config = {
   api: {bodyParser: false},
 };
 
-const TARGET_HOST = 'insa.kwe.co.kr';
-const TARGET_ORIGIN = `https://${TARGET_HOST}`;
-const ALLOWED_ROUTES = new Map([
-  ['/main.asp', 'GET'],
-  ['/leave/01_list.asp', 'GET'],
-  ['/worktime/01_list.asp', 'POST'],
-]);
+const TARGET_HOST = serverConfig.insa.host;
+const TARGET_ORIGIN = serverConfig.insa.origin;
+const ALLOWED_ROUTES = serverConfig.insa.routes;
 const REQUEST_HEADER_ALLOWLIST = new Set([
   'accept',
   'accept-encoding',

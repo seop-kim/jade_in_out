@@ -1,3 +1,5 @@
+import {appConfig} from '../config';
+
 export interface InsaHomeDaySummary {
   ymd: string;
   vacationCount: number;
@@ -111,15 +113,15 @@ export function parseInsaHomeHtml(
   expectedMonth: number
 ): InsaHomeMonthData {
   const doc = parseDocument(html);
-  const dateCells = Array.from(doc.querySelectorAll<HTMLTableCellElement>('td[onclick*="Sel_Day="]'));
+  const dateCells = Array.from(doc.querySelectorAll<HTMLTableCellElement>(`${appConfig.insa.parser.dateCellSelectorPrefix}`));
   if (dateCells.length === 0) throw new Error(HOME_FORMAT_ERROR);
   const days: Record<string, InsaHomeDaySummary> = {};
 
   for (const cell of dateCells) {
     const onclick = cell.getAttribute('onclick') ?? '';
-    const year = parseQueryNumber(onclick, 'Sel_Year');
-    const month = parseQueryNumber(onclick, 'Sel_Month');
-    const day = parseQueryNumber(onclick, 'Sel_Day');
+    const year = parseQueryNumber(onclick, appConfig.insa.query.year);
+    const month = parseQueryNumber(onclick, appConfig.insa.query.month);
+    const day = parseQueryNumber(onclick, appConfig.insa.query.day);
     if (year !== expectedYear || month !== expectedMonth || !day) continue;
 
     const ymd = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -129,8 +131,8 @@ export function parseInsaHomeHtml(
     };
     days[ymd] = {
       ymd,
-      vacationCount: countForIcon('icon_dot_schedule0.gif'),
-      timeCount: countForIcon('icon_dot_schedule1.gif'),
+      vacationCount: countForIcon(appConfig.insa.parser.vacationIcon),
+      timeCount: countForIcon(appConfig.insa.parser.timeIcon),
     };
   }
 
@@ -140,24 +142,24 @@ export function parseInsaHomeHtml(
 
 export function parseInsaDayDetails(html: string, expectedYmd: string): InsaTeamDetail[] {
   const doc = parseDocument(html);
-  const detailEnd = doc.querySelector('img[src*="main_schedule_detail_bottom.gif"]');
+  const detailEnd = doc.querySelector(`img[src*="${appConfig.insa.parser.detailBottomIcon}"]`);
 
   if (detailEnd) {
     let sectionTable = detailEnd.closest('table');
     let detailTable: HTMLTableElement | null = null;
     while (sectionTable && !detailTable) {
-      detailTable = sectionTable.querySelector<HTMLTableElement>('div.scroll > table');
+      detailTable = sectionTable.querySelector<HTMLTableElement>(appConfig.insa.parser.detailScrollSelector);
       sectionTable = sectionTable.parentElement?.closest('table') ?? null;
     }
     if (!detailTable) throw new Error(DAY_DETAILS_FORMAT_ERROR);
 
     return Array.from(detailTable.querySelectorAll('tr')).flatMap((row) => {
       const cells = directCells(row);
-      if (cells.length !== 4) return [];
+      if (cells.length !== appConfig.insa.parser.detailColumnCount) return [];
       const iconCell = cells[1];
       const detailCell = cells[2];
       const icon = iconCell?.querySelector(
-        'img[src*="icon_dot_schedule0.gif"], img[src*="icon_dot_schedule1.gif"]'
+        `img[src*="${appConfig.insa.parser.vacationIcon}"], img[src*="${appConfig.insa.parser.timeIcon}"]`
       );
       if (!icon) return [];
       if (!detailCell) throw new Error(DAY_DETAILS_FORMAT_ERROR);
@@ -165,14 +167,14 @@ export function parseInsaDayDetails(html: string, expectedYmd: string): InsaTeam
       const scheduleElement = Array.from(detailCell.children).find(
         (child) => child.tagName === 'SPAN'
       );
-      const durationElement = scheduleElement?.querySelector('font.cGR.font_11');
+      const durationElement = scheduleElement?.querySelector(appConfig.insa.parser.durationSelector);
       const name = directText(detailCell);
       if (!scheduleElement || !durationElement || !name) {
         throw new Error(DAY_DETAILS_FORMAT_ERROR);
       }
 
       const scheduleWithoutDuration = scheduleElement.cloneNode(true) as Element;
-      scheduleWithoutDuration.querySelectorAll('font.cGR.font_11').forEach((element) => element.remove());
+      scheduleWithoutDuration.querySelectorAll(appConfig.insa.parser.durationSelector).forEach((element) => element.remove());
       const scheduleLabel = cleanText(scheduleWithoutDuration);
       const durationLabel = cleanText(durationElement);
       if (!scheduleLabel) throw new Error(DAY_DETAILS_FORMAT_ERROR);
@@ -181,7 +183,7 @@ export function parseInsaDayDetails(html: string, expectedYmd: string): InsaTeam
     });
   }
 
-  const table = doc.querySelector('table.tbltop');
+  const table = doc.querySelector(appConfig.insa.parser.tableSelector);
   if (!table) throw new Error(DAY_DETAILS_FORMAT_ERROR);
 
   return Array.from(table.querySelectorAll('tr')).flatMap((row) => {
@@ -200,12 +202,12 @@ export function parseInsaDayDetails(html: string, expectedYmd: string): InsaTeam
 
 export function parseInsaWorktimeHtml(html: string): InsaWorktimeRecord[] {
   const doc = parseDocument(html);
-  const table = doc.querySelector('table.tbltop');
+  const table = doc.querySelector(appConfig.insa.parser.tableSelector);
   if (!table) throw new Error(WORKTIME_FORMAT_ERROR);
 
   return Array.from(table.querySelectorAll('tr')).flatMap((row) => {
     const cells = directCells(row);
-    if (cells.length !== 14) return [];
+    if (cells.length !== appConfig.insa.parser.worktimeColumnCount) return [];
     const ymd = parseYmd(cleanText(cells[3]!));
     if (!ymd) return [];
     return [{
@@ -226,7 +228,7 @@ export function parseInsaWorktimeHtml(html: string): InsaWorktimeRecord[] {
 
 export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   const doc = parseDocument(html);
-  const tables = Array.from(doc.querySelectorAll('table.tbltop'));
+  const tables = Array.from(doc.querySelectorAll(appConfig.insa.parser.tableSelector));
   if (tables.length < 2) throw new Error(LEAVE_FORMAT_ERROR);
 
   const balances: InsaLeaveBalance[] = [];
@@ -235,7 +237,7 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   for (const table of tables) {
     for (const row of Array.from(table.querySelectorAll('tr'))) {
       const cells = directCells(row);
-      if (cells.length === 6) {
+      if (cells.length === appConfig.insa.parser.balanceColumnCount) {
         const year = parseNumber(cleanText(cells[0]!));
         if (year === null) continue;
         balances.push({
@@ -246,7 +248,7 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
           remainingHours: numberFromSummaryCell(cells[5]!),
         });
       }
-      if (cells.length === 8) {
+      if (cells.length === appConfig.insa.parser.leaveRecordColumnCount) {
         const ymd = parseYmd(cleanText(cells[1]!));
         if (!ymd) continue;
         records.push({

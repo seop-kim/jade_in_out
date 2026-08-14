@@ -1,11 +1,12 @@
 import https from 'node:https';
+const {serverConfig} = require('../config');
 
 export const config = {
   api: { bodyParser: false },
 };
 
-const TARGET_HOST = 'ehr.jadehr.co.kr';
-const TARGET_ORIGIN = `https://${TARGET_HOST}`;
+const TARGET_HOST = serverConfig.jade.host;
+const TARGET_ORIGIN = serverConfig.jade.origin;
 
 const HOP_BY_HOP = new Set([
   'transfer-encoding',
