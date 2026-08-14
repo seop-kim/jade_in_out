@@ -245,6 +245,16 @@ function ExportMenu({
             </div>
 
             <div className="export-date-picker-section">
+              <div className="export-date-picker-heading">
+                <div>
+                  <strong>조회 기간</strong>
+                  <span>첫 번째 날짜는 시작일, 두 번째 날짜는 종료일입니다.</span>
+                </div>
+                <div className="export-date-step-indicator" aria-label="기간 선택 단계">
+                  <span className={rangeStep === 'start' ? 'is-active' : ''}>1 시작일</span>
+                  <span className={rangeStep === 'end' ? 'is-active' : ''}>2 종료일</span>
+                </div>
+              </div>
               <div className="export-date-selection-status">
                 <div className={`export-date-selection ${startDate ? 'is-selected' : ''}`}>
                   <span className="export-date-selection-label">시작일</span>
@@ -358,7 +368,12 @@ function ExportMenu({
               <button type="button" className="btn export-cancel" onClick={() => setIsOpen(false)}>
                 취소
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleDownload}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleDownload}
+                disabled={!startDate || !endDate || selectedColumns.length === 0}
+              >
                 파일 저장
               </button>
             </div>
