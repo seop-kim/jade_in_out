@@ -17,6 +17,7 @@ interface CalendarPageProps {
   credentials: Credentials;
   transport?: JadeBridgeTransport;
   onError?: (message: string) => void;
+  onAuthenticationExpired?: () => void;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onLastFetchedChange?: (value: Date | null) => void;
 }
@@ -43,6 +44,10 @@ function hasAttendanceErrors(results: Record<string, AttendanceResult>): boolean
   return Object.values(results).some((result) => 'error' in result);
 }
 
+function hasAuthenticationErrors(results: Record<string, AttendanceResult>): boolean {
+  return Object.values(results).some((result) => 'authError' in result && result.authError === true);
+}
+
 function buildLoadingMap(year: number, month: number): AttendanceMap {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const out: AttendanceMap = {};
@@ -56,6 +61,7 @@ function CalendarPage({
   credentials,
   transport,
   onError,
+  onAuthenticationExpired,
   onConnectionStatusChange,
   onLastFetchedChange,
 }: CalendarPageProps) {
@@ -141,6 +147,11 @@ function CalendarPage({
         if (cancelled) return;
         const nextAttendance = buildAttendanceMap(results, today);
         setAttendance(nextAttendance);
+        if (hasAuthenticationErrors(results)) {
+          onConnectionStatusChange?.('error');
+          onAuthenticationExpired?.();
+          return;
+        }
         if (hasAttendanceErrors(results)) {
           onConnectionStatusChange?.('error');
           return;
@@ -165,7 +176,7 @@ function CalendarPage({
       cancelled = true;
       controller.abort();
     };
-  }, [viewYear, viewMonth, credentials, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, today, transport]);
+  }, [viewYear, viewMonth, credentials, onAuthenticationExpired, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, today, transport]);
 
   return (
     <div className="jade-calendar-page">

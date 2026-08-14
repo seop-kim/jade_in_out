@@ -72,6 +72,13 @@ describe('INSA API', () => {
     });
   });
 
+  test('identifies an expired INSA session from an unauthorized response', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({ok: false, status: 401} as Response);
+
+    await expect(fetchInsaHomeMonth({cookie: 'expired-session', year: 2026, month: 7}))
+      .rejects.toMatchObject({name: 'InsaAuthenticationError'});
+  });
+
   test('posts form-urlencoded worktime criteria through the INSA proxy', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(encodedHtmlResponse(worktimeHtml));
 

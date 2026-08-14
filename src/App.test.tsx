@@ -9,6 +9,7 @@ import {clearCredentials, saveCredentials} from './lib/storage';
 
 jest.mock('./api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 jest.mock('./api/jadeApi', () => ({
@@ -76,6 +77,34 @@ describe('App system tabs', () => {
     await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     expect(screen.getByLabelText('INSA Cookie')).toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
+  });
+
+  test('returns to Jade authentication setup when the session expires', async () => {
+    saveCredentials({
+      cookie: 'expired-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {},
+    });
+    mockedFetchAttendanceForMonth.mockResolvedValue({
+      '2026-08-12': {ymd: '2026-08-12', error: 'expired', authError: true},
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', {name: 'Jade 자동 연결'})).toBeInTheDocument();
+  });
+
+  test('returns to INSA authentication setup when the session expires', async () => {
+    saveInsaCookie('expired-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult(2026, new Date().getMonth()),
+      errors: [{source: 'home', message: 'session expired', authError: true}],
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+
+    expect(await screen.findByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
   });
 
   test('places the authenticated Jade user label immediately left of settings', () => {

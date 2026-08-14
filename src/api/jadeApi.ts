@@ -60,9 +60,17 @@ export interface AttendanceRecord {
 export interface AttendanceError {
   ymd: string;
   error: string;
+  authError?: boolean;
 }
 
 export type AttendanceResult = AttendanceRecord | AttendanceError;
+
+export class JadeAuthenticationError extends Error {
+  constructor(message = '로그인 정보 만료') {
+    super(message);
+    this.name = 'JadeAuthenticationError';
+  }
+}
 
 const LEAVE_TYPE_KEYWORDS = ['휴가', '병가', '공가'] as const;
 
@@ -192,10 +200,10 @@ function parseAttendanceXml(xmlText: string): RawEtc {
   const message = doc.querySelector('MESSAGE');
   const messageText = message ? (message.textContent ?? '').trim() : '';
 
+  if (messageText === 'LOGIN_CHECK_FAIL:LOGOUT') {
+    throw new JadeAuthenticationError();
+  }
   if (Object.keys(result).length === 0) {
-    if (messageText === 'LOGIN_CHECK_FAIL:LOGOUT') {
-      throw new Error('로그인 정보 만료');
-    }
     throw new Error('오류');
   }
 
@@ -213,12 +221,24 @@ export interface FetchDateOptions {
   transport?: JadeBridgeTransport;
 }
 
+export function isJadeAuthenticationError(error: unknown): boolean {
+  const typedError = error as {name?: string; message?: string; response?: {status?: number}} | null;
+  const status = typedError?.response?.status;
+  const message = typedError?.message ?? String(error ?? '');
+  return typedError?.name === 'JadeAuthenticationError'
+    || status === 401
+    || status === 403
+    || /\b(?:401|403)\b/.test(message)
+    || message.includes('LOGIN_CHECK_FAIL:LOGOUT');
+}
+
 function isAbortError(error: unknown): boolean {
   const name = (error as {name?: string} | null)?.name;
   return name === 'CanceledError' || name === 'AbortError';
 }
 
 function isRetryableError(error: unknown): boolean {
+  if (isJadeAuthenticationError(error)) return false;
   const status = (error as {response?: {status?: number}} | null)?.response?.status;
   return status === undefined || status === 0 || status >= 500;
 }
@@ -403,7 +423,11 @@ export async function fetchAttendanceForMonth({
           ? `HTTP ${error.response.status}`
           : error.message ?? String(err);
         console.error('[jade] fetch failed', ymd, message, err);
-        dayResult = {ymd, error: message};
+        dayResult = {
+          ymd,
+          error: message,
+          ...(isJadeAuthenticationError(err) ? {authError: true} : {}),
+        };
       }
       result[ymd] = dayResult;
       onDayResult?.(ymd, dayResult);

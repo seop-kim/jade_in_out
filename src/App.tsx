@@ -103,12 +103,12 @@ function App() {
     setCredentials(creds);
   };
 
-  const handleResetCredentials = (): void => {
+  const handleResetCredentials = useCallback((): void => {
     closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
     setJadeConnectionStatus('not-configured');
-  };
+  }, [closeJadeBridge]);
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
     saveThemePreference(nextTheme);
@@ -125,6 +125,17 @@ function App() {
     nextToastId.current = id;
     setToasts((current) => [...current, {id, message}]);
   }, []);
+
+  const handleJadeAuthenticationExpired = useCallback((): void => {
+    handleResetCredentials();
+    showErrorToast('인증 정보가 만료되었습니다. 다시 인증해주세요.');
+  }, [handleResetCredentials, showErrorToast]);
+
+  const handleInsaAuthenticationExpired = useCallback((): void => {
+    setInsaConnectionStatus('not-configured');
+    setInsaResetRequest((request) => request + 1);
+    showErrorToast('인증 정보가 만료되었습니다. 다시 인증해주세요.');
+  }, [showErrorToast]);
 
   const handleOpenJadeAutomatic = useCallback((): void => {
     closeJadeBridge(true);
@@ -337,6 +348,7 @@ function App() {
                 credentials={activeJadeCredentials}
                 transport={activeJadeTransport}
                 onError={showErrorToast}
+                onAuthenticationExpired={handleJadeAuthenticationExpired}
                 onConnectionStatusChange={setJadeConnectionStatus}
               />
             ) : (
@@ -358,6 +370,7 @@ function App() {
             <InsaPage
               resetRequest={insaResetRequest}
               onConnectionChange={handleInsaConnectionChange}
+              onAuthenticationExpired={handleInsaAuthenticationExpired}
               onConnectionStatusChange={setInsaConnectionStatus}
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}

@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   fetchInsaDayDetails,
+  isInsaAuthenticationError,
   InsaMonthLoadResult,
   InsaMonthSource,
   loadInsaMonth,
@@ -74,6 +75,7 @@ function TeamDetailPanel({ymd, state}: {ymd: string; state?: DetailState}) {
 export interface InsaPageProps {
   resetRequest?: number;
   onConnectionChange?: (connected: boolean) => void;
+  onAuthenticationExpired?: () => void;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onLastFetchedChange?: (value: Date | null) => void;
   onApiRequestChange?: (request: InsaApiRequest, active: boolean) => void;
@@ -94,6 +96,7 @@ const INSA_POPUP_URL = `${INSA_BRIDGE_ORIGIN}/`;
 function InsaPage({
   resetRequest = 0,
   onConnectionChange,
+  onAuthenticationExpired,
   onConnectionStatusChange,
   onLastFetchedChange,
   onApiRequestChange,
@@ -232,6 +235,11 @@ function InsaPage({
     })
       .then((nextResult) => {
         if (!cancelled) {
+          if (nextResult.errors.some((error) => error.authError)) {
+            onConnectionStatusChange?.('error');
+            onAuthenticationExpired?.();
+            return;
+          }
           setResult(nextResult);
           if (nextResult.errors.length === 0) {
             const fetchedAt = new Date();
@@ -250,6 +258,11 @@ function InsaPage({
       .catch((error: {name?: string} | unknown) => {
         if (cancelled) return;
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (isInsaAuthenticationError(error)) {
+          onConnectionStatusChange?.('error');
+          onAuthenticationExpired?.();
+          return;
+        }
         onConnectionStatusChange?.('error');
         onError?.('월간 조회 실패');
       })
@@ -261,7 +274,7 @@ function InsaPage({
       cancelled = true;
       controller.abort();
     };
-  }, [bridgeReady, cookie, handleMonthlyRequestChange, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, requestHtmlViaBridge, today, viewMonth, viewYear]);
+  }, [bridgeReady, cookie, handleMonthlyRequestChange, onAuthenticationExpired, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, requestHtmlViaBridge, today, viewMonth, viewYear]);
 
   const days = useMemo(() => buildInsaCalendarMap(
     viewYear,
@@ -348,6 +361,10 @@ function InsaPage({
       }
     } catch (error) {
       if (!controller.signal.aborted) {
+        if (isInsaAuthenticationError(error)) {
+          onAuthenticationExpired?.();
+          return;
+        }
         setDetailStates((previous) => {
           const next = {
             ...previous,
@@ -364,7 +381,7 @@ function InsaPage({
       }
       onApiRequestChange?.(request, false);
     }
-  }, [bridgeReady, cookie, days, onApiRequestChange, onError, requestHtmlViaBridge]);
+  }, [bridgeReady, cookie, days, onApiRequestChange, onAuthenticationExpired, onError, requestHtmlViaBridge]);
 
   const handleDaySelect = useCallback((ymd: string): void => {
     setSelectedYmd(ymd);

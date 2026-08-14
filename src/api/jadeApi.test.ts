@@ -48,4 +48,19 @@ describe('Jade API', () => {
 
     expect(post).toHaveBeenCalledTimes(2);
   });
+
+  test('identifies an expired Jade session from the response', async () => {
+    const post = jest.fn().mockResolvedValue(`
+      <SHEET>
+        <MESSAGE><![CDATA[LOGIN_CHECK_FAIL:LOGOUT]]></MESSAGE>
+      </SHEET>
+    `);
+
+    await expect(fetchAttendanceForDate({
+      cookie: 'expired-cookie',
+      parsedBody: {},
+      ymd: '2026-08-12',
+      transport: {post},
+    })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
+  });
 });

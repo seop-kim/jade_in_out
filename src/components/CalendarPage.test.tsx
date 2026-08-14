@@ -122,4 +122,20 @@ describe('CalendarPage layout', () => {
     expect(statuses).toContain('checking');
     expect(onLastFetchedChange).toHaveBeenLastCalledWith(expect.any(Date));
   });
+
+  it('requests authentication setup when a Jade session expires', async () => {
+    mockedFetchAttendanceForMonth.mockResolvedValue({
+      '2026-08-12': {ymd: '2026-08-12', error: 'expired', authError: true},
+    });
+    const onAuthenticationExpired = jest.fn();
+
+    render(
+      <CalendarPage
+        credentials={{cookie: 'expired-cookie', body: 'body', parsedBody: {}}}
+        onAuthenticationExpired={onAuthenticationExpired}
+      />,
+    );
+
+    await waitFor(() => expect(onAuthenticationExpired).toHaveBeenCalledTimes(1));
+  });
 });

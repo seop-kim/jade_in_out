@@ -45,6 +45,7 @@ export interface LoadInsaMonthOptions extends FetchInsaHomeMonthOptions {
 export interface InsaMonthLoadError {
   source: InsaMonthSource;
   message: string;
+  authError?: boolean;
 }
 
 export interface InsaMonthLoadResult {
@@ -52,6 +53,35 @@ export interface InsaMonthLoadResult {
   worktime: InsaWorktimeRecord[] | null;
   leave: InsaLeavePageData | null;
   errors: InsaMonthLoadError[];
+}
+
+export class InsaAuthenticationError extends Error {
+  constructor(message = '인증 정보 만료') {
+    super(message);
+    this.name = 'InsaAuthenticationError';
+  }
+}
+
+export function isInsaAuthenticationError(error: unknown): boolean {
+  const typedError = error as {name?: string; message?: string; response?: {status?: number}} | null;
+  const status = typedError?.response?.status;
+  const message = typedError?.message ?? String(error ?? '');
+  return typedError?.name === 'InsaAuthenticationError'
+    || status === 401
+    || status === 403
+    || /\b(?:401|403)\b/.test(message)
+    || message.includes('LOGIN_CHECK_FAIL:LOGOUT');
+}
+
+function looksLikeInsaLoginPage(html: string): boolean {
+  const lowerHtml = html.toLowerCase();
+  const hasLoginMarker = lowerHtml.includes('login_check_fail')
+    || lowerHtml.includes('session expired')
+    || html.includes('\uB85C\uADF8\uC778');
+  const hasPasswordMarker = lowerHtml.includes('password')
+    || lowerHtml.includes('passwd')
+    || html.includes('\uBE44\uBC00\uBC88\uD638');
+  return hasLoginMarker && hasPasswordMarker;
 }
 
 function formatDate(date: Date): string {
@@ -81,17 +111,26 @@ async function requestHtml(
   init: RequestInit,
   signal = options.signal
 ): Promise<string> {
-  if (options.requestHtml) return options.requestHtml(path, init, signal);
-  if (!options.cookie) throw new Error('INSA authentication is not configured');
-  const response = await fetch(`${appConfig.insa.apiBasePath}${path}`, {
-    ...init,
-    credentials: 'omit',
-    cache: 'no-store',
-    signal,
-    headers: {...init.headers, 'X-Insa-Cookie': options.cookie},
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return new TextDecoder('euc-kr').decode(await response.arrayBuffer());
+  let html: string;
+  if (options.requestHtml) {
+    html = await options.requestHtml(path, init, signal);
+  } else {
+    if (!options.cookie) throw new Error('INSA authentication is not configured');
+    const response = await fetch(`${appConfig.insa.apiBasePath}${path}`, {
+      ...init,
+      credentials: 'omit',
+      cache: 'no-store',
+      signal,
+      headers: {...init.headers, 'X-Insa-Cookie': options.cookie},
+    });
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) throw new InsaAuthenticationError();
+      throw new Error(`HTTP ${response.status}`);
+    }
+    html = new TextDecoder('euc-kr').decode(await response.arrayBuffer());
+  }
+  if (looksLikeInsaLoginPage(html)) throw new InsaAuthenticationError();
+  return html;
 }
 
 export async function fetchInsaHomeMonth(options: FetchInsaHomeMonthOptions): Promise<InsaHomeMonthData> {
@@ -153,7 +192,11 @@ function sourceResult<T>(
   errors: InsaMonthLoadError[]
 ): T | null {
   if (result.status === 'fulfilled') return result.value;
-  errors.push({source, message: errorMessage(result.reason, cookie)});
+  errors.push({
+    source,
+    message: errorMessage(result.reason, cookie),
+    ...(isInsaAuthenticationError(result.reason) ? {authError: true} : {}),
+  });
   return null;
 }
 

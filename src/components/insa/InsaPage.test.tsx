@@ -12,6 +12,7 @@ import InsaPage from './InsaPage';
 
 jest.mock('../../api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 
@@ -177,6 +178,19 @@ describe('InsaPage', () => {
     expect(screen.queryByText('근태 조회 실패: HTTP 500 [redacted]')).not.toBeInTheDocument();
     expect(screen.getByText(/연차/)).toBeInTheDocument();
     expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
+  });
+
+  test('requests authentication setup when an INSA session expires', async () => {
+    const onAuthenticationExpired = jest.fn();
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'expired-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult,
+      errors: [{source: 'home', message: 'session expired', authError: true}],
+    });
+
+    render(<InsaPage onAuthenticationExpired={onAuthenticationExpired} />);
+
+    await waitFor(() => expect(onAuthenticationExpired).toHaveBeenCalledTimes(1));
   });
 
   test('reuses a completed month when navigating away and back', async () => {
