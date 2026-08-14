@@ -32,17 +32,17 @@ describe('ExportMenu', () => {
     expect(document.querySelector('.export-settings-grid')).toBeInTheDocument();
     expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
     expect(document.querySelector('.export-preview-section')).toBeInTheDocument();
-    expect(screen.getByText('시작일을 선택하세요')).toBeInTheDocument();
-    expect(screen.getByText('종료일을 선택하세요')).toBeInTheDocument();
+    expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
+    expect(document.querySelector('.export-calendar')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', {name: '날짜 포함'})).toBeChecked();
     expect(screen.getByRole('checkbox', {name: '이름 포함'})).toBeChecked();
 
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
-    expect(screen.getByText('2026. 08. 05')).toBeInTheDocument();
-    expect(screen.getByText('종료일을 선택하세요')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '2026년 8월 5일'})).toHaveClass('is-start');
+    expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
 
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
-    expect(screen.getByText('2026. 08. 10')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '2026년 8월 10일'})).toHaveClass('is-end');
     expect(screen.getByRole('columnheader', {name: '날짜'})).toHaveClass('export-preview-column-date');
     expect(screen.getByRole('columnheader', {name: '근무 유형'})).toHaveClass('export-preview-column-work-type');
     expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');

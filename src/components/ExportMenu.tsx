@@ -45,12 +45,6 @@ function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function dateLabel(value: string): string {
-  if (!value) return '';
-  const date = parseDate(value);
-  return `${date.getFullYear()}. ${pad(date.getMonth() + 1)}. ${pad(date.getDate())}`;
-}
-
 function dateButtonLabel(value: string): string {
   const date = parseDate(value);
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
@@ -362,18 +356,6 @@ function ExportMenu({
                   <span className={rangeStep === 'end' ? 'is-active' : ''}>2 종료일</span>
                 </div>
               </div>
-              <div className="export-date-selection-status">
-                <div className={`export-date-selection ${startDate ? 'is-selected' : ''}`}>
-                  <span className="export-date-selection-label">시작일</span>
-                  <strong>{startDate ? dateLabel(startDate) : '시작일을 선택하세요'}</strong>
-                </div>
-                <span className="export-date-arrow" aria-hidden="true">→</span>
-                <div className={`export-date-selection ${endDate ? 'is-selected' : ''}`}>
-                  <span className="export-date-selection-label">종료일</span>
-                  <strong>{endDate ? dateLabel(endDate) : '종료일을 선택하세요'}</strong>
-                </div>
-              </div>
-
               <p className="export-date-instruction" role="status">
                 {rangeStep === 'start' ? '달력에서 시작일을 선택하세요.' : '달력에서 종료일을 선택하세요.'}
               </p>

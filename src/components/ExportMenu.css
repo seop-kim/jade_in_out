@@ -133,8 +133,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  max-width: 520px;
-  margin: 0 auto 14px;
+  margin: 0 0 14px;
 }
 
 .export-date-picker-heading > div:first-child {
@@ -176,54 +175,6 @@
   color: var(--color-accent-hover);
 }
 
-.export-date-selection-status {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  max-width: 440px;
-  margin: 0 auto;
-}
-
-.export-date-selection {
-  display: grid;
-  flex: 1 1 0;
-  gap: 4px;
-  min-width: 0;
-  padding: 9px 11px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 12px;
-}
-
-.export-date-selection.is-selected {
-  border-color: #93c5fd;
-  color: var(--color-text);
-}
-
-.export-date-selection strong {
-  overflow: hidden;
-  color: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.export-date-selection-label {
-  color: var(--color-muted-strong);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.export-date-arrow {
-  display: flex;
-  align-items: center;
-  color: var(--color-muted);
-  font-size: 16px;
-}
-
 .export-date-instruction {
   margin: 12px 0 8px;
   color: var(--color-accent-hover);
@@ -233,8 +184,8 @@
 }
 
 .export-calendar {
-  width: min(360px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: 9px;
@@ -574,11 +525,4 @@
     max-height: none;
   }
 
-  .export-date-selection-status {
-    gap: 5px;
-  }
-
-  .export-date-selection {
-    padding: 8px;
-  }
 }
