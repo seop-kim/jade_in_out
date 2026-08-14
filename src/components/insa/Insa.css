@@ -506,6 +506,15 @@
   white-space: nowrap;
 }
 
+.insa-team-tooltip-holiday {
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.2);
+  color: #fcd34d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .insa-team-tooltip-scheduled {
   display: flex;
   align-items: baseline;

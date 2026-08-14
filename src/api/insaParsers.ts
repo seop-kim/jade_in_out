@@ -4,6 +4,7 @@ export interface InsaHomeDaySummary {
   ymd: string;
   vacationCount: number;
   timeCount: number;
+  holidayLabel?: string;
 }
 
 export interface InsaHomeMonthData {
@@ -107,6 +108,20 @@ function numberFromSummaryCell(cell: HTMLTableCellElement): number {
   return parseNumber(emphasizedNumber ? cleanText(emphasizedNumber) : cleanText(cell)) ?? 0;
 }
 
+function normalizeHolidayLabel(text: string): string {
+  const compact = text.replace(/\s+/g, '').trim();
+  if (compact === '대체공휴일') return '대체 공휴일';
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function holidayLabelFromCell(cell: HTMLTableCellElement): string {
+  const holidayElement = Array.from(cell.querySelectorAll('font')).find((element) => {
+    const color = element.getAttribute('color')?.replace(/\s+/g, '').toUpperCase();
+    return color === '#FF9900' && Boolean(cleanText(element));
+  });
+  return holidayElement ? normalizeHolidayLabel(cleanText(holidayElement)) : '';
+}
+
 export function parseInsaHomeHtml(
   html: string,
   expectedYear: number,
@@ -129,10 +144,12 @@ export function parseInsaHomeHtml(
       const icon = cell.querySelector(`img[src*="${iconFileName}"]`);
       return icon?.closest('tr') ? parseLastNumber(cleanText(icon.closest('tr')!)) : 0;
     };
+    const holidayLabel = holidayLabelFromCell(cell);
     days[ymd] = {
       ymd,
       vacationCount: countForIcon(appConfig.insa.parser.vacationIcon),
       timeCount: countForIcon(appConfig.insa.parser.timeIcon),
+      ...(holidayLabel ? {holidayLabel} : {}),
     };
   }
 

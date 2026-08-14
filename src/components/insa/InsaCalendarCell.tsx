@@ -62,6 +62,7 @@ function TeamDetailsTooltip({
   pos,
   dateLabel,
   hasTeamDetails,
+  holidayLabel,
   worktime,
   scheduledIn,
   scheduledOut,
@@ -71,6 +72,7 @@ function TeamDetailsTooltip({
   pos: TooltipPos;
   dateLabel: string;
   hasTeamDetails: boolean;
+  holidayLabel?: string;
   worktime?: InsaWorktimeRecord;
   scheduledIn?: string;
   scheduledOut?: string;
@@ -86,6 +88,7 @@ function TeamDetailsTooltip({
         <span className="insa-team-tooltip-title">근무 상세</span>
         <span className="insa-team-tooltip-date">{dateLabel}</span>
       </div>
+      {holidayLabel && <div className="insa-team-tooltip-holiday">{holidayLabel}</div>}
       {(scheduledIn || scheduledOut) && (
         <div className="insa-team-tooltip-scheduled">
           <span className="insa-team-tooltip-title">예정 시간</span>
@@ -140,6 +143,7 @@ function InsaCalendarCell({
   const ownLeave = dayData?.ownLeave ?? [];
   const vacationCount = dayData?.teamSchedule?.vacationCount ?? 0;
   const timeCount = dayData?.teamSchedule?.timeCount ?? 0;
+  const holidayLabel = dayData?.teamSchedule?.holidayLabel;
   const hasTeamDetails = vacationCount > 0 || timeCount > 0;
   const hasOwnLeave = ownLeave.length > 0 || Boolean(worktime?.leaveLabel);
   const departmentLeaveCount = vacationCount + timeCount;
@@ -148,9 +152,9 @@ function InsaCalendarCell({
     ? otherLeaveCount > 0 ? `연차 (본인 외 ${otherLeaveCount})` : '연차 (본인)'
     : `연차 (${departmentLeaveCount})`;
   const hasLeaveBadge = hasTeamDetails || hasOwnLeave;
-  const isHoliday = Boolean(worktime) && !worktime?.scheduledIn && !worktime?.scheduledOut;
+  const isHoliday = Boolean(holidayLabel) || (Boolean(worktime) && !worktime?.scheduledIn && !worktime?.scheduledOut);
   const hasActualAttendance = Boolean(worktime?.actualIn || worktime?.actualOut);
-  const hasTooltipContent = hasTeamDetails || Boolean(worktime);
+  const hasTooltipContent = hasTeamDetails || Boolean(holidayLabel) || Boolean(worktime);
   const dayOfWeek = new Date(year, month, day).getDay();
   const dateLabel = `${year}년 ${month + 1}월 ${day}일`;
   const tooltipId = `insa-team-tooltip-${ymd}`;
@@ -237,6 +241,7 @@ function InsaCalendarCell({
           pos={tooltip}
           dateLabel={`${month + 1}/${day} (${WEEKDAY_LABELS[new Date(year, month, day).getDay()]})`}
           hasTeamDetails={hasTeamDetails}
+          holidayLabel={holidayLabel}
           worktime={worktime}
           scheduledIn={worktime?.scheduledIn}
           scheduledOut={worktime?.scheduledOut}
