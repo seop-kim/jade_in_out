@@ -89,7 +89,7 @@
 }
 
 .export-close-button,
-.export-move-button {
+.export-drag-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -107,12 +107,12 @@
 }
 
 .export-close-button:hover,
-.export-move-button:hover:not(:disabled) {
+.export-drag-handle:hover {
   color: var(--color-accent);
 }
 
 .export-close-button:focus-visible,
-.export-move-button:focus-visible,
+.export-drag-handle:focus-visible,
 .export-column-check input:focus-visible,
 .export-calendar-day:focus-visible,
 .export-actions button:focus-visible {
@@ -363,7 +363,10 @@
 }
 
 .export-columns-panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 100%;
   padding: 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -377,16 +380,29 @@
 }
 
 .export-column-list {
+  flex: 1 1 auto;
   display: grid;
-  max-height: 240px;
+  min-height: 0;
   overflow-y: auto;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
 }
 
 .export-column-row {
+  position: relative;
   min-height: 36px;
   gap: 8px;
   border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.export-column-row.is-dragging {
+  opacity: 0.45;
+}
+
+.export-column-row.is-drag-over {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 2px 0 var(--color-accent);
 }
 
 .export-column-check {
@@ -404,25 +420,25 @@
   accent-color: var(--color-accent);
 }
 
-.export-column-actions {
+.export-drag-handle {
   display: inline-flex;
-  gap: 1px;
-}
-
-.export-move-button {
-  width: 24px;
-  height: 26px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   border-radius: 5px;
-  font-size: 15px;
+  color: var(--color-muted);
+  cursor: grab;
+  user-select: none;
 }
 
-.export-move-button:hover:not(:disabled) {
+.export-drag-handle:hover {
   background: var(--color-surface-muted);
 }
 
-.export-move-button:disabled {
-  color: var(--color-disabled-text);
-  cursor: not-allowed;
+.export-drag-handle:active {
+  cursor: grabbing;
 }
 
 .export-preview-section {

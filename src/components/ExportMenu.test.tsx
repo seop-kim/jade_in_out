@@ -1,4 +1,4 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportMenu from './ExportMenu';
 
@@ -48,7 +48,7 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');
   });
 
-  test('allows a column to be excluded and moved without persisting it', () => {
+  test('allows a column to be excluded and reordered with drag and drop', () => {
     const {unmount} = render(
       <ExportMenu
         rows={rows}
@@ -61,7 +61,11 @@ describe('ExportMenu', () => {
 
     userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
     userEvent.click(screen.getByRole('checkbox', {name: '상태 포함'}));
-    userEvent.click(screen.getByRole('button', {name: '이름 위로 이동'}));
+    const nameHandle = screen.getByRole('button', {name: '이름 순서 변경'});
+    const dateRow = screen.getByTestId('export-column-row-date');
+    fireEvent.dragStart(nameHandle);
+    fireEvent.dragOver(dateRow);
+    fireEvent.drop(dateRow);
 
     expect(screen.getByRole('checkbox', {name: '상태 포함'})).not.toBeChecked();
     const labels = screen.getAllByTestId('export-column-label').map((element) => element.textContent);

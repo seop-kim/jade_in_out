@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {DragEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   buildCsv,
   CsvColumn,
@@ -129,6 +129,8 @@ function ExportMenu({
   const [calendarMonth, setCalendarMonth] = useState(() => parseDate(initialDate ?? minDate).getMonth());
   const [rangeRows, setRangeRows] = useState<CsvRow[]>(rows);
   const [rangeLoading, setRangeLoading] = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
+  const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [orderedKeys, setOrderedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [error, setError] = useState<string | null>(null);
@@ -258,16 +260,35 @@ function ExportMenu({
     setError(null);
   };
 
-  const moveColumn = (key: string, offset: -1 | 1): void => {
+  const reorderColumn = (sourceKey: string, targetKey: string): void => {
     setOrderedKeys((current) => {
-      const index = current.indexOf(key);
-      const nextIndex = index + offset;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const sourceIndex = current.indexOf(sourceKey);
+      const targetIndex = current.indexOf(targetKey);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
       const next = [...current];
-      const [moved] = next.splice(index, 1);
-      if (moved !== undefined) next.splice(nextIndex, 0, moved);
+      const [moved] = next.splice(sourceIndex, 1);
+      if (moved !== undefined) {
+        const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        next.splice(insertIndex, 0, moved);
+      }
       return next;
     });
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLSpanElement>, key: string): void => {
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', key);
+    }
+    setDraggedColumnKey(key);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>, targetKey: string): void => {
+    event.preventDefault();
+    const sourceKey = draggedColumnKey || event.dataTransfer?.getData('text/plain') || '';
+    if (sourceKey) reorderColumn(sourceKey, targetKey);
+    setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
   };
 
   const handleDownload = (): void => {
@@ -437,8 +458,17 @@ function ExportMenu({
                   <span className="export-columns-hint">순서대로 저장됩니다</span>
                 </div>
                 <div className="export-column-list">
-                  {orderedColumns.map((column, index) => (
-                    <div className="export-column-row" key={column.key}>
+                  {orderedColumns.map((column) => (
+                    <div
+                      className={`export-column-row ${draggedColumnKey === column.key ? 'is-dragging' : ''} ${dragOverColumnKey === column.key && draggedColumnKey !== column.key ? 'is-drag-over' : ''}`}
+                      data-testid={`export-column-row-${column.key}`}
+                      key={column.key}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (draggedColumnKey !== column.key) setDragOverColumnKey(column.key);
+                      }}
+                      onDrop={(event) => handleDrop(event, column.key)}
+                    >
                       <label className="export-column-check">
                         <input
                           type="checkbox"
@@ -448,25 +478,19 @@ function ExportMenu({
                         />
                         <span data-testid="export-column-label">{column.label}</span>
                       </label>
-                      <span className="export-column-actions">
-                        <button
-                          type="button"
-                          className="export-move-button"
-                          aria-label={`${column.label} 위로 이동`}
-                          disabled={index === 0}
-                          onClick={() => moveColumn(column.key, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="export-move-button"
-                          aria-label={`${column.label} 아래로 이동`}
-                          disabled={index === orderedColumns.length - 1}
-                          onClick={() => moveColumn(column.key, 1)}
-                        >
-                          ↓
-                        </button>
+                      <span
+                        className="export-drag-handle"
+                        role="button"
+                        tabIndex={0}
+                        draggable
+                        aria-label={`${column.label} 순서 변경`}
+                        onDragStart={(event) => handleDragStart(event, column.key)}
+                        onDragEnd={() => {
+                          setDraggedColumnKey(null);
+                          setDragOverColumnKey(null);
+                        }}
+                      >
+                        <span aria-hidden="true">⠿</span>
                       </span>
                     </div>
                   ))}
