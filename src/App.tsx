@@ -16,6 +16,7 @@ import {
 import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 import {loadThemePreference, saveThemePreference, Theme} from './lib/theme';
+import {ConnectionStatus} from './lib/connectionStatus';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -39,6 +40,10 @@ function App() {
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
   const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? 'light');
+  const [jadeConnectionStatus, setJadeConnectionStatus] = useState<ConnectionStatus>(
+    () => credentials ? 'checking' : 'not-configured'
+  );
+  const [insaConnectionStatus, setInsaConnectionStatus] = useState<ConnectionStatus>('not-configured');
   const [insaVisited, setInsaVisited] = useState(false);
   const [insaConnected, setInsaConnected] = useState(false);
   const [insaResetRequest, setInsaResetRequest] = useState(0);
@@ -89,6 +94,7 @@ function App() {
     setJadeBridgeWindow(null);
     setJadeBridgeStatus('idle');
     setJadeBridgeConnection(null);
+    setJadeConnectionStatus('not-configured');
   }, [jadeBridgeWindow]);
 
   const handleSetupSubmit = (creds: Credentials): void => {
@@ -101,6 +107,7 @@ function App() {
     closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
+    setJadeConnectionStatus('not-configured');
   };
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
@@ -110,6 +117,7 @@ function App() {
 
   const handleInsaConnectionChange = useCallback((connected: boolean): void => {
     setInsaConnected(connected);
+    if (!connected) setInsaConnectionStatus('not-configured');
   }, []);
 
   const showErrorToast = useCallback((message: string): void => {
@@ -122,9 +130,11 @@ function App() {
     closeJadeBridge(true);
     const jadeWindow = window.open(`${appConfig.jade.origin}/`, '_blank');
     if (!jadeWindow) {
+      setJadeConnectionStatus('not-configured');
       showErrorToast('Jade 시스템 창을 열지 못했습니다');
       return;
     }
+    setJadeConnectionStatus('checking');
 
     const client = new JadeBridgeClient(
       jadeWindow,
@@ -167,6 +177,7 @@ function App() {
       setJadeBridgeWindow(null);
       setJadeBridgeStatus('idle');
       setJadeBridgeConnection(null);
+      setJadeConnectionStatus('not-configured');
     }, 500);
     return () => window.clearInterval(timer);
   }, [credentials, jadeBridgeWindow]);
@@ -251,7 +262,10 @@ function App() {
   const canResetCredentials = systemTab === 'jade' ? Boolean(activeJadeCredentials) : insaConnected;
   const handleResetCurrentCredentials = (): void => {
     if (systemTab === 'jade') handleResetCredentials();
-    else setInsaResetRequest((request) => request + 1);
+    else {
+      setInsaConnectionStatus('not-configured');
+      setInsaResetRequest((request) => request + 1);
+    }
   };
 
   return (
@@ -302,6 +316,8 @@ function App() {
             <SettingsMenu
               theme={theme}
               onThemeChange={handleThemeChange}
+              jadeStatus={jadeConnectionStatus}
+              insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
             />
@@ -321,6 +337,7 @@ function App() {
                 credentials={activeJadeCredentials}
                 transport={activeJadeTransport}
                 onError={showErrorToast}
+                onConnectionStatusChange={setJadeConnectionStatus}
               />
             ) : (
               <Setup
@@ -341,6 +358,7 @@ function App() {
             <InsaPage
               resetRequest={insaResetRequest}
               onConnectionChange={handleInsaConnectionChange}
+              onConnectionStatusChange={setInsaConnectionStatus}
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
             />

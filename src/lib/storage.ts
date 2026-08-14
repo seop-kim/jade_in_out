@@ -8,7 +8,7 @@ const STORAGE_KEY = 'jade_in_out_credentials_v1';
 
 export function loadCredentials(): Credentials | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<Credentials>;
     if (!parsed.cookie || !parsed.body) return null;
@@ -24,7 +24,7 @@ export function loadCredentials(): Credentials | null {
 
 export function saveCredentials(creds: Credentials): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
   } catch {
     // localStorage unavailable (private mode, quota, etc.) — silently skip
   }
@@ -32,7 +32,7 @@ export function saveCredentials(creds: Credentials): void {
 
 export function clearCredentials(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   } catch {
     // see saveCredentials
   }

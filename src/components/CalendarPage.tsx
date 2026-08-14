@@ -1,7 +1,8 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import Calendar from './Calendar';
 import MonthPicker from './MonthPicker';
-import {fetchAttendanceForMonth} from '../api/jadeApi';
+import LastFetchedLabel from './LastFetchedLabel';
+import {AttendanceResult, fetchAttendanceForMonth} from '../api/jadeApi';
 import {
   AttendanceMap,
   buildDisplayRecord,
@@ -9,11 +10,36 @@ import {
 import {Credentials} from '../lib/storage';
 import {dateKey, ymdToKey} from '../lib/format';
 import {JadeBridgeTransport} from '../lib/jadeBridge';
+import {ConnectionStatus} from '../lib/connectionStatus';
 
 interface CalendarPageProps {
   credentials: Credentials;
   transport?: JadeBridgeTransport;
   onError?: (message: string) => void;
+  onConnectionStatusChange?: (status: ConnectionStatus) => void;
+  onLastFetchedChange?: (value: Date | null) => void;
+}
+
+interface CachedMonth {
+  attendance: AttendanceMap;
+  fetchedAt: Date;
+}
+
+function monthKey(year: number, month: number): string {
+  return `${year}-${month}`;
+}
+
+function buildAttendanceMap(results: Record<string, AttendanceResult>, today: Date): AttendanceMap {
+  const attendance: AttendanceMap = {};
+  Object.entries(results).forEach(([ymd, result]) => {
+    const display = buildDisplayRecord(ymd, result, today);
+    if (display) attendance[ymdToKey(ymd)] = display;
+  });
+  return attendance;
+}
+
+function hasAttendanceErrors(results: Record<string, AttendanceResult>): boolean {
+  return Object.values(results).some((result) => 'error' in result);
 }
 
 function buildLoadingMap(year: number, month: number): AttendanceMap {
@@ -25,7 +51,13 @@ function buildLoadingMap(year: number, month: number): AttendanceMap {
   return out;
 }
 
-function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
+function CalendarPage({
+  credentials,
+  transport,
+  onError,
+  onConnectionStatusChange,
+  onLastFetchedChange,
+}: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(today.getMonth());
@@ -33,6 +65,8 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [reloadKey, setReloadKey] = useState<number>(0);
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const monthCache = useRef(new Map<string, CachedMonth>());
 
   const goPrev = (): void => {
     const d = new Date(viewYear, viewMonth - 1, 1);
@@ -44,7 +78,10 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
   };
-  const refresh = useCallback((): void => setReloadKey((k) => k + 1), []);
+  const refresh = useCallback((): void => {
+    monthCache.current.delete(monthKey(viewYear, viewMonth));
+    setReloadKey((k) => k + 1);
+  }, [viewMonth, viewYear]);
 
   const handlePickerSelect = (year: number, month: number): void => {
     setViewYear(year);
@@ -54,9 +91,26 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
+    const key = monthKey(viewYear, viewMonth);
+    const cached = monthCache.current.get(key);
 
     setLoading(true);
     setAttendance(buildLoadingMap(viewYear, viewMonth));
+    setLastFetchedAt(null);
+    onLastFetchedChange?.(null);
+    onConnectionStatusChange?.('checking');
+
+    if (cached) {
+      setAttendance(cached.attendance);
+      setLastFetchedAt(cached.fetchedAt);
+      onLastFetchedChange?.(cached.fetchedAt);
+      onConnectionStatusChange?.('connected');
+      setLoading(false);
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
 
     fetchAttendanceForMonth({
       cookie: credentials.cookie,
@@ -80,9 +134,24 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
       },
       transport,
     })
+      .then((results) => {
+        if (cancelled) return;
+        const nextAttendance = buildAttendanceMap(results, today);
+        setAttendance(nextAttendance);
+        if (hasAttendanceErrors(results)) {
+          onConnectionStatusChange?.('error');
+          return;
+        }
+        const fetchedAt = new Date();
+        monthCache.current.set(key, {attendance: nextAttendance, fetchedAt});
+        setLastFetchedAt(fetchedAt);
+        onLastFetchedChange?.(fetchedAt);
+        onConnectionStatusChange?.('connected');
+      })
       .catch((err: {name?: string; message?: string}) => {
         if (cancelled) return;
         if (err.name === 'CanceledError' || err.name === 'AbortError') return;
+        onConnectionStatusChange?.('error');
         onError?.('출퇴근 기록 조회 실패');
       })
       .finally(() => {
@@ -93,7 +162,7 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [viewYear, viewMonth, credentials, onError, reloadKey, today, transport]);
+  }, [viewYear, viewMonth, credentials, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, today, transport]);
 
   return (
     <div className="jade-calendar-page">
@@ -110,6 +179,7 @@ function CalendarPage({credentials, transport, onError}: CalendarPageProps) {
           <button className="btn" onClick={goNext} aria-label="다음 달" disabled={loading}>›</button>
         </div>
         <div className="toolbar-right">
+          <LastFetchedLabel value={lastFetchedAt}/>
           <button
             type="button"
             className="btn btn-primary refresh-button"

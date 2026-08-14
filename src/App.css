@@ -125,6 +125,12 @@ body {
   gap: 8px;
 }
 
+.last-fetched-label {
+  color: var(--color-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .month-title {
   margin: 0 8px;
   font-size: 18px;

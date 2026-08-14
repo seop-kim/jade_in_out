@@ -167,6 +167,31 @@ describe('App system tabs', () => {
     expect(screen.queryByRole('dialog', {name: '설정'})).not.toBeInTheDocument();
   });
 
+  test('shows both system connection diagnostics in the settings menu', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    const dialog = screen.getByRole('dialog', {name: '설정'});
+
+    expect(within(dialog).getByText('기존 시스템')).toBeInTheDocument();
+    expect(within(dialog).getByText('신규 인사시스템')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('인증 필요')).toHaveLength(2);
+  });
+
+  test('shows a connected diagnostic after a successful INSA month request', async () => {
+    saveInsaCookie('synthetic-session');
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findByText(/연차/);
+    await screen.findByText(/^최근 조회/);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+
+    const dialog = screen.getByRole('dialog', {name: '설정'});
+    expect(within(dialog).getByText('신규 인사시스템')).toBeInTheDocument();
+    expect(within(dialog).getByText('연결됨')).toBeInTheDocument();
+  });
+
   test('connects Jade through the logged-in tab without storing a Cookie', async () => {
     const jadeTab = {
       closed: false,
