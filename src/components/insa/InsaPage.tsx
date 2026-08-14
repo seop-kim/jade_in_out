@@ -18,9 +18,11 @@ import {ConnectionStatus} from '../../lib/connectionStatus';
 import {isMonthCacheFresh} from '../../lib/monthCache';
 import MonthPicker from '../MonthPicker';
 import LastFetchedLabel from '../LastFetchedLabel';
+import ExportMenu from '../ExportMenu';
 import InsaCalendar from './InsaCalendar';
 import InsaSetup from './InsaSetup';
 import './Insa.css';
+import {INSA_EXPORT_COLUMNS, buildInsaExportRows} from '../../lib/exportRows';
 
 export type DetailState =
   | {status: 'loading'}
@@ -283,6 +285,9 @@ function InsaPage({
     result?.worktime ?? [],
     result?.leave?.records ?? []
   ), [result, viewMonth, viewYear]);
+  const exportRows = useMemo(() => buildInsaExportRows(days), [days]);
+  const exportMinDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
+  const exportMaxDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, '0')}`;
 
   const selectMonth = (year: number, month: number): void => {
     setViewYear(year);
@@ -414,6 +419,14 @@ function InsaPage({
         </div>
         <div className="toolbar-right">
           <LastFetchedLabel value={lastFetchedAt}/>
+          <ExportMenu
+            rows={exportRows}
+            columns={INSA_EXPORT_COLUMNS}
+            minDate={exportMinDate}
+            maxDate={exportMaxDate}
+            fileName={`insa-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+            disabled={loading || result === null}
+          />
           <button
             type="button"
             className="btn btn-primary refresh-button"

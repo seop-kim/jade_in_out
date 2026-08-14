@@ -2,6 +2,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import Calendar from './Calendar';
 import MonthPicker from './MonthPicker';
 import LastFetchedLabel from './LastFetchedLabel';
+import ExportMenu from './ExportMenu';
 import {AttendanceResult, fetchAttendanceForMonth} from '../api/jadeApi';
 import {
   AttendanceMap,
@@ -12,6 +13,7 @@ import {dateKey, ymdToKey} from '../lib/format';
 import {JadeBridgeTransport} from '../lib/jadeBridge';
 import {ConnectionStatus} from '../lib/connectionStatus';
 import {isMonthCacheFresh} from '../lib/monthCache';
+import {JADE_EXPORT_COLUMNS, buildJadeExportRows} from '../lib/exportRows';
 
 interface CalendarPageProps {
   credentials: Credentials;
@@ -24,6 +26,7 @@ interface CalendarPageProps {
 
 interface CachedMonth {
   attendance: AttendanceMap;
+  results: Record<string, AttendanceResult>;
   fetchedAt: Date;
 }
 
@@ -70,6 +73,7 @@ function CalendarPage({
   const [viewMonth, setViewMonth] = useState<number>(today.getMonth());
 
   const [attendance, setAttendance] = useState<AttendanceMap>({});
+  const [attendanceResults, setAttendanceResults] = useState<Record<string, AttendanceResult>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
@@ -105,12 +109,14 @@ function CalendarPage({
 
     setLoading(true);
     setAttendance(buildLoadingMap(viewYear, viewMonth));
+    setAttendanceResults({});
     setLastFetchedAt(null);
     onLastFetchedChange?.(null);
     onConnectionStatusChange?.('checking');
 
     if (cached) {
       setAttendance(cached.attendance);
+      setAttendanceResults(cached.results);
       setLastFetchedAt(cached.fetchedAt);
       onLastFetchedChange?.(cached.fetchedAt);
       onConnectionStatusChange?.('connected');
@@ -129,6 +135,7 @@ function CalendarPage({
       signal: controller.signal,
       onDayResult: (ymd, result) => {
         if (cancelled) return;
+        setAttendanceResults((previous) => ({...previous, [ymd]: result}));
         const display = buildDisplayRecord(ymd, result, today);
         const key = ymdToKey(ymd);
         setAttendance((prev) => {
@@ -147,6 +154,7 @@ function CalendarPage({
         if (cancelled) return;
         const nextAttendance = buildAttendanceMap(results, today);
         setAttendance(nextAttendance);
+        setAttendanceResults(results);
         if (hasAuthenticationErrors(results)) {
           onConnectionStatusChange?.('error');
           onAuthenticationExpired?.();
@@ -157,7 +165,7 @@ function CalendarPage({
           return;
         }
         const fetchedAt = new Date();
-        monthCache.current.set(key, {attendance: nextAttendance, fetchedAt});
+        monthCache.current.set(key, {attendance: nextAttendance, results, fetchedAt});
         setLastFetchedAt(fetchedAt);
         onLastFetchedChange?.(fetchedAt);
         onConnectionStatusChange?.('connected');
@@ -178,6 +186,10 @@ function CalendarPage({
     };
   }, [viewYear, viewMonth, credentials, onAuthenticationExpired, onConnectionStatusChange, onError, onLastFetchedChange, reloadKey, today, transport]);
 
+  const exportRows = useMemo(() => buildJadeExportRows(attendanceResults), [attendanceResults]);
+  const exportMinDate = dateKey(viewYear, viewMonth, 1);
+  const exportMaxDate = dateKey(viewYear, viewMonth + 1, 0);
+
   return (
     <div className="jade-calendar-page">
       <div className="toolbar">
@@ -194,6 +206,14 @@ function CalendarPage({
         </div>
         <div className="toolbar-right">
           <LastFetchedLabel value={lastFetchedAt}/>
+          <ExportMenu
+            rows={exportRows}
+            columns={JADE_EXPORT_COLUMNS}
+            minDate={exportMinDate}
+            maxDate={exportMaxDate}
+            fileName={`jade-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+            disabled={loading}
+          />
           <button
             type="button"
             className="btn btn-primary refresh-button"

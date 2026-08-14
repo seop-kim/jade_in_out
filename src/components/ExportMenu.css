@@ -1,0 +1,205 @@
+.export-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: var(--color-border-strong);
+  color: var(--color-muted-strong);
+}
+
+.export-button:hover:not(:disabled) {
+  color: var(--color-accent);
+}
+
+.export-icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.export-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.export-popover-header,
+.export-columns-heading,
+.export-column-row,
+.export-actions {
+  display: flex;
+  align-items: center;
+}
+
+.export-popover-header,
+.export-columns-heading,
+.export-column-row,
+.export-actions {
+  justify-content: space-between;
+}
+
+.export-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.export-close-button,
+.export-move-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted-strong);
+  cursor: pointer;
+}
+
+.export-close-button {
+  width: 28px;
+  height: 28px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.export-close-button:hover,
+.export-move-button:hover:not(:disabled) {
+  color: var(--color-accent);
+}
+
+.export-close-button:focus-visible,
+.export-move-button:focus-visible,
+.export-column-check input:focus-visible,
+.export-date-fields input:focus-visible,
+.export-actions button:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.export-date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.export-date-fields label {
+  display: grid;
+  gap: 5px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.export-date-fields input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 7px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.export-columns-heading {
+  margin-bottom: 7px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-columns-hint {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.export-column-list {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.export-column-row {
+  min-height: 36px;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.export-column-check {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.export-column-check input {
+  accent-color: var(--color-accent);
+}
+
+.export-column-actions {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.export-move-button {
+  width: 24px;
+  height: 26px;
+  border-radius: 5px;
+  font-size: 15px;
+}
+
+.export-move-button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+}
+
+.export-move-button:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.export-error {
+  margin: 10px 0 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.export-actions {
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.export-actions .btn {
+  min-width: 76px;
+}
+
+.export-cancel {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-muted-strong);
+}
