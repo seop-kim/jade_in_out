@@ -14,10 +14,12 @@ interface ExportMenuProps {
   minDate: string;
   maxDate: string;
   fileName: string;
+  initialDate?: string;
   disabled?: boolean;
   hideTrigger?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onRangeDataRequest?: (startDate: string, endDate: string) => Promise<CsvRow[]>;
 }
 
 type RangeStep = 'start' | 'end';
@@ -65,21 +67,68 @@ function columnClassName(key: string): string {
   return '';
 }
 
+const PREVIEW_ROWS: CsvRow[] = [
+  {
+    date: '2026-08-05',
+    weekday: '수',
+    workDay: '(수)',
+    workType: '기본근무',
+    clockIn: '09:00',
+    clockOut: '18:00',
+    scheduledIn: '09:00',
+    scheduledOut: '18:00',
+    actualIn: '08:51',
+    actualOut: '18:00',
+    vacation: '',
+    leave: '',
+    overtime: '2시간',
+    workList: '연장 2시간 (18:00~20:00)',
+    departmentLeave: '연차 (2)',
+    departmentTime: '',
+    status: '정상',
+  },
+  {
+    date: '2026-08-06',
+    weekday: '목',
+    workDay: '(목)',
+    workType: '기본근무',
+    clockIn: '09:00',
+    clockOut: '18:00',
+    scheduledIn: '09:00',
+    scheduledOut: '18:00',
+    actualIn: '09:02',
+    actualOut: '18:00',
+    vacation: '',
+    leave: '',
+    overtime: '',
+    workList: '',
+    departmentLeave: '',
+    departmentTime: '',
+    status: '정상',
+  },
+];
+
 function ExportMenu({
   rows,
   columns,
   minDate,
   maxDate,
   fileName,
+  initialDate,
   disabled = false,
   hideTrigger = false,
   open,
   onOpenChange,
+  onRangeDataRequest,
 }: ExportMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [rangeStep, setRangeStep] = useState<RangeStep>('start');
+  const [calendarYear, setCalendarYear] = useState(() => parseDate(initialDate ?? minDate).getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(() => parseDate(initialDate ?? minDate).getMonth());
+  const [rangeRows, setRangeRows] = useState<CsvRow[]>(rows);
+  const [rangeLoading, setRangeLoading] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [orderedKeys, setOrderedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [error, setError] = useState<string | null>(null);
@@ -96,10 +145,18 @@ function ExportMenu({
     setStartDate('');
     setEndDate('');
     setRangeStep('start');
+    const nextCalendarDate = parseDate(initialDate ?? minDate);
+    setCalendarYear(nextCalendarDate.getFullYear());
+    setCalendarMonth(nextCalendarDate.getMonth());
+    setRangeLoading(false);
     setSelectedKeys(columns.map((column) => column.key));
     setOrderedKeys(columns.map((column) => column.key));
     setError(null);
-  }, [columns, maxDate, minDate]);
+  }, [columns, initialDate, maxDate, minDate]);
+
+  useEffect(() => {
+    if (!startDate && !endDate) setRangeRows(rows);
+  }, [endDate, rows, startDate]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -122,15 +179,25 @@ function ExportMenu({
   }, [isOpen, setIsOpen]);
 
   const calendarDays = useMemo(() => {
-    const firstDay = parseDate(minDate);
-    const dayCount = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(calendarYear, calendarMonth, 1);
+    const dayCount = new Date(calendarYear, calendarMonth + 1, 0).getDate();
     const emptyCells: Array<string | null> = Array.from({length: firstDay.getDay()}, () => null);
     const dates = Array.from({length: dayCount}, (_, index) => {
       const date = new Date(firstDay.getFullYear(), firstDay.getMonth(), index + 1);
       return toDateKey(date);
     });
     return [...emptyCells, ...dates];
-  }, [minDate]);
+  }, [calendarMonth, calendarYear]);
+
+  const minCalendarDate = parseDate(minDate);
+  const maxCalendarDate = parseDate(maxDate);
+  const minMonthValue = minCalendarDate.getFullYear() * 12 + minCalendarDate.getMonth();
+  const maxMonthValue = maxCalendarDate.getFullYear() * 12 + maxCalendarDate.getMonth();
+  const calendarMonthValue = calendarYear * 12 + calendarMonth;
+  const calendarYears = Array.from(
+    {length: maxCalendarDate.getFullYear() - minCalendarDate.getFullYear() + 1},
+    (_, index) => minCalendarDate.getFullYear() + index,
+  );
 
   const columnsByKey = useMemo(
     () => new Map(columns.map((column) => [column.key, column])),
@@ -141,17 +208,34 @@ function ExportMenu({
     .filter((column): column is CsvColumn => Boolean(column));
   const selectedColumns = orderedColumns.filter((column) => selectedKeys.includes(column.key));
   const filteredRows = startDate && endDate
-    ? filterRowsByDateRange(rows, 'date', startDate, endDate)
+    ? filterRowsByDateRange(rangeRows, 'date', startDate, endDate)
     : [];
 
+  const requestRangeRows = useCallback(async (rangeStart: string, rangeEnd: string): Promise<void> => {
+    setRangeLoading(true);
+    setRangeRows([]);
+    setError(null);
+    try {
+      const nextRows = onRangeDataRequest
+        ? await onRangeDataRequest(rangeStart, rangeEnd)
+        : filterRowsByDateRange(rows, 'date', rangeStart, rangeEnd);
+      setRangeRows(nextRows);
+    } catch {
+      setError('선택한 기간의 데이터를 조회하지 못했습니다.');
+    } finally {
+      setRangeLoading(false);
+    }
+  }, [onRangeDataRequest, rows]);
+
   const selectDate = (date: string): void => {
-    if (date < minDate || date > maxDate) return;
+    if (rangeLoading || date < minDate || date > maxDate) return;
     setError(null);
 
     if (rangeStep === 'start' || !startDate) {
       setStartDate(date);
       setEndDate('');
       setRangeStep('end');
+      setRangeRows([]);
       return;
     }
 
@@ -164,6 +248,7 @@ function ExportMenu({
 
     setEndDate(date);
     setRangeStep('start');
+    void requestRangeRows(startDate, date);
   };
 
   const toggleColumn = (key: string): void => {
@@ -199,7 +284,7 @@ function ExportMenu({
     setIsOpen(false);
   };
 
-  const buttonDisabled = disabled || rows.length === 0 || columns.length === 0;
+  const buttonDisabled = disabled || rangeLoading || (rows.length === 0 && !onRangeDataRequest) || columns.length === 0;
 
   return (
     <div className="export-menu" ref={containerRef}>
@@ -272,8 +357,58 @@ function ExportMenu({
                 {rangeStep === 'start' ? '달력에서 시작일을 선택하세요.' : '달력에서 종료일을 선택하세요.'}
               </p>
               <div className="export-calendar" aria-label="다운로드 기간 선택">
-                <div className="export-calendar-title">
-                  {parseDate(minDate).getFullYear()}년 {parseDate(minDate).getMonth() + 1}월
+                <div className="export-calendar-toolbar">
+                  <button
+                    type="button"
+                    className="export-calendar-nav"
+                    aria-label="이전 달"
+                    disabled={rangeLoading || calendarMonthValue <= minMonthValue}
+                    onClick={() => {
+                      const previous = new Date(calendarYear, calendarMonth - 1, 1);
+                      setCalendarYear(previous.getFullYear());
+                      setCalendarMonth(previous.getMonth());
+                    }}
+                  >
+                    ‹
+                  </button>
+                  <div className="export-calendar-selects">
+                    <select
+                      aria-label="조회 연도"
+                      value={calendarYear}
+                      disabled={rangeLoading}
+                      onChange={(event) => setCalendarYear(Number(event.target.value))}
+                    >
+                      {calendarYears.map((year) => <option key={year} value={year}>{year}년</option>)}
+                    </select>
+                    <select
+                      aria-label="조회 월"
+                      value={calendarMonth}
+                      disabled={rangeLoading}
+                      onChange={(event) => setCalendarMonth(Number(event.target.value))}
+                    >
+                      {Array.from({length: 12}, (_, month) => {
+                        const value = calendarYear * 12 + month;
+                        return (
+                          <option key={month} value={month} disabled={value < minMonthValue || value > maxMonthValue}>
+                            {month + 1}월
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="export-calendar-nav"
+                    aria-label="다음 달"
+                    disabled={rangeLoading || calendarMonthValue >= maxMonthValue}
+                    onClick={() => {
+                      const next = new Date(calendarYear, calendarMonth + 1, 1);
+                      setCalendarYear(next.getFullYear());
+                      setCalendarMonth(next.getMonth());
+                    }}
+                  >
+                    ›
+                  </button>
                 </div>
                 <div className="export-calendar-weekdays" aria-hidden="true">
                   {['일', '월', '화', '수', '목', '금', '토'].map((weekday) => <span key={weekday}>{weekday}</span>)}
@@ -285,6 +420,7 @@ function ExportMenu({
                       className={`export-calendar-day ${date === startDate ? 'is-start' : ''} ${date === endDate ? 'is-end' : ''} ${startDate && endDate && date > startDate && date < endDate ? 'is-in-range' : ''}`}
                       aria-label={dateButtonLabel(date)}
                       aria-pressed={date === startDate || date === endDate}
+                      disabled={rangeLoading || date < minDate || date > maxDate}
                       key={date}
                       onClick={() => selectDate(date)}
                     >
@@ -338,32 +474,29 @@ function ExportMenu({
               </div>
             </div>
 
-            <div className="export-preview-section" aria-label="CSV 미리보기">
+            <div className="export-preview-section" aria-label="CSV 미리보기 예시">
               <div className="export-preview-heading">
-                <span>미리보기</span>
-                <span className="export-columns-hint">{startDate && endDate ? `${filteredRows.length}건` : '기간 선택 후 표시됩니다'}</span>
+                <span>미리보기 예시</span>
+                <span className="export-columns-hint">실제 조회 결과는 파일 저장 시 반영됩니다</span>
               </div>
-              {startDate && endDate ? (
-                <div className="export-preview-scroll">
-                  <table className="export-preview-table">
-                    <colgroup>
-                      {selectedColumns.map((column) => <col className={columnClassName(column.key)} key={column.key} />)}
-                    </colgroup>
-                    <thead>
-                      <tr>{selectedColumns.map((column) => <th className={columnClassName(column.key)} key={column.key} scope="col">{column.label}</th>)}</tr>
-                    </thead>
-                    <tbody>
-                      {filteredRows.length > 0 ? filteredRows.map((row, rowIndex) => (
-                        <tr key={`${String(row.date)}-${rowIndex}`}>
-                          {selectedColumns.map((column) => <td className={columnClassName(column.key)} key={column.key}>{cellText(row[column.key])}</td>)}
-                        </tr>
-                      )) : (
-                        <tr><td className="export-preview-empty" colSpan={selectedColumns.length}>선택한 기간에 데이터가 없습니다.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              ) : <p className="export-preview-empty">기간을 선택하면 미리보기가 표시됩니다.</p>}
+              {rangeLoading && <p className="export-loading" role="status">선택한 기간의 데이터를 불러오는 중입니다.</p>}
+              <div className="export-preview-scroll">
+                <table className="export-preview-table">
+                  <colgroup>
+                    {selectedColumns.map((column) => <col className={columnClassName(column.key)} key={column.key} />)}
+                  </colgroup>
+                  <thead>
+                    <tr>{selectedColumns.map((column) => <th className={columnClassName(column.key)} key={column.key} scope="col">{column.label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {PREVIEW_ROWS.map((row, rowIndex) => (
+                      <tr key={`${String(row.date)}-${rowIndex}`}>
+                        {selectedColumns.map((column) => <td className={columnClassName(column.key)} key={column.key}>{cellText(row[column.key])}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {error && <p className="export-error" role="alert">{error}</p>}

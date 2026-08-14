@@ -1,4 +1,4 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CalendarPage from './CalendarPage';
 import {fetchAttendanceForMonth} from '../api/jadeApi';
@@ -102,6 +102,39 @@ describe('CalendarPage layout', () => {
     await userEvent.click(screen.getByRole('button', {name: '새로고침'}));
 
     await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(2));
+  });
+
+  it('requests the selected export range again before showing it in the preview', async () => {
+    mockedFetchAttendanceForMonth.mockReset();
+    mockedFetchAttendanceForMonth.mockResolvedValue({});
+    let openExport: (() => void) | null = null;
+    const now = new Date();
+    const credentials = {cookie: 'test-cookie', body: 'test-body', parsedBody: {}};
+
+    render(
+      <CalendarPage
+        credentials={credentials}
+        onExportReady={(opener) => { openExport = opener; }}
+      />,
+    );
+
+    await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(openExport).toEqual(expect.any(Function)));
+    await act(async () => openExport?.());
+    const dialog = screen.getByRole('dialog', {name: 'CSV 다운로드 설정'});
+
+    await userEvent.click(within(dialog).getByRole('button', {
+      name: `${now.getFullYear()}년 ${now.getMonth() + 1}월 5일`,
+    }));
+    await userEvent.click(within(dialog).getByRole('button', {
+      name: `${now.getFullYear()}년 ${now.getMonth() + 1}월 10일`,
+    }));
+
+    await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(2));
+    expect(mockedFetchAttendanceForMonth).toHaveBeenLastCalledWith(expect.objectContaining({
+      year: now.getFullYear(),
+      month: now.getMonth(),
+    }));
   });
 
   it('reports checking and connected states with the latest successful fetch time', async () => {

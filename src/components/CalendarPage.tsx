@@ -14,6 +14,10 @@ import {JadeBridgeTransport} from '../lib/jadeBridge';
 import {ConnectionStatus} from '../lib/connectionStatus';
 import {isMonthCacheFresh} from '../lib/monthCache';
 import {JADE_EXPORT_COLUMNS, buildJadeExportRows} from '../lib/exportRows';
+import {CsvRow, filterRowsByDateRange} from '../lib/csvExport';
+
+const EXPORT_MIN_DATE = '2000-01-01';
+const EXPORT_MAX_DATE = '2099-12-31';
 
 interface CalendarPageProps {
   credentials: Credentials;
@@ -59,6 +63,18 @@ function buildLoadingMap(year: number, month: number): AttendanceMap {
     out[dateKey(year, month, day)] = {kind: 'loading'};
   }
   return out;
+}
+
+function exportMonths(startDate: string, endDate: string): Array<{year: number; month: number}> {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const months: Array<{year: number; month: number}> = [];
+  while (cursor <= end) {
+    months.push({year: cursor.getFullYear(), month: cursor.getMonth()});
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
 }
 
 function CalendarPage({
@@ -196,7 +212,24 @@ function CalendarPage({
 
   const exportRows = useMemo(() => buildJadeExportRows(attendanceResults), [attendanceResults]);
   const exportMinDate = dateKey(viewYear, viewMonth, 1);
-  const exportMaxDate = dateKey(viewYear, viewMonth + 1, 0);
+  const requestExportRows = useCallback(async (startDate: string, endDate: string): Promise<CsvRow[]> => {
+    const results: Record<string, AttendanceResult> = {};
+    for (const month of exportMonths(startDate, endDate)) {
+      const monthResults = await fetchAttendanceForMonth({
+        cookie: credentials.cookie,
+        parsedBody: credentials.parsedBody,
+        year: month.year,
+        month: month.month,
+        transport,
+      });
+      Object.assign(results, monthResults);
+      if (hasAuthenticationErrors(monthResults)) {
+        onAuthenticationExpired?.();
+        throw new Error('Jade authentication expired');
+      }
+    }
+    return filterRowsByDateRange(buildJadeExportRows(results), 'date', startDate, endDate);
+  }, [credentials, onAuthenticationExpired, transport]);
 
   return (
     <div className="jade-calendar-page">
@@ -238,13 +271,15 @@ function CalendarPage({
       <ExportMenu
         rows={exportRows}
         columns={JADE_EXPORT_COLUMNS}
-        minDate={exportMinDate}
-        maxDate={exportMaxDate}
-        fileName={`jade-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+        minDate={EXPORT_MIN_DATE}
+        maxDate={EXPORT_MAX_DATE}
+        initialDate={exportMinDate}
+        fileName="jade-근태-기간.csv"
         disabled={loading}
         hideTrigger
         open={exportOpen}
         onOpenChange={setExportOpen}
+        onRangeDataRequest={requestExportRows}
       />
     </div>
   );

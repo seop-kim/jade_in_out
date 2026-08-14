@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportMenu from './ExportMenu';
 
@@ -82,5 +82,51 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('checkbox', {name: '상태 포함'})).toBeChecked();
     expect(screen.getAllByTestId('export-column-label').map((element) => element.textContent))
       .toEqual(['날짜', '이름', '근무 유형', '근무 상세', '상태']);
+  });
+
+  test('reloads rows when the selected date range is completed', async () => {
+    const onRangeDataRequest = jest.fn().mockResolvedValue([
+      {date: '2026-08-05', name: '김태섭', workType: '기본근무', workList: '연장 2시간', status: '정상'},
+    ]);
+
+    render(
+      <ExportMenu
+        rows={[]}
+        columns={columns}
+        minDate="2020-01-01"
+        maxDate="2030-12-31"
+        initialDate="2026-08-01"
+        fileName="test.csv"
+        onRangeDataRequest={onRangeDataRequest}
+      />
+    );
+
+    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
+    userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
+
+    await waitFor(() => expect(onRangeDataRequest).toHaveBeenCalledWith('2026-08-05', '2026-08-10'));
+    expect(screen.getByText('실제 조회 결과는 파일 저장 시 반영됩니다')).toBeInTheDocument();
+    expect(screen.queryByText('김태섭')).not.toBeInTheDocument();
+    expect(screen.getByText('연장 2시간 (18:00~20:00)')).toBeInTheDocument();
+  });
+
+  test('allows the calendar year and month to be changed before selecting days', () => {
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2020-01-01"
+        maxDate="2030-12-31"
+        initialDate="2026-08-01"
+        fileName="test.csv"
+      />
+    );
+
+    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.selectOptions(screen.getByRole('combobox', {name: '조회 연도'}), '2025');
+    userEvent.selectOptions(screen.getByRole('combobox', {name: '조회 월'}), '11');
+
+    expect(screen.getByRole('button', {name: '2025년 12월 5일'})).toBeInTheDocument();
   });
 });

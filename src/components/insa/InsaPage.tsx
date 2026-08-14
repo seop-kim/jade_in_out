@@ -13,9 +13,10 @@ import {
   createInsaBookmarklet,
 } from '../../lib/insaBridge';
 import {clearInsaCookie, loadInsaCookie, saveInsaCookie} from '../../lib/insaStorage';
-import {buildInsaCalendarMap} from '../../lib/transformInsa';
+import {buildInsaCalendarMap, InsaCalendarMap} from '../../lib/transformInsa';
 import {ConnectionStatus} from '../../lib/connectionStatus';
 import {isMonthCacheFresh} from '../../lib/monthCache';
+import {CsvRow, filterRowsByDateRange} from '../../lib/csvExport';
 import MonthPicker from '../MonthPicker';
 import LastFetchedLabel from '../LastFetchedLabel';
 import ExportMenu from '../ExportMenu';
@@ -23,6 +24,9 @@ import InsaCalendar from './InsaCalendar';
 import InsaSetup from './InsaSetup';
 import './Insa.css';
 import {INSA_EXPORT_COLUMNS, buildInsaExportRows} from '../../lib/exportRows';
+
+const EXPORT_MIN_DATE = '2000-01-01';
+const EXPORT_MAX_DATE = '2099-12-31';
 
 export type DetailState =
   | {status: 'loading'}
@@ -92,6 +96,18 @@ interface CachedMonth {
 
 function monthKey(year: number, month: number): string {
   return `${year}-${month}`;
+}
+
+function exportMonths(startDate: string, endDate: string): Array<{year: number; month: number}> {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const months: Array<{year: number; month: number}> = [];
+  while (cursor <= end) {
+    months.push({year: cursor.getFullYear(), month: cursor.getMonth()});
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
 }
 
 const INSA_POPUP_URL = `${INSA_BRIDGE_ORIGIN}/`;
@@ -295,7 +311,31 @@ function InsaPage({
   ), [result, viewMonth, viewYear]);
   const exportRows = useMemo(() => buildInsaExportRows(days), [days]);
   const exportMinDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
-  const exportMaxDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, '0')}`;
+  const requestExportRows = useCallback(async (startDate: string, endDate: string): Promise<CsvRow[]> => {
+    const exportDays: InsaCalendarMap = {};
+    for (const month of exportMonths(startDate, endDate)) {
+      const monthResult = await loadInsaMonth({
+        cookie: cookie ?? undefined,
+        requestHtml: cookie ? undefined : requestHtmlViaBridge,
+        year: month.year,
+        month: month.month,
+        today,
+      });
+      if (monthResult.errors.some((error) => error.authError)) {
+        onAuthenticationExpired?.();
+        throw new Error('INSA authentication expired');
+      }
+      if (monthResult.errors.length > 0) throw new Error('INSA export request failed');
+      Object.assign(exportDays, buildInsaCalendarMap(
+        month.year,
+        month.month,
+        monthResult.home,
+        monthResult.worktime ?? [],
+        monthResult.leave?.records ?? [],
+      ));
+    }
+    return filterRowsByDateRange(buildInsaExportRows(exportDays), 'date', startDate, endDate);
+  }, [cookie, onAuthenticationExpired, requestHtmlViaBridge, today]);
 
   const selectMonth = (year: number, month: number): void => {
     setViewYear(year);
@@ -458,13 +498,15 @@ function InsaPage({
       <ExportMenu
         rows={exportRows}
         columns={INSA_EXPORT_COLUMNS}
-        minDate={exportMinDate}
-        maxDate={exportMaxDate}
-        fileName={`insa-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+        minDate={EXPORT_MIN_DATE}
+        maxDate={EXPORT_MAX_DATE}
+        initialDate={exportMinDate}
+        fileName="insa-근태-기간.csv"
         disabled={loading || result === null}
         hideTrigger
         open={exportOpen}
         onOpenChange={setExportOpen}
+        onRangeDataRequest={requestExportRows}
       />
     </div>
   );

@@ -223,6 +223,29 @@ describe('InsaPage', () => {
     await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
   });
 
+  test('requests the selected export range again before showing it in the preview', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    let openExport: (() => void) | null = null;
+
+    render(<InsaPage onExportReady={(opener) => { openExport = opener; }} />);
+
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(openExport).toEqual(expect.any(Function)));
+    await act(async () => openExport?.());
+    const dialog = screen.getByRole('dialog', {name: 'CSV 다운로드 설정'});
+
+    await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 5일'}));
+    await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 10일'}));
+
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
+    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
+      year: 2026,
+      month: 7,
+      cookie: 'private-session',
+    }));
+  });
+
   test('reports connection state and the latest successful fetch time', async () => {
     sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const statuses: ConnectionStatus[] = [];

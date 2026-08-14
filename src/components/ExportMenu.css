@@ -241,12 +241,61 @@
   background: var(--color-surface);
 }
 
-.export-calendar-title {
+.export-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
+}
+
+.export-calendar-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.export-calendar-nav:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-accent);
+}
+
+.export-calendar-nav:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.export-calendar-selects {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.export-calendar-selects select {
+  padding: 5px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
   color: var(--color-text);
-  font-size: 13px;
+  font: inherit;
+  font-size: 12px;
   font-weight: 700;
-  text-align: center;
+}
+
+.export-calendar-selects select:focus-visible,
+.export-calendar-nav:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .export-calendar-weekdays,
@@ -280,6 +329,11 @@
   border-color: #93c5fd;
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+.export-calendar-day:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
 }
 
 .export-calendar-day.is-in-range {
@@ -445,6 +499,16 @@
 .export-preview-empty {
   padding: 14px;
   color: var(--color-muted);
+  text-align: center;
+}
+
+.export-loading {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 8px;
+  color: var(--color-accent-hover);
+  font-size: 12px;
   text-align: center;
 }
 
