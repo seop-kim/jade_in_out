@@ -75,10 +75,25 @@ describe('InsaPage', () => {
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
     expect(screen.queryByText('위 순서대로 인사 연결을 설정해주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('insa-auto-connect-card');
-    expect(screen.getByText('자동 연결을 사용할 수 없는 경우에는 아래 순서대로 인사시스템의 Cookie를 복사해 입력하세요.')).toBeInTheDocument();
-    expect(screen.getByText('Headers에서 Cookie 값을 복사합니다.')).toBeInTheDocument();
-    expect(screen.getByLabelText('INSA Cookie')).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('tab', {name: '자동인증'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: '수동인증'})).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
+  });
+
+  test('shows only the manual Cookie setup after selecting manual authentication', async () => {
+    render(<InsaPage />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
+
+    expect(screen.getByLabelText('INSA Cookie')).toHaveAttribute('type', 'password');
+    expect(screen.queryByRole('button', {name: '인사시스템 열기'})).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: '수동인증'})).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.click(screen.getByRole('tab', {name: '자동인증'}));
+
+    expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '인사시스템 열기'})).toBeInTheDocument();
   });
 
   test('explains the bookmarklet drag action when its setup link is clicked directly', async () => {
@@ -119,6 +134,7 @@ describe('InsaPage', () => {
 
   test('stores the independent cookie and loads the current INSA month', async () => {
     render(<InsaPage />);
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     await userEvent.type(screen.getByLabelText('INSA Cookie'), '  private-session  ');
     await act(async () => {
       await userEvent.click(screen.getByRole('button', {name: '저장하고 달력 보기'}));
@@ -438,6 +454,7 @@ describe('InsaPage', () => {
     await userEvent.click(await screen.findByRole('button', {name: '2026년 8월 5일 상세'}));
     rerender(<InsaPage resetRequest={1} />);
 
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     await userEvent.type(screen.getByLabelText('INSA Cookie'), 'new-session');
     await act(async () => {
       await userEvent.click(screen.getByRole('button', {name: '저장하고 달력 보기'}));
