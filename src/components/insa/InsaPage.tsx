@@ -82,6 +82,7 @@ export interface InsaPageProps {
   onLastFetchedChange?: (value: Date | null) => void;
   onApiRequestChange?: (request: InsaApiRequest, active: boolean) => void;
   onError?: (message: string) => void;
+  onExportReady?: (opener: (() => void) | null) => void;
 }
 
 interface CachedMonth {
@@ -103,6 +104,7 @@ function InsaPage({
   onLastFetchedChange,
   onApiRequestChange,
   onError,
+  onExportReady,
 }: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
@@ -115,12 +117,18 @@ function InsaPage({
   const [result, setResult] = useState<InsaMonthLoadResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [selectedYmd, setSelectedYmd] = useState<string | null>(null);
   const [detailStates, setDetailStates] = useState<Record<string, DetailState>>({});
   const detailStatesRef = useRef<Record<string, DetailState>>({});
   const detailControllers = useRef(new Map<string, AbortController>());
   const bridgeClientRef = useRef<InsaBridgeClient | null>(null);
   const monthCache = useRef(new Map<string, CachedMonth>());
+
+  useEffect(() => {
+    onExportReady?.(() => setExportOpen(true));
+    return () => onExportReady?.(null);
+  }, [onExportReady]);
 
   const disposeBridge = useCallback((closePopup = false): void => {
     bridgeClientRef.current?.dispose();
@@ -319,6 +327,7 @@ function InsaPage({
     setLastFetchedAt(null);
     onLastFetchedChange?.(null);
     onConnectionStatusChange?.('not-configured');
+    setExportOpen(false);
   }, [disposeBridge, invalidateDayDetails, onConnectionStatusChange, onLastFetchedChange]);
 
   useEffect(() => {
@@ -419,14 +428,6 @@ function InsaPage({
         </div>
         <div className="toolbar-right">
           <LastFetchedLabel value={lastFetchedAt}/>
-          <ExportMenu
-            rows={exportRows}
-            columns={INSA_EXPORT_COLUMNS}
-            minDate={exportMinDate}
-            maxDate={exportMaxDate}
-            fileName={`insa-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
-            disabled={loading || result === null}
-          />
           <button
             type="button"
             className="btn btn-primary refresh-button"
@@ -454,6 +455,17 @@ function InsaPage({
       />
 
       {selectedYmd && <TeamDetailPanel ymd={selectedYmd} state={detailStates[selectedYmd]} />}
+      <ExportMenu
+        rows={exportRows}
+        columns={INSA_EXPORT_COLUMNS}
+        minDate={exportMinDate}
+        maxDate={exportMaxDate}
+        fileName={`insa-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+        disabled={loading || result === null}
+        hideTrigger
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+      />
     </div>
   );
 }

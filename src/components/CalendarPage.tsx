@@ -22,6 +22,7 @@ interface CalendarPageProps {
   onAuthenticationExpired?: () => void;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onLastFetchedChange?: (value: Date | null) => void;
+  onExportReady?: (opener: (() => void) | null) => void;
 }
 
 interface CachedMonth {
@@ -67,6 +68,7 @@ function CalendarPage({
   onAuthenticationExpired,
   onConnectionStatusChange,
   onLastFetchedChange,
+  onExportReady,
 }: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
@@ -77,7 +79,13 @@ function CalendarPage({
   const [loading, setLoading] = useState<boolean>(false);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const monthCache = useRef(new Map<string, CachedMonth>());
+
+  useEffect(() => {
+    onExportReady?.(() => setExportOpen(true));
+    return () => onExportReady?.(null);
+  }, [onExportReady]);
 
   const goPrev = (): void => {
     const d = new Date(viewYear, viewMonth - 1, 1);
@@ -206,14 +214,6 @@ function CalendarPage({
         </div>
         <div className="toolbar-right">
           <LastFetchedLabel value={lastFetchedAt}/>
-          <ExportMenu
-            rows={exportRows}
-            columns={JADE_EXPORT_COLUMNS}
-            minDate={exportMinDate}
-            maxDate={exportMaxDate}
-            fileName={`jade-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
-            disabled={loading}
-          />
           <button
             type="button"
             className="btn btn-primary refresh-button"
@@ -234,6 +234,17 @@ function CalendarPage({
         month={viewMonth}
         today={today}
         attendance={attendance}
+      />
+      <ExportMenu
+        rows={exportRows}
+        columns={JADE_EXPORT_COLUMNS}
+        minDate={exportMinDate}
+        maxDate={exportMaxDate}
+        fileName={`jade-근태-${viewYear}-${String(viewMonth + 1).padStart(2, '0')}.csv`}
+        disabled={loading}
+        hideTrigger
+        open={exportOpen}
+        onOpenChange={setExportOpen}
       />
     </div>
   );

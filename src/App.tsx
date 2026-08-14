@@ -53,6 +53,10 @@ function App() {
   const insaTabRef = useRef<HTMLButtonElement>(null);
   const nextToastId = useRef(0);
   const jadeBridgeClientRef = useRef<JadeBridgeClient | null>(null);
+  const jadeExportOpenerRef = useRef<(() => void) | null>(null);
+  const insaExportOpenerRef = useRef<(() => void) | null>(null);
+  const [jadeExportReady, setJadeExportReady] = useState(false);
+  const [insaExportReady, setInsaExportReady] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -271,6 +275,21 @@ function App() {
   const empId = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const userLabel = `${empName} ${empId ? `(${empId})` : ''}`.trim();
   const canResetCredentials = systemTab === 'jade' ? Boolean(activeJadeCredentials) : insaConnected;
+  const canExport = systemTab === 'jade'
+    ? Boolean(activeJadeCredentials && jadeExportReady)
+    : Boolean(insaConnected && insaExportReady);
+  const handleOpenExport = (): void => {
+    if (systemTab === 'jade') jadeExportOpenerRef.current?.();
+    else insaExportOpenerRef.current?.();
+  };
+  const registerJadeExportOpener = useCallback((opener: (() => void) | null): void => {
+    jadeExportOpenerRef.current = opener;
+    setJadeExportReady(Boolean(opener));
+  }, []);
+  const registerInsaExportOpener = useCallback((opener: (() => void) | null): void => {
+    insaExportOpenerRef.current = opener;
+    setInsaExportReady(Boolean(opener));
+  }, []);
   const handleResetCurrentCredentials = (): void => {
     if (systemTab === 'jade') handleResetCredentials();
     else {
@@ -331,6 +350,8 @@ function App() {
               insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
+              canExport={canExport}
+              onOpenExport={handleOpenExport}
             />
           </div>
         </div>
@@ -350,6 +371,7 @@ function App() {
                 onError={showErrorToast}
                 onAuthenticationExpired={handleJadeAuthenticationExpired}
                 onConnectionStatusChange={setJadeConnectionStatus}
+                onExportReady={registerJadeExportOpener}
               />
             ) : (
               <Setup
@@ -374,6 +396,7 @@ function App() {
               onConnectionStatusChange={setInsaConnectionStatus}
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
+              onExportReady={registerInsaExportOpener}
             />
           )}
         </div>

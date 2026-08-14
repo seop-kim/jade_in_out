@@ -5,15 +5,17 @@ import ExportMenu from './ExportMenu';
 const columns = [
   {key: 'date', label: '날짜'},
   {key: 'name', label: '이름'},
+  {key: 'workType', label: '근무 유형'},
+  {key: 'workList', label: '근무 상세'},
   {key: 'status', label: '상태'},
 ];
 
 const rows = [
-  {date: '2026-08-05', name: '김태섭', status: '정상'},
+  {date: '2026-08-05', name: '김태섭', workType: '기본근무', workList: '연장 2시간', status: '정상'},
 ];
 
 describe('ExportMenu', () => {
-  test('opens an unsaved column and date configuration panel', () => {
+  test('opens a popup with one shared date range calendar', () => {
     render(
       <ExportMenu
         rows={rows}
@@ -27,10 +29,20 @@ describe('ExportMenu', () => {
     userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
 
     expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
-    expect(screen.getByLabelText('시작일')).toHaveValue('2026-08-01');
-    expect(screen.getByLabelText('종료일')).toHaveValue('2026-08-31');
+    expect(screen.getByText('시작일을 선택하세요')).toBeInTheDocument();
+    expect(screen.getByText('종료일을 선택하세요')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', {name: '날짜 포함'})).toBeChecked();
     expect(screen.getByRole('checkbox', {name: '이름 포함'})).toBeChecked();
+
+    userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
+    expect(screen.getByText('2026. 08. 05')).toBeInTheDocument();
+    expect(screen.getByText('종료일을 선택하세요')).toBeInTheDocument();
+
+    userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
+    expect(screen.getByText('2026. 08. 10')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '날짜'})).toHaveClass('export-preview-column-date');
+    expect(screen.getByRole('columnheader', {name: '근무 유형'})).toHaveClass('export-preview-column-work-type');
+    expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');
   });
 
   test('allows a column to be excluded and moved without persisting it', () => {
@@ -50,7 +62,7 @@ describe('ExportMenu', () => {
 
     expect(screen.getByRole('checkbox', {name: '상태 포함'})).not.toBeChecked();
     const labels = screen.getAllByTestId('export-column-label').map((element) => element.textContent);
-    expect(labels).toEqual(['이름', '날짜', '상태']);
+    expect(labels).toEqual(['이름', '날짜', '근무 유형', '근무 상세', '상태']);
 
     unmount();
     render(
@@ -66,6 +78,6 @@ describe('ExportMenu', () => {
 
     expect(screen.getByRole('checkbox', {name: '상태 포함'})).toBeChecked();
     expect(screen.getAllByTestId('export-column-label').map((element) => element.textContent))
-      .toEqual(['날짜', '이름', '상태']);
+      .toEqual(['날짜', '이름', '근무 유형', '근무 상세', '상태']);
   });
 });

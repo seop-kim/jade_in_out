@@ -10,6 +10,8 @@ interface SettingsMenuProps {
   insaStatus: ConnectionStatus;
   canResetCredentials: boolean;
   onResetCredentials: () => void;
+  canExport: boolean;
+  onOpenExport: () => void;
 }
 
 function SettingsIcon() {
@@ -28,6 +30,8 @@ function SettingsMenu({
   insaStatus,
   canResetCredentials,
   onResetCredentials,
+  canExport,
+  onOpenExport,
 }: SettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +87,17 @@ function SettingsMenu({
               </span>
             </div>
           </div>
+          <button
+            type="button"
+            className="settings-action"
+            onClick={() => {
+              onOpenExport();
+              setOpen(false);
+            }}
+            disabled={!canExport}
+          >
+            파일 저장
+          </button>
           <label className="settings-option">
             <span>다크모드</span>
             <input

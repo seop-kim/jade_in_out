@@ -145,6 +145,43 @@ describe('App system tabs', () => {
     expect(screen.getByRole('button', {name: '인증 정보 초기화'})).toBeDisabled();
   });
 
+  test('opens the file save popup from the settings menu', async () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {},
+    });
+    mockedFetchAttendanceForMonth.mockResolvedValue({
+      '20260812': {
+        ymd: '20260812',
+        workDay: '(수)',
+        workType: '기본근무',
+        vacation: null,
+        overtime: null,
+        dayOffWork: null,
+        remoteWork: null,
+        clockIn: '0900',
+        clockInChanged: false,
+        clockInLocal: false,
+        clockOut: '1800',
+        clockOutChanged: false,
+        clockOutLocal: false,
+        workList: [],
+        raw: {},
+      },
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    const fileSaveButton = await screen.findByRole('button', {name: '파일 저장'});
+    expect(fileSaveButton).not.toBeDisabled();
+
+    await userEvent.click(fileSaveButton);
+
+    expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.getByText('기간과 항목을 선택한 뒤 CSV 파일로 저장합니다.')).toBeInTheDocument();
+  });
+
   test('places the INSA connection reset inside the settings menu', async () => {
     saveInsaCookie('synthetic-session');
     render(<App />);

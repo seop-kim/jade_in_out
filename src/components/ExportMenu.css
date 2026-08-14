@@ -28,12 +28,21 @@
   stroke-width: 1.9;
 }
 
-.export-popover {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(360px, calc(100vw - 32px));
+.export-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.export-dialog {
+  width: min(1120px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -44,7 +53,8 @@
 .export-popover-header,
 .export-columns-heading,
 .export-column-row,
-.export-actions {
+.export-actions,
+.export-preview-heading {
   display: flex;
   align-items: center;
 }
@@ -52,7 +62,8 @@
 .export-popover-header,
 .export-columns-heading,
 .export-column-row,
-.export-actions {
+.export-actions,
+.export-preview-heading {
   justify-content: space-between;
 }
 
@@ -61,6 +72,12 @@
   color: var(--color-text);
   font-size: 15px;
   font-weight: 700;
+}
+
+.export-dialog-description {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .export-close-button,
@@ -89,36 +106,139 @@
 .export-close-button:focus-visible,
 .export-move-button:focus-visible,
 .export-column-check input:focus-visible,
-.export-date-fields input:focus-visible,
+.export-calendar-day:focus-visible,
 .export-actions button:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
-.export-date-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 14px 0 18px;
+.export-date-picker-section {
+  margin: 16px 0 18px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
 }
 
-.export-date-fields label {
+.export-date-selection-status {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.export-date-selection {
   display: grid;
-  gap: 5px;
-  color: var(--color-muted-strong);
+  flex: 1 1 0;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-muted);
   font-size: 12px;
 }
 
-.export-date-fields input {
-  width: 100%;
-  min-width: 0;
-  padding: 8px 7px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 7px;
-  background: var(--color-surface-muted);
+.export-date-selection.is-selected {
+  border-color: #93c5fd;
+  color: var(--color-text);
+}
+
+.export-date-selection strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-date-selection-label {
+  color: var(--color-muted-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.export-date-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--color-muted);
+  font-size: 16px;
+}
+
+.export-date-instruction {
+  margin: 12px 0 8px;
+  color: var(--color-accent-hover);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.export-calendar {
+  width: min(360px, 100%);
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+}
+
+.export-calendar-title {
+  margin-bottom: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.export-calendar-weekdays,
+.export-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.export-calendar-weekdays {
+  margin-bottom: 3px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.export-calendar-day {
+  min-height: 31px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
   color: var(--color-text);
   font: inherit;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.export-calendar-day:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.export-calendar-day.is-in-range {
+  border-radius: 0;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.export-calendar-day.is-start,
+.export-calendar-day.is-end {
+  border-color: var(--color-accent);
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.export-calendar-empty {
+  min-height: 31px;
 }
 
 .export-columns-heading {
@@ -183,6 +303,83 @@
   cursor: not-allowed;
 }
 
+.export-preview-section {
+  margin-top: 18px;
+}
+
+.export-preview-heading {
+  margin-bottom: 7px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-preview-scroll {
+  max-width: 100%;
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.export-preview-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.export-preview-table th,
+.export-preview-table td {
+  padding: 8px 10px;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.export-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.export-preview-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.export-preview-table th:last-child,
+.export-preview-table td:last-child {
+  border-right: 0;
+}
+
+.export-preview-column-date {
+  width: 130px;
+  min-width: 130px;
+}
+
+.export-preview-column-work-type {
+  width: 150px;
+  min-width: 150px;
+}
+
+.export-preview-column-work-list {
+  width: 300px;
+  min-width: 300px;
+}
+
+.export-preview-empty {
+  padding: 14px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
 .export-error {
   margin: 10px 0 0;
   color: var(--color-danger);
@@ -202,4 +399,25 @@
   border-color: var(--color-border);
   background: transparent;
   color: var(--color-muted-strong);
+}
+
+@media (max-width: 640px) {
+  .export-modal-backdrop {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .export-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 12px;
+  }
+
+  .export-date-selection-status {
+    gap: 5px;
+  }
+
+  .export-date-selection {
+    padding: 8px;
+  }
 }
