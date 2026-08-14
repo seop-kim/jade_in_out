@@ -208,7 +208,47 @@ export interface FetchDateOptions {
   parsedBody: Record<string, string>;
   ymd: string;
   signal?: AbortSignal;
+  retryCount?: number;
+  retryDelayMs?: number;
   transport?: JadeBridgeTransport;
+}
+
+function isAbortError(error: unknown): boolean {
+  const name = (error as {name?: string} | null)?.name;
+  return name === 'CanceledError' || name === 'AbortError';
+}
+
+function isRetryableError(error: unknown): boolean {
+  const status = (error as {response?: {status?: number}} | null)?.response?.status;
+  return status === undefined || status === 0 || status >= 500;
+}
+
+function createAbortError(): Error {
+  const error = new Error('Request aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(createAbortError());
+  if (delayMs <= 0) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = (): void => {
+      if (timer !== undefined) clearTimeout(timer);
+      signal?.removeEventListener('abort', handleAbort);
+    };
+    const handleAbort = (): void => {
+      cleanup();
+      reject(createAbortError());
+    };
+    timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delayMs);
+    signal?.addEventListener('abort', handleAbort, {once: true});
+  });
 }
 
 export async function fetchAttendanceForDate({
@@ -216,22 +256,36 @@ export async function fetchAttendanceForDate({
   parsedBody,
   ymd,
   signal,
+  retryCount = 0,
+  retryDelayMs = 250,
   transport,
 }: FetchDateOptions): Promise<RawEtc> {
   const body = buildFormBody(parsedBody, ymd);
-  if (transport) {
-    const responseText = await transport.post(appConfig.jade.requestPath, body.toString(), signal);
-    return parseAttendanceXml(responseText);
+  let attempt = 0;
+
+  while (true) {
+    try {
+      if (transport) {
+        const responseText = await transport.post(appConfig.jade.requestPath, body.toString(), signal);
+        return parseAttendanceXml(responseText);
+      }
+      if (!cookie) throw new Error('Jade authentication is not configured');
+      const res = await client.post(`${appConfig.jade.apiBasePath}${appConfig.jade.requestPath}`, body, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Jade-Cookie': cookie,
+        },
+        signal,
+      });
+      return parseAttendanceXml(res.data);
+    } catch (error) {
+      if (signal?.aborted || isAbortError(error) || attempt >= retryCount || !isRetryableError(error)) {
+        throw error;
+      }
+      await waitForRetry(retryDelayMs * (2 ** attempt), signal);
+      attempt += 1;
+    }
   }
-  if (!cookie) throw new Error('Jade authentication is not configured');
-  const res = await client.post(`${appConfig.jade.apiBasePath}${appConfig.jade.requestPath}`, body, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      'X-Jade-Cookie': cookie,
-    },
-    signal,
-  });
-  return parseAttendanceXml(res.data);
 }
 
 function buildRecord(ymd: string, etc: RawEtc): AttendanceRecord {
@@ -295,6 +349,8 @@ export interface FetchMonthOptions {
   year: number;
   month: number;
   concurrency?: number;
+  retryCount?: number;
+  retryDelayMs?: number;
   signal?: AbortSignal;
   onProgress?: (info: ProgressInfo) => void;
   onDayResult?: (ymd: string, result: AttendanceResult) => void;
@@ -307,6 +363,8 @@ export async function fetchAttendanceForMonth({
   year,
   month,
   concurrency = 4,
+  retryCount = 2,
+  retryDelayMs = 250,
   signal,
   onProgress,
   onDayResult,
@@ -328,7 +386,15 @@ export async function fetchAttendanceForMonth({
       const ymd = toYmd(year, month, day);
       let dayResult: AttendanceResult;
       try {
-        const etc = await fetchAttendanceForDate({cookie, parsedBody, ymd, signal, transport});
+        const etc = await fetchAttendanceForDate({
+          cookie,
+          parsedBody,
+          ymd,
+          retryCount,
+          retryDelayMs,
+          signal,
+          transport,
+        });
         dayResult = buildRecord(ymd, etc);
       } catch (err) {
         const error = err as {name?: string; message?: string; response?: {status?: number}};

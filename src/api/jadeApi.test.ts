@@ -26,4 +26,26 @@ describe('Jade API', () => {
       controller.signal,
     );
   });
+
+  test('retries a temporary failure for the same date', async () => {
+    const post = jest.fn()
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(`
+        <ROOT>
+          <ETC KEY="I_IN_HM">08:50</ETC>
+          <ETC KEY="I_OUT_HM">18:10</ETC>
+        </ROOT>
+      `);
+
+    await fetchAttendanceForDate({
+      cookie: '',
+      parsedBody: {},
+      ymd: '2026-08-12',
+      retryCount: 1,
+      retryDelayMs: 0,
+      transport: {post},
+    });
+
+    expect(post).toHaveBeenCalledTimes(2);
+  });
 });
