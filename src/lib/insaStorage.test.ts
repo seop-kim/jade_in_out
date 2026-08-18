@@ -8,18 +8,18 @@ import {
 describe('INSA cookie storage', () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    localStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
+    sessionStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
   });
 
   test('stores an INSA cookie under its independent key', () => {
     saveInsaCookie(' User_ID=masked; SESSION=masked ');
 
-    expect(localStorage.getItem(INSA_COOKIE_STORAGE_KEY)).toBe('User_ID=masked; SESSION=masked');
+    expect(sessionStorage.getItem(INSA_COOKIE_STORAGE_KEY)).toBe('User_ID=masked; SESSION=masked');
     expect(localStorage.getItem('jade_in_out_credentials_v1')).toBeNull();
   });
 
   test('loads and clears only the INSA cookie', () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'User_ID=masked; SESSION=masked');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'User_ID=masked; SESSION=masked');
     localStorage.setItem('jade_in_out_credentials_v1', 'unrelated');
 
     expect(loadInsaCookie()).toBe('User_ID=masked; SESSION=masked');
@@ -30,7 +30,7 @@ describe('INSA cookie storage', () => {
     expect(localStorage.getItem('jade_in_out_credentials_v1')).toBe('unrelated');
   });
 
-  test('returns safely when localStorage access throws', () => {
+  test('returns safely when sessionStorage access throws', () => {
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });

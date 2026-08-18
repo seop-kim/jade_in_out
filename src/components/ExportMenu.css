@@ -1,0 +1,587 @@
+.export-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: var(--color-border-strong);
+  color: var(--color-muted-strong);
+}
+
+.export-button:hover:not(:disabled) {
+  color: var(--color-accent);
+}
+
+.export-icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.export-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.export-progress-backdrop {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.export-progress-dialog {
+  width: min(360px, calc(100vw - 56px));
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.export-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.export-progress-heading span {
+  color: var(--color-muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-progress-track {
+  height: 8px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+}
+
+.export-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.export-progress-message {
+  margin: 12px 0 16px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.export-progress-cancel {
+  width: 100%;
+}
+
+.export-dialog {
+  width: min(1120px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.export-popover-header,
+.export-columns-heading,
+.export-column-row,
+.export-actions,
+.export-preview-heading {
+  display: flex;
+  align-items: center;
+}
+
+.export-popover-header,
+.export-columns-heading,
+.export-column-row,
+.export-actions,
+.export-preview-heading {
+  justify-content: space-between;
+}
+
+.export-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.export-dialog-description {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.export-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(330px, 0.9fr) minmax(360px, 1.1fr);
+  align-items: stretch;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.export-close-button,
+.export-date-range-clear,
+.export-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted-strong);
+  cursor: pointer;
+}
+
+.export-close-button {
+  width: 28px;
+  height: 28px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.export-date-range-clear {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.export-close-button:hover,
+.export-date-range-clear:hover,
+.export-drag-handle:hover {
+  color: var(--color-accent);
+}
+
+.export-close-button:focus-visible,
+.export-date-range-clear:focus-visible,
+.export-drag-handle:focus-visible,
+.export-column-check input:focus-visible,
+.export-calendar-day:focus-visible,
+.export-actions button:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.export-date-picker-section {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.export-date-picker-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 480px;
+  max-height: 480px;
+}
+
+.export-date-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+}
+
+.export-date-picker-heading > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.export-date-picker-heading strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.export-date-picker-heading > div:first-child span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.export-date-range-display {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+}
+
+.export-date-range-value {
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 5px;
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.export-date-range-value.is-selected {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
+.export-date-range-arrow {
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.export-calendar {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+}
+
+.export-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.export-calendar-weekdays,
+.export-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.export-calendar-weekdays {
+  margin-bottom: 3px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.export-calendar-day {
+  min-height: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.export-calendar-day:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.export-calendar-day:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.export-calendar-day.is-in-range {
+  border-radius: 0;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.export-calendar-day.is-today {
+  align-self: center;
+  justify-self: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-color: #2563eb;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.export-calendar-day.is-start,
+.export-calendar-day.is-end {
+  border-color: var(--color-accent);
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.export-calendar-empty {
+  min-height: 0;
+}
+
+.export-calendar-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-auto-rows: minmax(36px, 1fr);
+}
+
+.export-columns-heading {
+  margin-bottom: 7px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-columns-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  min-width: 0;
+  min-height: 0;
+  height: 480px;
+  max-height: 480px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.export-columns-hint {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.export-column-list {
+  flex: 1 1 auto;
+  display: grid;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.export-column-row {
+  position: relative;
+  min-height: 36px;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.export-column-row.is-dragging {
+  opacity: 0.45;
+}
+
+.export-column-row.is-drag-over {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+.export-column-check {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.export-column-check input {
+  accent-color: var(--color-accent);
+}
+
+.export-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  color: var(--color-muted);
+  cursor: grab;
+  user-select: none;
+}
+
+.export-drag-handle:hover {
+  background: var(--color-surface-muted);
+}
+
+.export-drag-handle:active {
+  cursor: grabbing;
+}
+
+.export-preview-section {
+  margin-top: 18px;
+}
+
+.export-preview-heading {
+  margin-bottom: 7px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-preview-scroll {
+  max-width: 100%;
+  max-height: 300px;
+  overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.export-preview-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.export-preview-table th,
+.export-preview-table td {
+  padding: 8px 10px;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.export-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.export-preview-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.export-preview-table th:last-child,
+.export-preview-table td:last-child {
+  border-right: 0;
+}
+
+.export-preview-resizer {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  z-index: 2;
+  width: 10px;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.export-preview-resizer:hover,
+.export-preview-resizer:focus-visible {
+  background: var(--color-accent-soft);
+  outline: 0;
+}
+
+.export-preview-table th:last-child .export-preview-resizer {
+  right: 0;
+}
+
+.export-preview-table th > span:first-child {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.export-preview-empty {
+  padding: 14px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.export-error {
+  margin: 10px 0 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.export-actions {
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.export-actions .btn {
+  min-width: 76px;
+}
+
+@media (max-width: 640px) {
+  .export-modal-backdrop {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .export-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 12px;
+  }
+
+  .export-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-columns-panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .export-date-picker-panel {
+    height: auto;
+    max-height: none;
+  }
+
+}

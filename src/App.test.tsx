@@ -9,6 +9,7 @@ import {clearCredentials, saveCredentials} from './lib/storage';
 
 jest.mock('./api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 jest.mock('./api/jadeApi', () => ({
@@ -70,12 +71,49 @@ describe('App system tabs', () => {
     expect(screen.getByRole('heading', {name: 'Jade 자동 연결'})).toBeInTheDocument();
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('button', {name: '엑셀 다운로드'})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+
     await userEvent.click(screen.getByRole('tab', {name: '신규'}));
 
     expect(screen.getByRole('tab', {name: '신규'})).toHaveAttribute('aria-selected', 'true');
     await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     expect(screen.getByLabelText('INSA Cookie')).toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('button', {name: '엑셀 다운로드'})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
+  });
+
+  test('returns to Jade authentication setup when the session expires', async () => {
+    saveCredentials({
+      cookie: 'expired-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {},
+    });
+    mockedFetchAttendanceForMonth.mockResolvedValue({
+      '2026-08-12': {ymd: '2026-08-12', error: 'expired', authError: true},
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', {name: 'Jade 자동 연결'})).toBeInTheDocument();
+  });
+
+  test('returns to INSA authentication setup when the session expires', async () => {
+    saveInsaCookie('expired-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult(2026, new Date().getMonth()),
+      errors: [{source: 'home', message: 'session expired', authError: true}],
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+
+    expect(await screen.findByRole('heading', {name: '신규 인사시스템 연결'})).toBeInTheDocument();
   });
 
   test('places the authenticated Jade user label immediately left of settings', () => {
@@ -90,9 +128,13 @@ describe('App system tabs', () => {
     const headerActions = document.querySelector('.app-header-actions');
     const userLabel = screen.getByText('김태섭 (20250304)');
     const settingsButton = screen.getByRole('button', {name: '설정'});
+    const exportButton = screen.getByRole('button', {name: '엑셀 다운로드'});
 
     expect(headerActions).toContainElement(userLabel);
+    expect(headerActions).toContainElement(exportButton);
     expect(headerActions).toContainElement(settingsButton);
+    expect(exportButton).toHaveAttribute('title', '엑셀 다운로드');
+    expect(settingsButton).toHaveAttribute('title', '설정');
     expect(userLabel.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -114,6 +156,42 @@ describe('App system tabs', () => {
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
     expect(screen.getByRole('button', {name: '인증 정보 초기화'})).toBeDisabled();
+  });
+
+  test('opens the file save popup from the export icon', async () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {},
+    });
+    mockedFetchAttendanceForMonth.mockResolvedValue({
+      '20260812': {
+        ymd: '20260812',
+        workDay: '(수)',
+        workType: '기본근무',
+        vacation: null,
+        overtime: null,
+        dayOffWork: null,
+        remoteWork: null,
+        clockIn: '0900',
+        clockInChanged: false,
+        clockInLocal: false,
+        clockOut: '1800',
+        clockOutChanged: false,
+        clockOutLocal: false,
+        workList: [],
+        raw: {},
+      },
+    });
+
+    render(<App />);
+    const exportButton = await screen.findByRole('button', {name: '엑셀 다운로드'});
+    expect(exportButton).not.toBeDisabled();
+
+    await userEvent.click(exportButton);
+
+    expect(screen.getByRole('dialog', {name: '엑셀 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.getByText('기간과 항목을 선택한 뒤 Excel 파일로 저장합니다.')).toBeInTheDocument();
   });
 
   test('places the INSA connection reset inside the settings menu', async () => {
@@ -165,6 +243,45 @@ describe('App system tabs', () => {
     await userEvent.keyboard('{Escape}');
 
     expect(screen.queryByRole('dialog', {name: '설정'})).not.toBeInTheDocument();
+  });
+
+  test('shows both system connection diagnostics in the settings menu', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    const dialog = screen.getByRole('dialog', {name: '설정'});
+
+    expect(within(dialog).getByText('기존 시스템')).toBeInTheDocument();
+    expect(within(dialog).getByText('신규 인사시스템')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('인증 필요')).toHaveLength(2);
+  });
+
+  test('shows a connected diagnostic after a successful INSA month request', async () => {
+    saveInsaCookie('synthetic-session');
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findByText(/연차/);
+    await screen.findByText(/^최근 조회/);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+
+    const dialog = screen.getByRole('dialog', {name: '설정'});
+    expect(within(dialog).getByText('신규 인사시스템')).toBeInTheDocument();
+    expect(within(dialog).getByText('연결됨')).toBeInTheDocument();
+  });
+
+  test('enables INSA export after authentication is completed from setup', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
+    await userEvent.type(screen.getByLabelText('INSA Cookie'), 'synthetic-session');
+    await userEvent.click(screen.getByRole('button', {name: '저장하고 달력 보기'}));
+
+    await screen.findByText(/연차/);
+    await screen.findByText(/^최근 조회/);
+
+    expect(screen.getByRole('button', {name: '엑셀 다운로드'})).not.toBeDisabled();
   });
 
   test('connects Jade through the logged-in tab without storing a Cookie', async () => {

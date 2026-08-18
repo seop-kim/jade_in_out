@@ -1,10 +1,13 @@
 import {useEffect, useRef, useState} from 'react';
 import './SettingsMenu.css';
+import {connectionStatusLabel, ConnectionStatus} from '../lib/connectionStatus';
 import {Theme} from '../lib/theme';
 
 interface SettingsMenuProps {
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  jadeStatus: ConnectionStatus;
+  insaStatus: ConnectionStatus;
   canResetCredentials: boolean;
   onResetCredentials: () => void;
 }
@@ -18,7 +21,14 @@ function SettingsIcon() {
   );
 }
 
-function SettingsMenu({theme, onThemeChange, canResetCredentials, onResetCredentials}: SettingsMenuProps) {
+function SettingsMenu({
+  theme,
+  onThemeChange,
+  jadeStatus,
+  insaStatus,
+  canResetCredentials,
+  onResetCredentials,
+}: SettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,6 +69,20 @@ function SettingsMenu({theme, onThemeChange, canResetCredentials, onResetCredent
       {open && (
         <div className="settings-popover" role="dialog" aria-label="설정">
           <h2 className="settings-title">설정</h2>
+          <div className="settings-statuses" aria-label="연결 상태">
+            <div className="settings-status-row">
+              <span>기존 시스템</span>
+              <span className={`settings-status-value is-${jadeStatus}`}>
+                {connectionStatusLabel(jadeStatus)}
+              </span>
+            </div>
+            <div className="settings-status-row">
+              <span>신규 인사시스템</span>
+              <span className={`settings-status-value is-${insaStatus}`}>
+                {connectionStatusLabel(insaStatus)}
+              </span>
+            </div>
+          </div>
           <label className="settings-option">
             <span>다크모드</span>
             <input

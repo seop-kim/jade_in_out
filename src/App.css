@@ -125,6 +125,12 @@ body {
   gap: 8px;
 }
 
+.last-fetched-label {
+  color: var(--color-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .month-title {
   margin: 0 8px;
   font-size: 18px;
@@ -206,9 +212,14 @@ body {
   transition: all 0.15s ease;
 }
 
-.month-picker-cell:hover {
+.month-picker-cell:hover:not(:disabled) {
   background: var(--color-surface-muted);
   border-color: var(--color-border-strong);
+}
+
+.month-picker-cell:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .month-picker-cell.is-today {

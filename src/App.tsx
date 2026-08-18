@@ -16,6 +16,7 @@ import {
 import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 import {loadThemePreference, saveThemePreference, Theme} from './lib/theme';
+import {ConnectionStatus} from './lib/connectionStatus';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -32,6 +33,14 @@ interface JadeBridgeConnection {
   transport: JadeBridgeTransport;
 }
 
+function ExportIcon() {
+  return (
+    <svg className="export-header-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
   const [jadeBridgeConnection, setJadeBridgeConnection] = useState<JadeBridgeConnection | null>(null);
@@ -39,6 +48,10 @@ function App() {
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
   const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? 'light');
+  const [jadeConnectionStatus, setJadeConnectionStatus] = useState<ConnectionStatus>(
+    () => credentials ? 'checking' : 'not-configured'
+  );
+  const [insaConnectionStatus, setInsaConnectionStatus] = useState<ConnectionStatus>('not-configured');
   const [insaVisited, setInsaVisited] = useState(false);
   const [insaConnected, setInsaConnected] = useState(false);
   const [insaResetRequest, setInsaResetRequest] = useState(0);
@@ -48,6 +61,10 @@ function App() {
   const insaTabRef = useRef<HTMLButtonElement>(null);
   const nextToastId = useRef(0);
   const jadeBridgeClientRef = useRef<JadeBridgeClient | null>(null);
+  const jadeExportOpenerRef = useRef<(() => void) | null>(null);
+  const insaExportOpenerRef = useRef<(() => void) | null>(null);
+  const [jadeExportReady, setJadeExportReady] = useState(false);
+  const [insaExportReady, setInsaExportReady] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -89,6 +106,7 @@ function App() {
     setJadeBridgeWindow(null);
     setJadeBridgeStatus('idle');
     setJadeBridgeConnection(null);
+    setJadeConnectionStatus('not-configured');
   }, [jadeBridgeWindow]);
 
   const handleSetupSubmit = (creds: Credentials): void => {
@@ -97,11 +115,13 @@ function App() {
     setCredentials(creds);
   };
 
-  const handleResetCredentials = (): void => {
+  const handleResetCredentials = useCallback((): void => {
     closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
-  };
+    setJadeConnectionStatus('not-configured');
+    setJadeExportReady(false);
+  }, [closeJadeBridge]);
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
     saveThemePreference(nextTheme);
@@ -110,6 +130,10 @@ function App() {
 
   const handleInsaConnectionChange = useCallback((connected: boolean): void => {
     setInsaConnected(connected);
+    if (!connected) {
+      setInsaConnectionStatus('not-configured');
+      setInsaExportReady(false);
+    }
   }, []);
 
   const showErrorToast = useCallback((message: string): void => {
@@ -118,13 +142,27 @@ function App() {
     setToasts((current) => [...current, {id, message}]);
   }, []);
 
+  const handleJadeAuthenticationExpired = useCallback((): void => {
+    handleResetCredentials();
+    showErrorToast('인증 정보가 만료되었습니다. 다시 인증해주세요.');
+  }, [handleResetCredentials, showErrorToast]);
+
+  const handleInsaAuthenticationExpired = useCallback((): void => {
+    setInsaConnectionStatus('not-configured');
+    setInsaExportReady(false);
+    setInsaResetRequest((request) => request + 1);
+    showErrorToast('인증 정보가 만료되었습니다. 다시 인증해주세요.');
+  }, [showErrorToast]);
+
   const handleOpenJadeAutomatic = useCallback((): void => {
     closeJadeBridge(true);
     const jadeWindow = window.open(`${appConfig.jade.origin}/`, '_blank');
     if (!jadeWindow) {
+      setJadeConnectionStatus('not-configured');
       showErrorToast('Jade 시스템 창을 열지 못했습니다');
       return;
     }
+    setJadeConnectionStatus('checking');
 
     const client = new JadeBridgeClient(
       jadeWindow,
@@ -167,6 +205,7 @@ function App() {
       setJadeBridgeWindow(null);
       setJadeBridgeStatus('idle');
       setJadeBridgeConnection(null);
+      setJadeConnectionStatus('not-configured');
     }, 500);
     return () => window.clearInterval(timer);
   }, [credentials, jadeBridgeWindow]);
@@ -249,9 +288,28 @@ function App() {
   const empId = activeJadeCredentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const userLabel = `${empName} ${empId ? `(${empId})` : ''}`.trim();
   const canResetCredentials = systemTab === 'jade' ? Boolean(activeJadeCredentials) : insaConnected;
+  const canExport = systemTab === 'jade'
+    ? Boolean(activeJadeCredentials && jadeExportReady)
+    : Boolean(insaConnected && insaExportReady);
+  const handleOpenExport = (): void => {
+    if (!canExport) return;
+    if (systemTab === 'jade') jadeExportOpenerRef.current?.();
+    else insaExportOpenerRef.current?.();
+  };
+  const registerJadeExportOpener = useCallback((opener: (() => void) | null): void => {
+    jadeExportOpenerRef.current = opener;
+    setJadeExportReady(Boolean(opener));
+  }, []);
+  const registerInsaExportOpener = useCallback((opener: (() => void) | null): void => {
+    insaExportOpenerRef.current = opener;
+    setInsaExportReady(Boolean(opener));
+  }, []);
   const handleResetCurrentCredentials = (): void => {
     if (systemTab === 'jade') handleResetCredentials();
-    else setInsaResetRequest((request) => request + 1);
+    else {
+      setInsaConnectionStatus('not-configured');
+      setInsaResetRequest((request) => request + 1);
+    }
   };
 
   return (
@@ -299,9 +357,21 @@ function App() {
                 {userLabel || '날짜별 출근/퇴근 시간을 한눈에 확인하세요'}
               </p>
             )}
+            <button
+              type="button"
+              className="settings-button header-export-button"
+              aria-label="엑셀 다운로드"
+              title="엑셀 다운로드"
+              onClick={handleOpenExport}
+              disabled={!canExport}
+            >
+              <ExportIcon />
+            </button>
             <SettingsMenu
               theme={theme}
               onThemeChange={handleThemeChange}
+              jadeStatus={jadeConnectionStatus}
+              insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
             />
@@ -321,6 +391,9 @@ function App() {
                 credentials={activeJadeCredentials}
                 transport={activeJadeTransport}
                 onError={showErrorToast}
+                onAuthenticationExpired={handleJadeAuthenticationExpired}
+                onConnectionStatusChange={setJadeConnectionStatus}
+                onExportReady={registerJadeExportOpener}
               />
             ) : (
               <Setup
@@ -341,8 +414,11 @@ function App() {
             <InsaPage
               resetRequest={insaResetRequest}
               onConnectionChange={handleInsaConnectionChange}
+              onAuthenticationExpired={handleInsaAuthenticationExpired}
+              onConnectionStatusChange={setInsaConnectionStatus}
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
+              onExportReady={registerInsaExportOpener}
             />
           )}
         </div>

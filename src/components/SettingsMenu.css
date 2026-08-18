@@ -34,6 +34,14 @@
   color: var(--color-accent);
 }
 
+.settings-button:disabled,
+.settings-button:disabled:hover {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 .settings-button:focus-visible,
 .settings-reset:focus-visible,
 .settings-option input:focus-visible + .settings-switch {
@@ -59,6 +67,53 @@
   color: var(--color-text);
   font-size: 14px;
   font-weight: 700;
+}
+
+.settings-statuses {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.settings-status-value {
+  color: var(--color-muted-strong);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-status-value.is-connected {
+  color: #15803d;
+}
+
+.settings-status-value.is-checking {
+  color: #b45309;
+}
+
+.settings-status-value.is-error {
+  color: #b91c1c;
+}
+
+html[data-theme='dark'] .settings-status-value.is-connected {
+  color: #4ade80;
+}
+
+html[data-theme='dark'] .settings-status-value.is-checking {
+  color: #fbbf24;
+}
+
+html[data-theme='dark'] .settings-status-value.is-error {
+  color: #f87171;
 }
 
 .settings-option {

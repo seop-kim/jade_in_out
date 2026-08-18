@@ -7,10 +7,12 @@ import {
 } from '../../api/insaApi';
 import {INSA_BRIDGE_ORIGIN} from '../../lib/insaBridge';
 import {INSA_COOKIE_STORAGE_KEY} from '../../lib/insaStorage';
+import {ConnectionStatus} from '../../lib/connectionStatus';
 import InsaPage from './InsaPage';
 
 jest.mock('../../api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 
@@ -48,7 +50,7 @@ function deferred<T>() {
 
 describe('InsaPage', () => {
   beforeEach(() => {
-    localStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
+    sessionStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date(2026, 7, 12, 9));
@@ -58,7 +60,7 @@ describe('InsaPage', () => {
 
   afterEach(() => {
     jest.useRealTimers();
-    localStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
+    sessionStorage.removeItem(INSA_COOKIE_STORAGE_KEY);
   });
 
   test('shows separate cookie setup when no INSA cookie is stored', () => {
@@ -140,7 +142,7 @@ describe('InsaPage', () => {
       await userEvent.click(screen.getByRole('button', {name: '저장하고 달력 보기'}));
     });
 
-    expect(localStorage.getItem(INSA_COOKIE_STORAGE_KEY)).toBe('private-session');
+    expect(sessionStorage.getItem(INSA_COOKIE_STORAGE_KEY)).toBe('private-session');
     await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledWith(expect.objectContaining({
       cookie: 'private-session',
       year: 2026,
@@ -151,7 +153,7 @@ describe('InsaPage', () => {
   });
 
   test('does not show the annual INSA leave balance card', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
 
     render(<InsaPage />);
 
@@ -160,7 +162,7 @@ describe('InsaPage', () => {
   });
 
   test('shows partial source errors without hiding successful balance and calendar data', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const onError = jest.fn();
     mockedLoadInsaMonth.mockResolvedValue({
       ...monthResult,
@@ -178,8 +180,98 @@ describe('InsaPage', () => {
     expect(screen.queryByText(/private-session/)).not.toBeInTheDocument();
   });
 
+  test('requests authentication setup when an INSA session expires', async () => {
+    const onAuthenticationExpired = jest.fn();
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'expired-session');
+    mockedLoadInsaMonth.mockResolvedValue({
+      ...monthResult,
+      errors: [{source: 'home', message: 'session expired', authError: true}],
+    });
+
+    render(<InsaPage onAuthenticationExpired={onAuthenticationExpired} />);
+
+    await waitFor(() => expect(onAuthenticationExpired).toHaveBeenCalledTimes(1));
+  });
+
+  test('reuses a completed month when navigating away and back', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    render(<InsaPage />);
+
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1));
+    await screen.findByText(/^최근 조회/);
+    await waitFor(() => expect(screen.getByRole('button', {name: '다음 달'})).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', {name: '다음 달'}));
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
+    await screen.findByRole('button', {name: '2026년 09월'});
+
+    await userEvent.click(screen.getByRole('button', {name: '이전 달'}));
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2);
+  });
+
+  test('bypasses the month cache when refresh is clicked', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    render(<InsaPage />);
+
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1));
+    await screen.findByText(/^최근 조회/);
+    await waitFor(() => expect(screen.getByRole('button', {name: '새로고침'})).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', {name: '새로고침'}));
+
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
+  });
+
+  test('does not request the selected export range while dates are being chosen', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    let openExport: (() => void) | null = null;
+
+    render(<InsaPage onExportReady={(opener) => { openExport = opener; }} />);
+
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(openExport).toEqual(expect.any(Function)));
+    await act(async () => openExport?.());
+    const dialog = screen.getByRole('dialog', {name: '엑셀 다운로드 설정'});
+
+    await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 5일'}));
+    await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 10일'}));
+
+    expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1);
+  });
+
+  test('reports connection state and the latest successful fetch time', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const statuses: ConnectionStatus[] = [];
+    const onConnectionStatusChange = jest.fn((status: ConnectionStatus) => statuses.push(status));
+    const onLastFetchedChange = jest.fn();
+
+    render(
+      <InsaPage
+        onConnectionStatusChange={onConnectionStatusChange}
+        onLastFetchedChange={onLastFetchedChange}
+      />,
+    );
+
+    await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
+    await waitFor(() => expect(onConnectionStatusChange).toHaveBeenLastCalledWith('connected'));
+    expect(statuses).toContain('checking');
+    expect(onLastFetchedChange).toHaveBeenLastCalledWith(expect.any(Date));
+  });
+
+  test('reports an error state when the monthly request fails', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    mockedLoadInsaMonth.mockRejectedValue(new Error('request failed'));
+    const onConnectionStatusChange = jest.fn();
+
+    render(<InsaPage onConnectionStatusChange={onConnectionStatusChange} />);
+
+    await waitFor(() => expect(onConnectionStatusChange).toHaveBeenLastCalledWith('error'));
+  });
+
   test('visually locks the calendar while monthly data is loading', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const monthRequest = deferred<InsaMonthLoadResult>();
     mockedLoadInsaMonth.mockReturnValue(monthRequest.promise);
 
@@ -200,7 +292,7 @@ describe('InsaPage', () => {
   });
 
   test('reports the department leave count while a day-detail request is pending', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     const onApiRequestChange = jest.fn();
     mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
@@ -222,7 +314,7 @@ describe('InsaPage', () => {
   });
 
   test('aborts a stale monthly request when the viewed month changes', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const firstRequest = deferred<InsaMonthLoadResult>();
     mockedLoadInsaMonth
       .mockReturnValueOnce(firstRequest.promise)
@@ -242,7 +334,7 @@ describe('InsaPage', () => {
   });
 
   test('refresh aborts an in-flight detail request', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
 
@@ -262,7 +354,7 @@ describe('InsaPage', () => {
   });
 
   test('refresh clears successful detail cache so the next request refetches', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     mockedFetchInsaDayDetails.mockResolvedValue([{
       ymd: '2026-08-05',
       name: 'Synthetic Cached Person',
@@ -287,7 +379,7 @@ describe('InsaPage', () => {
   });
 
   test('refresh recomputes the current date across a month boundary', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     jest.setSystemTime(new Date(2026, 7, 31, 23, 59));
 
     render(<InsaPage />);
@@ -307,7 +399,7 @@ describe('InsaPage', () => {
   });
 
   test('removes the Today action and uses the accessible refresh icon', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
 
     const {container} = render(<InsaPage />);
     await screen.findByRole('button', {name: '2026년 8월 5일 상세'});
@@ -319,7 +411,7 @@ describe('InsaPage', () => {
   });
 
   test('shows attendance and overtime values in the day tooltip', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     mockedLoadInsaMonth.mockResolvedValue({
       ...monthResult,
       worktime: [{
@@ -351,7 +443,7 @@ describe('InsaPage', () => {
   });
 
   test('omits the overtime row when no overtime value exists', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     mockedLoadInsaMonth.mockResolvedValue({
       ...monthResult,
       worktime: [{
@@ -378,7 +470,7 @@ describe('InsaPage', () => {
   });
 
   test('loads team details only after selection and reuses cached details', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     mockedFetchInsaDayDetails.mockResolvedValue([{
       ymd: '2026-08-05',
       name: '홍길동',
@@ -399,7 +491,7 @@ describe('InsaPage', () => {
   });
 
   test('previews synthetic team details on hover without selecting the day and reuses the result on click', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'synthetic-session');
     const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
 
@@ -436,7 +528,7 @@ describe('InsaPage', () => {
   });
 
   test('shows team-detail loading and empty states', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const detailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     mockedFetchInsaDayDetails.mockReturnValue(detailRequest.promise);
 
@@ -450,7 +542,7 @@ describe('InsaPage', () => {
   });
 
   test('redacts the cookie from team-detail errors', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const onError = jest.fn();
     mockedFetchInsaDayDetails.mockRejectedValue(new Error('failed private-session'));
 
@@ -464,7 +556,7 @@ describe('InsaPage', () => {
   });
 
   test('retries team details after a failed request', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const retryRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     mockedFetchInsaDayDetails
       .mockRejectedValueOnce(new Error('temporary failure'))
@@ -490,7 +582,7 @@ describe('InsaPage', () => {
   });
 
   test('does not reuse a stale detail response after the Cookie is reset', async () => {
-    localStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     const oldDetailRequest = deferred<Awaited<ReturnType<typeof fetchInsaDayDetails>>>();
     mockedFetchInsaDayDetails
       .mockReturnValueOnce(oldDetailRequest.promise)
