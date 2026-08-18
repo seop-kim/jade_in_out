@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import {buildCsv, buildExcelFile, buildExportFileName, filterRowsByDateRange} from './csvExport';
 
 describe('CSV export', () => {
@@ -48,6 +48,10 @@ describe('CSV export', () => {
       {wch: 20},
       {wch: 51},
     ]);
+    expect(sheet.A1?.s).toMatchObject({
+      patternType: 'solid',
+      fgColor: {rgb: '1F4E78'},
+    });
     expect(XLSX.utils.sheet_to_json(sheet, {header: 1})).toEqual([
       ['날짜', '근무 상세'],
       ['2026-08-05', '연장 2시간'],

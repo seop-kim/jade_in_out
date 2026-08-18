@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 export interface CsvColumn {
   key: string;
@@ -54,9 +54,18 @@ export function buildExcelFile(
   worksheet['!cols'] = columns.map((column) => ({
     wch: excelColumnWidth(columnWidths[column.key]),
   }));
+  const headerStyle = {
+    font: {bold: true, color: {rgb: 'FFFFFF'}},
+    fill: {patternType: 'solid', fgColor: {rgb: '1F4E78'}},
+    alignment: {horizontal: 'center', vertical: 'center', wrapText: true},
+  };
+  columns.forEach((_column, index) => {
+    const headerCell = worksheet[XLSX.utils.encode_cell({r: 0, c: index})];
+    if (headerCell) headerCell.s = headerStyle;
+  });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '근태');
-  return XLSX.write(workbook, {bookType: 'xlsx', type: 'array'}) as ArrayBuffer;
+  return XLSX.write(workbook, {bookType: 'xlsx', type: 'array', cellStyles: true}) as ArrayBuffer;
 }
 
 export function filterRowsByDateRange<T extends CsvRow>(
