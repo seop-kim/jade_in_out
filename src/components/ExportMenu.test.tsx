@@ -279,6 +279,30 @@ describe('ExportMenu', () => {
     }
   });
 
+  test('marks today in the export calendar', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 7, 18, 12));
+
+    try {
+      render(
+        <ExportMenu
+          rows={rows}
+          columns={columns}
+          minDate="2026-08-01"
+          maxDate="2026-08-31"
+          initialDate="2026-08-01"
+          fileName="test.csv"
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+
+      expect(screen.getByRole('button', {name: '2026년 8월 18일'})).toHaveClass('is-today');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('uses the attendance calendar month picker before selecting days', async () => {
     render(
       <ExportMenu

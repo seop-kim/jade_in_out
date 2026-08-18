@@ -459,7 +459,7 @@ function ExportMenu({
                   {calendarDays.map((date, index) => date ? (
                     <button
                       type="button"
-                      className={`export-calendar-day ${date === startDate ? 'is-start' : ''} ${date === endDate ? 'is-end' : ''} ${startDate && endDate && date > startDate && date < endDate ? 'is-in-range' : ''}`}
+                      className={`export-calendar-day ${date === toDateKey(calendarToday) ? 'is-today' : ''} ${date === startDate ? 'is-start' : ''} ${date === endDate ? 'is-end' : ''} ${startDate && endDate && date > startDate && date < endDate ? 'is-in-range' : ''}`}
                       aria-label={dateButtonLabel(date)}
                       aria-pressed={date === startDate || date === endDate}
                       disabled={rangeLoading || date < minDate || date > maxDate}

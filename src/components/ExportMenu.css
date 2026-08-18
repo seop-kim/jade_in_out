@@ -331,6 +331,14 @@
   color: #1e40af;
 }
 
+.export-calendar-day.is-today {
+  border-color: #2563eb;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .export-calendar-day.is-start,
 .export-calendar-day.is-end {
   border-color: var(--color-accent);
