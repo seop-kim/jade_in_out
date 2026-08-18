@@ -332,6 +332,11 @@
 }
 
 .export-calendar-day.is-today {
+  align-self: center;
+  justify-self: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
   border-color: #2563eb;
   border-radius: 50%;
   background: #2563eb;
