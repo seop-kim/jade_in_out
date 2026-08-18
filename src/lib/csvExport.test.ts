@@ -52,6 +52,10 @@ describe('CSV export', () => {
       patternType: 'solid',
       fgColor: {rgb: '1F4E78'},
     });
+    expect(sheet['!rows']).toMatchObject([
+      {hpt: 20},
+      {hpt: 20},
+    ]);
     expect(XLSX.utils.sheet_to_json(sheet, {header: 1})).toEqual([
       ['날짜', '근무 상세'],
       ['2026-08-05', '연장 2시간'],

@@ -59,10 +59,20 @@ export function buildExcelFile(
     fill: {patternType: 'solid', fgColor: {rgb: '1F4E78'}},
     alignment: {horizontal: 'center', vertical: 'center', wrapText: true},
   };
+  const dataStyle = {
+    alignment: {vertical: 'center'},
+  };
   columns.forEach((_column, index) => {
     const headerCell = worksheet[XLSX.utils.encode_cell({r: 0, c: index})];
     if (headerCell) headerCell.s = headerStyle;
   });
+  values.slice(1).forEach((_row, rowIndex) => {
+    columns.forEach((_column, columnIndex) => {
+      const dataCell = worksheet[XLSX.utils.encode_cell({r: rowIndex + 1, c: columnIndex})];
+      if (dataCell) dataCell.s = dataStyle;
+    });
+  });
+  worksheet['!rows'] = values.map(() => ({hpt: 20}));
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '근태');
   return XLSX.write(workbook, {bookType: 'xlsx', type: 'array', cellStyles: true}) as ArrayBuffer;
