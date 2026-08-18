@@ -6,6 +6,7 @@ import {
   downloadCsv,
   filterRowsByDateRange,
 } from '../lib/csvExport';
+import MonthPicker from './MonthPicker';
 import './ExportMenu.css';
 
 interface ExportMenuProps {
@@ -126,6 +127,7 @@ function ExportMenu({
   const [rangeStep, setRangeStep] = useState<RangeStep>('start');
   const [calendarYear, setCalendarYear] = useState(() => parseDate(initialDate ?? minDate).getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(() => parseDate(initialDate ?? minDate).getMonth());
+  const calendarToday = useMemo(() => new Date(), []);
   const [rangeRows, setRangeRows] = useState<CsvRow[]>(rows);
   const [rangeLoading, setRangeLoading] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
@@ -208,10 +210,6 @@ function ExportMenu({
   const minMonthValue = minCalendarDate.getFullYear() * 12 + minCalendarDate.getMonth();
   const maxMonthValue = maxCalendarDate.getFullYear() * 12 + maxCalendarDate.getMonth();
   const calendarMonthValue = calendarYear * 12 + calendarMonth;
-  const calendarYears = Array.from(
-    {length: maxCalendarDate.getFullYear() - minCalendarDate.getFullYear() + 1},
-    (_, index) => minCalendarDate.getFullYear() + index,
-  );
 
   const columnsByKey = useMemo(
     () => new Map(columns.map((column) => [column.key, column])),
@@ -387,7 +385,7 @@ function ExportMenu({
                 <div className="export-calendar-toolbar">
                   <button
                     type="button"
-                    className="export-calendar-nav"
+                    className="btn"
                     aria-label="이전 달"
                     disabled={rangeLoading || calendarMonthValue <= minMonthValue}
                     onClick={() => {
@@ -398,34 +396,21 @@ function ExportMenu({
                   >
                     ‹
                   </button>
-                  <div className="export-calendar-selects">
-                    <select
-                      aria-label="조회 연도"
-                      value={calendarYear}
-                      disabled={rangeLoading}
-                      onChange={(event) => setCalendarYear(Number(event.target.value))}
-                    >
-                      {calendarYears.map((year) => <option key={year} value={year}>{year}년</option>)}
-                    </select>
-                    <select
-                      aria-label="조회 월"
-                      value={calendarMonth}
-                      disabled={rangeLoading}
-                      onChange={(event) => setCalendarMonth(Number(event.target.value))}
-                    >
-                      {Array.from({length: 12}, (_, month) => {
-                        const value = calendarYear * 12 + month;
-                        return (
-                          <option key={month} value={month} disabled={value < minMonthValue || value > maxMonthValue}>
-                            {month + 1}월
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                  <MonthPicker
+                    viewYear={calendarYear}
+                    viewMonth={calendarMonth}
+                    today={calendarToday}
+                    disabled={rangeLoading}
+                    minMonth={{year: minCalendarDate.getFullYear(), month: minCalendarDate.getMonth()}}
+                    maxMonth={{year: maxCalendarDate.getFullYear(), month: maxCalendarDate.getMonth()}}
+                    onSelect={(year, month) => {
+                      setCalendarYear(year);
+                      setCalendarMonth(month);
+                    }}
+                  />
                   <button
                     type="button"
-                    className="export-calendar-nav"
+                    className="btn"
                     aria-label="다음 달"
                     disabled={rangeLoading || calendarMonthValue >= maxMonthValue}
                     onClick={() => {

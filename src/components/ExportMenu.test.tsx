@@ -1,4 +1,4 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportMenu from './ExportMenu';
 
@@ -172,7 +172,7 @@ describe('ExportMenu', () => {
     expect(screen.getByText('연장 2시간 (18:00~20:00)')).toBeInTheDocument();
   });
 
-  test('allows the calendar year and month to be changed before selecting days', () => {
+  test('uses the attendance calendar month picker before selecting days', async () => {
     render(
       <ExportMenu
         rows={rows}
@@ -185,9 +185,17 @@ describe('ExportMenu', () => {
     );
 
     userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
-    userEvent.selectOptions(screen.getByRole('combobox', {name: '조회 연도'}), '2025');
-    userEvent.selectOptions(screen.getByRole('combobox', {name: '조회 월'}), '11');
+    const calendar = screen.getByLabelText('다운로드 기간 선택');
+    const monthButton = within(calendar).getByRole('button', {name: '2026년 08월'});
+    expect(monthButton).toHaveClass('month-title', 'month-title-btn');
 
-    expect(screen.getByRole('button', {name: '2025년 12월 5일'})).toBeInTheDocument();
+    await userEvent.click(monthButton);
+    const monthPicker = within(calendar).getByRole('dialog');
+    expect(within(monthPicker).getByText('2026년')).toBeInTheDocument();
+    await userEvent.click(within(monthPicker).getByRole('button', {name: '12월'}));
+
+    expect(within(calendar).getByRole('button', {name: '2026년 12월 5일'})).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', {name: '조회 연도'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', {name: '조회 월'})).not.toBeInTheDocument();
   });
 });

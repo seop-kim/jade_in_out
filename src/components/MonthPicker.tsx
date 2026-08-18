@@ -6,13 +6,29 @@ interface MonthPickerProps {
   viewMonth: number;
   today: Date;
   disabled?: boolean;
+  minMonth?: {year: number; month: number};
+  maxMonth?: {year: number; month: number};
   onSelect: (year: number, month: number) => void;
 }
 
-function MonthPicker({viewYear, viewMonth, today, disabled, onSelect}: MonthPickerProps) {
+function monthValue(year: number, month: number): number {
+  return year * 12 + month;
+}
+
+function MonthPicker({
+  viewYear,
+  viewMonth,
+  today,
+  disabled,
+  minMonth,
+  maxMonth,
+  onSelect,
+}: MonthPickerProps) {
   const [open, setOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(viewYear);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const minMonthValue = minMonth ? monthValue(minMonth.year, minMonth.month) : Number.NEGATIVE_INFINITY;
+  const maxMonthValue = maxMonth ? monthValue(maxMonth.year, maxMonth.month) : Number.POSITIVE_INFINITY;
 
   const openPicker = (): void => {
     setPickerYear(viewYear);
@@ -63,6 +79,7 @@ function MonthPicker({viewYear, viewMonth, today, disabled, onSelect}: MonthPick
               className="btn"
               onClick={() => setPickerYear((y) => y - 1)}
               aria-label="이전 연도"
+              disabled={disabled || monthValue(pickerYear - 1, 11) < minMonthValue}
             >
               ‹
             </button>
@@ -72,6 +89,7 @@ function MonthPicker({viewYear, viewMonth, today, disabled, onSelect}: MonthPick
               className="btn"
               onClick={() => setPickerYear((y) => y + 1)}
               aria-label="다음 연도"
+              disabled={disabled || monthValue(pickerYear + 1, 0) > maxMonthValue}
             >
               ›
             </button>
@@ -91,6 +109,7 @@ function MonthPicker({viewYear, viewMonth, today, disabled, onSelect}: MonthPick
                     isToday ? 'is-today' : '',
                   ].join(' ').trim()}
                   onClick={() => selectMonth(i)}
+                  disabled={disabled || monthValue(pickerYear, i) < minMonthValue || monthValue(pickerYear, i) > maxMonthValue}
                 >
                   {i + 1}월
                 </button>
