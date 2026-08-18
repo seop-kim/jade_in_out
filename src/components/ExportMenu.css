@@ -39,6 +39,67 @@
   background: rgba(15, 23, 42, 0.42);
 }
 
+.export-progress-backdrop {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.export-progress-dialog {
+  width: min(360px, calc(100vw - 56px));
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.export-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.export-progress-heading span {
+  color: var(--color-muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-progress-track {
+  height: 8px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+}
+
+.export-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.export-progress-message {
+  margin: 12px 0 16px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.export-progress-cancel {
+  width: 100%;
+}
+
 .export-dialog {
   width: min(1120px, calc(100vw - 40px));
   max-height: calc(100vh - 40px);
@@ -435,16 +496,6 @@
 .export-preview-empty {
   padding: 14px;
   color: var(--color-muted);
-  text-align: center;
-}
-
-.export-loading {
-  margin: 0;
-  padding: 14px;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: 8px;
-  color: var(--color-accent-hover);
-  font-size: 12px;
   text-align: center;
 }
 

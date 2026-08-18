@@ -1,6 +1,7 @@
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportMenu from './ExportMenu';
+import {CsvRow} from '../lib/csvExport';
 
 const columns = [
   {key: 'date', label: '날짜'},
@@ -189,10 +190,10 @@ describe('ExportMenu', () => {
       .toEqual(['날짜', '이름', '근무 유형', '근무 상세', '상태']);
   });
 
-  test('reloads rows when the selected date range is completed', async () => {
-    const onRangeDataRequest = jest.fn().mockResolvedValue([
-      {date: '2026-08-05', name: '김태섭', workType: '기본근무', workList: '연장 2시간', status: '정상'},
-    ]);
+  test('requests the selected date range only after file save is clicked', async () => {
+    const onRangeDataRequest = jest.fn(
+      (_startDate: string, _endDate: string, _signal?: AbortSignal) => new Promise<CsvRow[]>(() => undefined),
+    );
 
     render(
       <ExportMenu
@@ -210,10 +211,23 @@ describe('ExportMenu', () => {
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
 
-    await waitFor(() => expect(onRangeDataRequest).toHaveBeenCalledWith('2026-08-05', '2026-08-10'));
+    expect(onRangeDataRequest).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', {name: '파일 저장'}));
+    await waitFor(() => expect(onRangeDataRequest).toHaveBeenCalledWith(
+      '2026-08-05',
+      '2026-08-10',
+      expect.any(AbortSignal),
+    ));
+    expect(screen.getByRole('dialog', {name: '다운로드 진행 상황'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '다운로드 취소'})).toBeInTheDocument();
+    const firstCall = onRangeDataRequest.mock.calls[0];
+    if (!firstCall) throw new Error('Export request was not recorded');
+    const requestSignal = firstCall[2] as unknown as AbortSignal;
+    await userEvent.click(screen.getByRole('button', {name: '다운로드 취소'}));
+    expect(requestSignal.aborted).toBe(true);
+    expect(screen.queryByRole('dialog', {name: '다운로드 진행 상황'})).not.toBeInTheDocument();
     expect(screen.getByText('실제 조회 결과는 파일 저장 시 반영됩니다')).toBeInTheDocument();
     expect(screen.queryByText('김태섭')).not.toBeInTheDocument();
-    expect(screen.getByText('연장 2시간 (18:00~20:00)')).toBeInTheDocument();
   });
 
   test('uses the attendance calendar month picker before selecting days', async () => {

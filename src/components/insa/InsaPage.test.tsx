@@ -223,7 +223,7 @@ describe('InsaPage', () => {
     await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
   });
 
-  test('requests the selected export range again before showing it in the preview', async () => {
+  test('does not request the selected export range while dates are being chosen', async () => {
     sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
     let openExport: (() => void) | null = null;
 
@@ -238,12 +238,7 @@ describe('InsaPage', () => {
     await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 5일'}));
     await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 10일'}));
 
-    await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(2));
-    expect(mockedLoadInsaMonth).toHaveBeenLastCalledWith(expect.objectContaining({
-      year: 2026,
-      month: 7,
-      cookie: 'private-session',
-    }));
+    expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1);
   });
 
   test('reports connection state and the latest successful fetch time', async () => {

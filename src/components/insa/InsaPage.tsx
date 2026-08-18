@@ -311,7 +311,7 @@ function InsaPage({
   ), [result, viewMonth, viewYear]);
   const exportRows = useMemo(() => buildInsaExportRows(days), [days]);
   const exportMinDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
-  const requestExportRows = useCallback(async (startDate: string, endDate: string): Promise<CsvRow[]> => {
+  const requestExportRows = useCallback(async (startDate: string, endDate: string, signal?: AbortSignal): Promise<CsvRow[]> => {
     const exportDays: InsaCalendarMap = {};
     for (const month of exportMonths(startDate, endDate)) {
       const monthResult = await loadInsaMonth({
@@ -320,6 +320,7 @@ function InsaPage({
         year: month.year,
         month: month.month,
         today,
+        signal,
       });
       if (monthResult.errors.some((error) => error.authError)) {
         onAuthenticationExpired?.();

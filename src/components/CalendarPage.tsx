@@ -212,7 +212,7 @@ function CalendarPage({
 
   const exportRows = useMemo(() => buildJadeExportRows(attendanceResults), [attendanceResults]);
   const exportMinDate = dateKey(viewYear, viewMonth, 1);
-  const requestExportRows = useCallback(async (startDate: string, endDate: string): Promise<CsvRow[]> => {
+  const requestExportRows = useCallback(async (startDate: string, endDate: string, signal?: AbortSignal): Promise<CsvRow[]> => {
     const results: Record<string, AttendanceResult> = {};
     for (const month of exportMonths(startDate, endDate)) {
       const monthResults = await fetchAttendanceForMonth({
@@ -220,6 +220,7 @@ function CalendarPage({
         parsedBody: credentials.parsedBody,
         year: month.year,
         month: month.month,
+        signal,
         transport,
       });
       Object.assign(results, monthResults);

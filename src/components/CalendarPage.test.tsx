@@ -104,7 +104,7 @@ describe('CalendarPage layout', () => {
     await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(2));
   });
 
-  it('requests the selected export range again before showing it in the preview', async () => {
+  it('does not request the selected export range while dates are being chosen', async () => {
     mockedFetchAttendanceForMonth.mockReset();
     mockedFetchAttendanceForMonth.mockResolvedValue({});
     let openExport: (() => void) | null = null;
@@ -130,11 +130,7 @@ describe('CalendarPage layout', () => {
       name: `${now.getFullYear()}년 ${now.getMonth() + 1}월 10일`,
     }));
 
-    await waitFor(() => expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(2));
-    expect(mockedFetchAttendanceForMonth).toHaveBeenLastCalledWith(expect.objectContaining({
-      year: now.getFullYear(),
-      month: now.getMonth(),
-    }));
+    expect(mockedFetchAttendanceForMonth).toHaveBeenCalledTimes(1);
   });
 
   it('reports checking and connected states with the latest successful fetch time', async () => {

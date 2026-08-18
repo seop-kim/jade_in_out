@@ -1,4 +1,4 @@
-import {DragEvent, useCallback, useEffect, useMemo, useState} from 'react';
+import {DragEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   buildCsv,
   CsvColumn,
@@ -20,10 +20,16 @@ interface ExportMenuProps {
   hideTrigger?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onRangeDataRequest?: (startDate: string, endDate: string) => Promise<CsvRow[]>;
+  onRangeDataRequest?: (startDate: string, endDate: string, signal?: AbortSignal) => Promise<CsvRow[]>;
 }
 
 type RangeStep = 'start' | 'end';
+type ExportProgressPhase = 'loading' | 'creating' | 'complete' | 'error';
+
+interface ExportProgressState {
+  phase: ExportProgressPhase;
+  progress: number;
+}
 
 function DownloadIcon() {
   return (
@@ -128,13 +134,15 @@ function ExportMenu({
   const [calendarYear, setCalendarYear] = useState(() => parseDate(initialDate ?? minDate).getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(() => parseDate(initialDate ?? minDate).getMonth());
   const calendarToday = useMemo(() => new Date(), []);
-  const [rangeRows, setRangeRows] = useState<CsvRow[]>(rows);
   const [rangeLoading, setRangeLoading] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [orderedKeys, setOrderedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [error, setError] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgressState | null>(null);
+  const exportControllerRef = useRef<AbortController | null>(null);
+  const exportOperationRef = useRef(0);
 
   const isControlled = open !== undefined;
   const isOpen = open ?? internalOpen;
@@ -142,6 +150,15 @@ function ExportMenu({
     if (!isControlled) setInternalOpen(nextOpen);
     onOpenChange?.(nextOpen);
   }, [isControlled, onOpenChange]);
+
+  const cancelExport = useCallback((): void => {
+    exportOperationRef.current += 1;
+    exportControllerRef.current?.abort();
+    exportControllerRef.current = null;
+    setRangeLoading(false);
+    setError(null);
+    setExportProgress(null);
+  }, []);
 
   useEffect(() => {
     setStartDate('');
@@ -157,21 +174,19 @@ function ExportMenu({
   }, [columns, initialDate, maxDate, minDate]);
 
   useEffect(() => {
-    if (!startDate && !endDate) setRangeRows(rows);
-  }, [endDate, rows, startDate]);
-
-  useEffect(() => {
     if (!isOpen) return undefined;
 
     const handleDocumentKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setIsOpen(false);
+      if (event.key !== 'Escape') return;
+      if (exportProgress) cancelExport();
+      else setIsOpen(false);
     };
 
     document.addEventListener('keydown', handleDocumentKeyDown);
     return () => {
       document.removeEventListener('keydown', handleDocumentKeyDown);
     };
-  }, [isOpen, setIsOpen]);
+  }, [cancelExport, exportProgress, isOpen, setIsOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -211,25 +226,6 @@ function ExportMenu({
     .map((key) => columnsByKey.get(key))
     .filter((column): column is CsvColumn => Boolean(column));
   const selectedColumns = orderedColumns.filter((column) => selectedKeys.includes(column.key));
-  const filteredRows = startDate && endDate
-    ? filterRowsByDateRange(rangeRows, 'date', startDate, endDate)
-    : [];
-
-  const requestRangeRows = useCallback(async (rangeStart: string, rangeEnd: string): Promise<void> => {
-    setRangeLoading(true);
-    setRangeRows([]);
-    setError(null);
-    try {
-      const nextRows = onRangeDataRequest
-        ? await onRangeDataRequest(rangeStart, rangeEnd)
-        : filterRowsByDateRange(rows, 'date', rangeStart, rangeEnd);
-      setRangeRows(nextRows);
-    } catch {
-      setError('선택한 기간의 데이터를 조회하지 못했습니다.');
-    } finally {
-      setRangeLoading(false);
-    }
-  }, [onRangeDataRequest, rows]);
 
   const selectDate = (date: string): void => {
     if (rangeLoading || date < minDate || date > maxDate) return;
@@ -239,7 +235,6 @@ function ExportMenu({
       setStartDate(date);
       setEndDate('');
       setRangeStep('end');
-      setRangeRows([]);
       return;
     }
 
@@ -252,14 +247,12 @@ function ExportMenu({
 
     setEndDate(date);
     setRangeStep('start');
-    void requestRangeRows(startDate, date);
   };
 
   const clearDateRange = (): void => {
     setStartDate('');
     setEndDate('');
     setRangeStep('start');
-    setRangeRows([]);
     setError(null);
   };
 
@@ -301,7 +294,7 @@ function ExportMenu({
     setDragOverColumnKey(null);
   };
 
-  const handleDownload = (): void => {
+  const handleDownload = async (): Promise<void> => {
     if (!startDate || !endDate || startDate > endDate) {
       setError('먼저 달력에서 시작일과 종료일을 선택해주세요.');
       return;
@@ -311,8 +304,39 @@ function ExportMenu({
       return;
     }
 
-    downloadCsv(fileName, buildCsv(selectedColumns, filteredRows));
-    setIsOpen(false);
+    const controller = new AbortController();
+    const operationId = exportOperationRef.current + 1;
+    exportOperationRef.current = operationId;
+    exportControllerRef.current = controller;
+    setError(null);
+    setRangeLoading(true);
+    setExportProgress({phase: 'loading', progress: 25});
+
+    try {
+      const nextRows = onRangeDataRequest
+        ? await onRangeDataRequest(startDate, endDate, controller.signal)
+        : filterRowsByDateRange(rows, 'date', startDate, endDate);
+      if (controller.signal.aborted || operationId !== exportOperationRef.current) return;
+
+      setExportProgress({phase: 'creating', progress: 75});
+      const filteredExportRows = filterRowsByDateRange(nextRows, 'date', startDate, endDate);
+      downloadCsv(fileName, buildCsv(selectedColumns, filteredExportRows));
+      if (controller.signal.aborted || operationId !== exportOperationRef.current) return;
+
+      setExportProgress({phase: 'complete', progress: 100});
+      window.setTimeout(() => {
+        if (operationId !== exportOperationRef.current) return;
+        setExportProgress(null);
+        setIsOpen(false);
+      }, 700);
+    } catch {
+      if (controller.signal.aborted || operationId !== exportOperationRef.current) return;
+      setError('선택한 기간의 데이터를 조회하지 못했습니다.');
+      setExportProgress({phase: 'error', progress: 100});
+    } finally {
+      if (exportControllerRef.current === controller) exportControllerRef.current = null;
+      if (operationId === exportOperationRef.current && !controller.signal.aborted) setRangeLoading(false);
+    }
   };
 
   const buttonDisabled = disabled || rangeLoading || (rows.length === 0 && !onRangeDataRequest) || columns.length === 0;
@@ -499,7 +523,6 @@ function ExportMenu({
                 <span>미리보기 예시</span>
                 <span className="export-columns-hint">실제 조회 결과는 파일 저장 시 반영됩니다</span>
               </div>
-              {rangeLoading && <p className="export-loading" role="status">선택한 기간의 데이터를 불러오는 중입니다.</p>}
               <div className="export-preview-scroll">
                 <table className="export-preview-table">
                   <colgroup>
@@ -535,6 +558,41 @@ function ExportMenu({
               </button>
             </div>
           </div>
+          {exportProgress && (
+            <div className="export-progress-backdrop">
+              <div className="export-progress-dialog" role="dialog" aria-modal="true" aria-label="다운로드 진행 상황">
+                <div className="export-progress-heading">
+                  <strong>파일 저장 중</strong>
+                  <span>{exportProgress.progress}%</span>
+                </div>
+                <div
+                  className="export-progress-track"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={exportProgress.progress}
+                >
+                  <span style={{width: `${exportProgress.progress}%`}} />
+                </div>
+                <p className="export-progress-message" role="status">
+                  {exportProgress.phase === 'loading' && '선택한 기간의 데이터를 조회하고 있습니다.'}
+                  {exportProgress.phase === 'creating' && '파일을 생성하고 있습니다.'}
+                  {exportProgress.phase === 'complete' && '다운로드가 완료되었습니다.'}
+                  {exportProgress.phase === 'error' && '다운로드에 실패했습니다.'}
+                </p>
+                {(exportProgress.phase === 'loading' || exportProgress.phase === 'creating') && (
+                  <button type="button" className="btn export-progress-cancel" onClick={cancelExport}>
+                    다운로드 취소
+                  </button>
+                )}
+                {exportProgress.phase === 'error' && (
+                  <button type="button" className="btn export-progress-cancel" onClick={cancelExport}>
+                    닫기
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
