@@ -45,6 +45,11 @@ function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+function dateLabel(value: string): string {
+  const date = parseDate(value);
+  return `${date.getFullYear()}. ${pad(date.getMonth() + 1)}. ${pad(date.getDate())}`;
+}
+
 function dateButtonLabel(value: string): string {
   const date = parseDate(value);
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
@@ -364,9 +369,18 @@ function ExportMenu({
                   <strong>조회 기간</strong>
                   <span>첫 번째 날짜는 시작일, 두 번째 날짜는 종료일입니다.</span>
                 </div>
-                <div className="export-date-step-indicator" aria-label="기간 선택 단계">
-                  <span className={rangeStep === 'start' ? 'is-active' : ''}>1 시작일</span>
-                  <span className={rangeStep === 'end' ? 'is-active' : ''}>2 종료일</span>
+                <div
+                  className="export-date-range-display"
+                  data-testid="export-date-range-display"
+                  aria-label="선택한 기간"
+                >
+                  <span className={`export-date-range-value ${startDate ? 'is-selected' : ''}`}>
+                    {startDate ? dateLabel(startDate) : '시작일'}
+                  </span>
+                  <span className="export-date-range-arrow" aria-hidden="true">→</span>
+                  <span className={`export-date-range-value ${endDate ? 'is-selected' : ''}`}>
+                    {endDate ? dateLabel(endDate) : '종료일'}
+                  </span>
                 </div>
               </div>
               <div className="export-calendar" aria-label="다운로드 기간 선택">

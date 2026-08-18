@@ -151,17 +151,20 @@
   font-size: 11px;
 }
 
-.export-date-step-indicator {
+.export-date-range-display {
   display: inline-flex;
   flex: 0 0 auto;
-  gap: 3px;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
   padding: 3px;
   border: 1px solid var(--color-border);
   border-radius: 7px;
   background: var(--color-surface);
 }
 
-.export-date-step-indicator span {
+.export-date-range-value {
+  min-width: 0;
   padding: 4px 6px;
   border-radius: 5px;
   color: var(--color-muted);
@@ -170,9 +173,15 @@
   white-space: nowrap;
 }
 
-.export-date-step-indicator span.is-active {
+.export-date-range-value.is-selected {
   background: var(--color-accent-soft);
   color: var(--color-accent-hover);
+}
+
+.export-date-range-arrow {
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1;
 }
 
 .export-calendar {

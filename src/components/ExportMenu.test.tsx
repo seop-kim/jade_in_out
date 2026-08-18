@@ -35,15 +35,23 @@ describe('ExportMenu', () => {
     expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
     expect(document.querySelector('.export-date-instruction')).not.toBeInTheDocument();
     expect(document.querySelector('.export-calendar')).toBeInTheDocument();
+    expect(screen.queryByText('1 시작일')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 종료일')).not.toBeInTheDocument();
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('시작일');
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('종료일');
     expect(screen.getByRole('checkbox', {name: '날짜 포함'})).toBeChecked();
     expect(screen.getByRole('checkbox', {name: '이름 포함'})).toBeChecked();
 
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
     expect(screen.getByRole('button', {name: '2026년 8월 5일'})).toHaveClass('is-start');
     expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('2026. 08. 05');
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('종료일');
 
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
     expect(screen.getByRole('button', {name: '2026년 8월 10일'})).toHaveClass('is-end');
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('2026. 08. 05');
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('2026. 08. 10');
     expect(screen.getByRole('columnheader', {name: '날짜'})).toHaveClass('export-preview-column-date');
     expect(screen.getByRole('columnheader', {name: '근무 유형'})).toHaveClass('export-preview-column-work-type');
     expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');
