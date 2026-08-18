@@ -175,14 +175,6 @@
   color: var(--color-accent-hover);
 }
 
-.export-date-instruction {
-  margin: 12px 0 8px;
-  color: var(--color-accent-hover);
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-}
-
 .export-calendar {
   width: 100%;
   margin: 0;
@@ -265,7 +257,7 @@
 }
 
 .export-calendar-day {
-  min-height: 31px;
+  min-height: 36px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -303,7 +295,7 @@
 }
 
 .export-calendar-empty {
-  min-height: 31px;
+  min-height: 36px;
 }
 
 .export-columns-heading {

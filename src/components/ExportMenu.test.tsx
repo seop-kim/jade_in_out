@@ -33,6 +33,7 @@ describe('ExportMenu', () => {
     expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
     expect(document.querySelector('.export-preview-section')).toBeInTheDocument();
     expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
+    expect(document.querySelector('.export-date-instruction')).not.toBeInTheDocument();
     expect(document.querySelector('.export-calendar')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', {name: '날짜 포함'})).toBeChecked();
     expect(screen.getByRole('checkbox', {name: '이름 포함'})).toBeChecked();
@@ -46,6 +47,29 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('columnheader', {name: '날짜'})).toHaveClass('export-preview-column-date');
     expect(screen.getByRole('columnheader', {name: '근무 유형'})).toHaveClass('export-preview-column-work-type');
     expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');
+  });
+
+  test('locks page scrolling while the file save popup is open', () => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'auto';
+
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2026-08-01"
+        maxDate="2026-08-31"
+        fileName="test.csv"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    expect(document.body.style.overflow).toBe('hidden');
+
+    fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드 설정 닫기'}));
+    expect(document.body.style.overflow).toBe('auto');
+
+    document.body.style.overflow = previousOverflow;
   });
 
   test('allows a column to be excluded and reordered with drag and drop', () => {

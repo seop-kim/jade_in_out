@@ -174,6 +174,16 @@ function ExportMenu({
     };
   }, [isOpen, setIsOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calendarYear, calendarMonth, 1);
     const dayCount = new Date(calendarYear, calendarMonth + 1, 0).getDate();
@@ -356,9 +366,6 @@ function ExportMenu({
                   <span className={rangeStep === 'end' ? 'is-active' : ''}>2 종료일</span>
                 </div>
               </div>
-              <p className="export-date-instruction" role="status">
-                {rangeStep === 'start' ? '달력에서 시작일을 선택하세요.' : '달력에서 종료일을 선택하세요.'}
-              </p>
               <div className="export-calendar" aria-label="다운로드 기간 선택">
                 <div className="export-calendar-toolbar">
                   <button
