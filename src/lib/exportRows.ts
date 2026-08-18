@@ -21,8 +21,6 @@ export const INSA_EXPORT_COLUMNS: CsvColumn[] = [
   {key: 'date', label: '날짜'},
   {key: 'weekday', label: '요일'},
   {key: 'holiday', label: '휴일'},
-  {key: 'departmentLeave', label: '연차'},
-  {key: 'departmentTime', label: '시간차'},
   {key: 'scheduledIn', label: '정규근무 출근'},
   {key: 'scheduledOut', label: '정규근무 퇴근'},
   {key: 'actualIn', label: '출근 시간'},
@@ -109,8 +107,6 @@ export function buildInsaExportRows(days: InsaCalendarMap): CsvRow[] {
       const day = days[date]!;
       const worktime = day.worktime;
       const summary = day.teamSchedule;
-      const departmentLeave = summary?.vacationCount ? `연차 (${summary.vacationCount})` : '';
-      const departmentTime = summary?.timeCount ? `시간차 (${summary.timeCount})` : '';
       const holiday = summary?.holidayLabel
         || (worktime && !worktime.scheduledIn && !worktime.scheduledOut ? '휴일' : '');
 
@@ -118,8 +114,6 @@ export function buildInsaExportRows(days: InsaCalendarMap): CsvRow[] {
         date,
         weekday: weekdayLabel(date),
         holiday,
-        departmentLeave,
-        departmentTime,
         scheduledIn: worktime?.scheduledIn ?? '',
         scheduledOut: worktime?.scheduledOut ?? '',
         actualIn: worktime?.actualIn ?? '',

@@ -1,4 +1,4 @@
-import {buildInsaExportRows, buildJadeExportRows} from './exportRows';
+import {buildInsaExportRows, buildJadeExportRows, INSA_EXPORT_COLUMNS} from './exportRows';
 
 describe('export row builders', () => {
   test('flattens Jade attendance details into CSV-friendly values', () => {
@@ -57,9 +57,15 @@ describe('export row builders', () => {
     })).toEqual([expect.objectContaining({
       weekday: '월',
       holiday: '대체 공휴일',
-      departmentLeave: '연차 (2)',
       actualIn: '09:00',
       actualOut: '18:00',
     })]);
+  });
+
+  test('exports only personal leave fields for INSA downloads', () => {
+    expect(INSA_EXPORT_COLUMNS.map((column) => column.key)).not.toEqual(
+      expect.arrayContaining(['departmentLeave', 'departmentTime']),
+    );
+    expect(INSA_EXPORT_COLUMNS.map((column) => column.key)).toContain('leave');
   });
 });
