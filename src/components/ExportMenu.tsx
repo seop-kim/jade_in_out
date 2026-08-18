@@ -1,4 +1,4 @@
-import {DragEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {DragEvent, useCallback, useEffect, useMemo, useState} from 'react';
 import {
   buildCsv,
   CsvColumn,
@@ -135,7 +135,6 @@ function ExportMenu({
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [orderedKeys, setOrderedKeys] = useState<string[]>(() => columns.map((column) => column.key));
   const [error, setError] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isControlled = open !== undefined;
   const isOpen = open ?? internalOpen;
@@ -164,19 +163,12 @@ function ExportMenu({
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const handleDocumentMouseDown = (event: MouseEvent): void => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
     const handleDocumentKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') setIsOpen(false);
     };
 
-    document.addEventListener('mousedown', handleDocumentMouseDown);
     document.addEventListener('keydown', handleDocumentKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleDocumentMouseDown);
       document.removeEventListener('keydown', handleDocumentKeyDown);
     };
   }, [isOpen, setIsOpen]);
@@ -263,6 +255,14 @@ function ExportMenu({
     void requestRangeRows(startDate, date);
   };
 
+  const clearDateRange = (): void => {
+    setStartDate('');
+    setEndDate('');
+    setRangeStep('start');
+    setRangeRows([]);
+    setError(null);
+  };
+
   const toggleColumn = (key: string): void => {
     setSelectedKeys((current) => current.includes(key)
       ? current.filter((item) => item !== key)
@@ -318,7 +318,7 @@ function ExportMenu({
   const buttonDisabled = disabled || rangeLoading || (rows.length === 0 && !onRangeDataRequest) || columns.length === 0;
 
   return (
-    <div className="export-menu" ref={containerRef}>
+    <div className="export-menu">
       {!hideTrigger && (
         <button
           type="button"
@@ -338,12 +338,7 @@ function ExportMenu({
       )}
 
       {isOpen && (
-        <div
-          className="export-modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setIsOpen(false);
-          }}
-        >
+        <div className="export-modal-backdrop">
           <div className="export-dialog" role="dialog" aria-modal="true" aria-label="CSV 다운로드 설정">
             <div className="export-popover-header">
               <div>
@@ -379,6 +374,16 @@ function ExportMenu({
                   <span className={`export-date-range-value ${endDate ? 'is-selected' : ''}`}>
                     {endDate ? dateLabel(endDate) : '종료일'}
                   </span>
+                  {(startDate || endDate) && (
+                    <button
+                      type="button"
+                      className="export-date-range-clear"
+                      aria-label="선택한 기간 초기화"
+                      onClick={clearDateRange}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="export-calendar" aria-label="다운로드 기간 선택">

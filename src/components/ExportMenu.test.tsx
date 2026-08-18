@@ -85,6 +85,50 @@ describe('ExportMenu', () => {
     document.documentElement.style.overflow = previousRootOverflow;
   });
 
+  test('shows one clear control when a date is selected and clears the whole range', async () => {
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2026-08-01"
+        maxDate="2026-08-31"
+        fileName="test.csv"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    await userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
+    expect(screen.getByRole('button', {name: '선택한 기간 초기화'})).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
+    expect(screen.getByRole('button', {name: '선택한 기간 초기화'})).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', {name: '선택한 기간 초기화'}));
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('시작일');
+    expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('종료일');
+    expect(screen.queryByRole('button', {name: '선택한 기간 초기화'})).not.toBeInTheDocument();
+  });
+
+  test('keeps the file save popup open when the backdrop is clicked', async () => {
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2026-08-01"
+        maxDate="2026-08-31"
+        fileName="test.csv"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    const backdrop = document.querySelector<HTMLElement>('.export-modal-backdrop');
+    if (!backdrop) throw new Error('Export modal backdrop is missing');
+
+    fireEvent.mouseDown(backdrop);
+
+    expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+  });
+
   test('keeps the file save action disabled when export is unavailable', () => {
     render(
       <ExportMenu
