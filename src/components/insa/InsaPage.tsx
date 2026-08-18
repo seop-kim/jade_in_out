@@ -507,7 +507,7 @@ function InsaPage({
         minDate={EXPORT_MIN_DATE}
         maxDate={EXPORT_MAX_DATE}
         initialDate={exportMinDate}
-        fileName="insa-근태-기간.csv"
+        fileName="insa-근태-기간.xlsx"
         disabled={loading || result === null}
         hideTrigger
         open={exportOpen}

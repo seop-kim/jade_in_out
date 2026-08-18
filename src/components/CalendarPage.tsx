@@ -275,7 +275,7 @@ function CalendarPage({
         minDate={EXPORT_MIN_DATE}
         maxDate={EXPORT_MAX_DATE}
         initialDate={exportMinDate}
-        fileName="jade-근태-기간.csv"
+        fileName="jade-근태-기간.xlsx"
         disabled={loading}
         hideTrigger
         open={exportOpen}

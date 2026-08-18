@@ -233,7 +233,7 @@ describe('InsaPage', () => {
     await waitFor(() => expect(mockedLoadInsaMonth).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(openExport).toEqual(expect.any(Function)));
     await act(async () => openExport?.());
-    const dialog = screen.getByRole('dialog', {name: 'CSV 다운로드 설정'});
+    const dialog = screen.getByRole('dialog', {name: '엑셀 다운로드 설정'});
 
     await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 5일'}));
     await userEvent.click(within(dialog).getByRole('button', {name: '2026년 8월 10일'}));

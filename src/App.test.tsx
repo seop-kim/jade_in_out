@@ -190,8 +190,8 @@ describe('App system tabs', () => {
 
     await userEvent.click(exportButton);
 
-    expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
-    expect(screen.getByText('기간과 항목을 선택한 뒤 CSV 파일로 저장합니다.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', {name: '엑셀 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.getByText('기간과 항목을 선택한 뒤 Excel 파일로 저장합니다.')).toBeInTheDocument();
   });
 
   test('places the INSA connection reset inside the settings menu', async () => {

@@ -27,9 +27,9 @@ describe('ExportMenu', () => {
       />
     );
 
-    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
 
-    expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.getByRole('dialog', {name: '엑셀 다운로드 설정'})).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: '취소'})).not.toBeInTheDocument();
     expect(document.querySelector('.export-settings-grid')).toBeInTheDocument();
     expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
@@ -55,9 +55,34 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('button', {name: '2026년 8월 10일'})).toHaveClass('is-end');
     expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('2026. 08. 05');
     expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('2026. 08. 10');
-    expect(screen.getByRole('columnheader', {name: '날짜'})).toHaveClass('export-preview-column-date');
-    expect(screen.getByRole('columnheader', {name: '근무 유형'})).toHaveClass('export-preview-column-work-type');
-    expect(screen.getByRole('columnheader', {name: '근무 상세'})).toHaveClass('export-preview-column-work-list');
+    expect(screen.getByRole('columnheader', {name: /^날짜/})).toHaveClass('export-preview-column-date');
+    expect(screen.getByRole('columnheader', {name: /^근무 유형/})).toHaveClass('export-preview-column-work-type');
+    expect(screen.getByRole('columnheader', {name: /^근무 상세/})).toHaveClass('export-preview-column-work-list');
+  });
+
+  test('resizes preview columns without squeezing the table', async () => {
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2026-08-01"
+        maxDate="2026-08-31"
+        fileName="test.xlsx"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
+    const resizeHandle = screen.getByRole('separator', {name: '날짜 너비 조절'});
+    const dateColumn = document.querySelector<HTMLTableColElement>('col.export-preview-column-date');
+    if (!dateColumn) throw new Error('Date preview column is missing');
+
+    expect(dateColumn.style.width).toBe('140px');
+    fireEvent.mouseDown(resizeHandle, {clientX: 100});
+    fireEvent.mouseMove(window, {clientX: 220});
+    fireEvent.mouseUp(window);
+
+    expect(resizeHandle).toHaveAttribute('aria-valuenow', '260');
+    expect(dateColumn.style.width).toBe('260px');
   });
 
   test('locks page scrolling while the file save popup is open', () => {
@@ -76,11 +101,11 @@ describe('ExportMenu', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    fireEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     expect(document.body.style.overflow).toBe('hidden');
     expect(document.documentElement.style.overflow).toBe('hidden');
 
-    fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드 설정 닫기'}));
+    fireEvent.click(screen.getByRole('button', {name: '엑셀 다운로드 설정 닫기'}));
     expect(document.body.style.overflow).toBe('auto');
     expect(document.documentElement.style.overflow).toBe('scroll');
 
@@ -99,7 +124,7 @@ describe('ExportMenu', () => {
       />
     );
 
-    await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    await userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     await userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
     expect(screen.getByRole('button', {name: '선택한 기간 초기화'})).toBeInTheDocument();
 
@@ -123,13 +148,13 @@ describe('ExportMenu', () => {
       />
     );
 
-    await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    await userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     const backdrop = document.querySelector<HTMLElement>('.export-modal-backdrop');
     if (!backdrop) throw new Error('Export modal backdrop is missing');
 
     fireEvent.mouseDown(backdrop);
 
-    expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.getByRole('dialog', {name: '엑셀 다운로드 설정'})).toBeInTheDocument();
   });
 
   test('keeps the file save action disabled when export is unavailable', () => {
@@ -163,7 +188,7 @@ describe('ExportMenu', () => {
       />
     );
 
-    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     userEvent.click(screen.getByRole('checkbox', {name: '상태 포함'}));
     const nameHandle = screen.getByRole('button', {name: '이름 순서 변경'});
     const dateRow = screen.getByTestId('export-column-row-date');
@@ -185,7 +210,7 @@ describe('ExportMenu', () => {
         fileName="test.csv"
       />
     );
-    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
 
     expect(screen.getByRole('checkbox', {name: '상태 포함'})).toBeChecked();
     expect(screen.getAllByTestId('export-column-label').map((element) => element.textContent))
@@ -209,7 +234,7 @@ describe('ExportMenu', () => {
       />
     );
 
-    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
     userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
 
@@ -259,7 +284,7 @@ describe('ExportMenu', () => {
         />
       );
 
-      await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+      await userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
       await userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
       await userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
       await userEvent.click(screen.getByRole('button', {name: '파일 저장'}));
@@ -295,7 +320,7 @@ describe('ExportMenu', () => {
         />
       );
 
-      fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+      fireEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
 
       expect(screen.getByRole('button', {name: '2026년 8월 18일'})).toHaveClass('is-today');
     } finally {
@@ -315,7 +340,7 @@ describe('ExportMenu', () => {
       />
     );
 
-    userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+    userEvent.click(screen.getByRole('button', {name: '엑셀 다운로드'}));
     const calendar = screen.getByLabelText('다운로드 기간 선택');
     const monthButton = within(calendar).getByRole('button', {name: '2026년 08월'});
     expect(monthButton).toHaveClass('month-title', 'month-title-btn');

@@ -1,4 +1,5 @@
-import {buildCsv, filterRowsByDateRange} from './csvExport';
+import * as XLSX from 'xlsx';
+import {buildCsv, buildExcelFile, filterRowsByDateRange} from './csvExport';
 
 describe('CSV export', () => {
   test('uses the selected column order and escapes CSV values', () => {
@@ -27,6 +28,29 @@ describe('CSV export', () => {
     expect(filterRowsByDateRange(rows, 'date', '2026-08-05', '2026-08-10')).toEqual([
       rows[1],
       rows[2],
+    ]);
+  });
+
+  test('preserves preview column widths in the Excel file', () => {
+    const file = buildExcelFile(
+      [
+        {key: 'date', label: '날짜'},
+        {key: 'workList', label: '근무 상세'},
+      ],
+      [{date: '2026-08-05', workList: '연장 2시간'}],
+      {date: 140, workList: 360},
+    );
+    const workbook = XLSX.read(file, {type: 'array', cellStyles: true});
+    const sheet = workbook.Sheets[workbook.SheetNames[0] ?? ''];
+    if (!sheet) throw new Error('Excel worksheet is missing');
+
+    expect(sheet['!cols']).toMatchObject([
+      {wch: 20},
+      {wch: 51},
+    ]);
+    expect(XLSX.utils.sheet_to_json(sheet, {header: 1})).toEqual([
+      ['날짜', '근무 상세'],
+      ['2026-08-05', '연장 2시간'],
     ]);
   });
 });
