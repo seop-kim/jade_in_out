@@ -526,16 +526,11 @@
 .export-actions {
   gap: 8px;
   margin-top: 16px;
+  justify-content: flex-end;
 }
 
 .export-actions .btn {
   min-width: 76px;
-}
-
-.export-cancel {
-  border-color: var(--color-border);
-  background: transparent;
-  color: var(--color-muted-strong);
 }
 
 @media (max-width: 640px) {

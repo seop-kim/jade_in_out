@@ -30,6 +30,7 @@ describe('ExportMenu', () => {
     userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
 
     expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: '취소'})).not.toBeInTheDocument();
     expect(document.querySelector('.export-settings-grid')).toBeInTheDocument();
     expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
     expect(document.querySelector('.export-date-picker-section')).toHaveClass('export-date-picker-panel');

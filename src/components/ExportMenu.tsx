@@ -546,9 +546,6 @@ function ExportMenu({
             {error && <p className="export-error" role="alert">{error}</p>}
 
             <div className="export-actions">
-              <button type="button" className="btn export-cancel" onClick={() => setIsOpen(false)}>
-                취소
-              </button>
               <button
                 type="button"
                 className="btn btn-primary"
