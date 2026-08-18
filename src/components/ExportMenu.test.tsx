@@ -51,7 +51,9 @@ describe('ExportMenu', () => {
 
   test('locks page scrolling while the file save popup is open', () => {
     const previousOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'scroll';
 
     render(
       <ExportMenu
@@ -65,11 +67,34 @@ describe('ExportMenu', () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
     expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
 
     fireEvent.click(screen.getByRole('button', {name: 'CSV 다운로드 설정 닫기'}));
     expect(document.body.style.overflow).toBe('auto');
+    expect(document.documentElement.style.overflow).toBe('scroll');
 
     document.body.style.overflow = previousOverflow;
+    document.documentElement.style.overflow = previousRootOverflow;
+  });
+
+  test('keeps the file save action disabled when export is unavailable', () => {
+    render(
+      <ExportMenu
+        rows={rows}
+        columns={columns}
+        minDate="2026-08-01"
+        maxDate="2026-08-31"
+        fileName="test.csv"
+        disabled
+        hideTrigger
+        open
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
+    fireEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
+
+    expect(screen.getByRole('button', {name: '파일 저장'})).toBeDisabled();
   });
 
   test('allows a column to be excluded and reordered with drag and drop', () => {

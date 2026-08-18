@@ -112,6 +112,7 @@ function App() {
     clearCredentials();
     setCredentials(null);
     setJadeConnectionStatus('not-configured');
+    setJadeExportReady(false);
   }, [closeJadeBridge]);
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
@@ -121,7 +122,10 @@ function App() {
 
   const handleInsaConnectionChange = useCallback((connected: boolean): void => {
     setInsaConnected(connected);
-    if (!connected) setInsaConnectionStatus('not-configured');
+    if (!connected) {
+      setInsaConnectionStatus('not-configured');
+      setInsaExportReady(false);
+    }
   }, []);
 
   const showErrorToast = useCallback((message: string): void => {
@@ -137,6 +141,7 @@ function App() {
 
   const handleInsaAuthenticationExpired = useCallback((): void => {
     setInsaConnectionStatus('not-configured');
+    setInsaExportReady(false);
     setInsaResetRequest((request) => request + 1);
     showErrorToast('인증 정보가 만료되었습니다. 다시 인증해주세요.');
   }, [showErrorToast]);
@@ -279,6 +284,7 @@ function App() {
     ? Boolean(activeJadeCredentials && jadeExportReady)
     : Boolean(insaConnected && insaExportReady);
   const handleOpenExport = (): void => {
+    if (!canExport) return;
     if (systemTab === 'jade') jadeExportOpenerRef.current?.();
     else insaExportOpenerRef.current?.();
   };

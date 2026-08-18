@@ -71,12 +71,19 @@ describe('App system tabs', () => {
     expect(screen.getByRole('heading', {name: 'Jade 자동 연결'})).toBeInTheDocument();
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('button', {name: '파일 저장'})).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+
     await userEvent.click(screen.getByRole('tab', {name: '신규'}));
 
     expect(screen.getByRole('tab', {name: '신규'})).toHaveAttribute('aria-selected', 'true');
     await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
     expect(screen.getByLabelText('INSA Cookie')).toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    expect(screen.getByRole('button', {name: '파일 저장'})).toBeDisabled();
   });
 
   test('returns to Jade authentication setup when the session expires', async () => {

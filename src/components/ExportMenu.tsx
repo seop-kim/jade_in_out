@@ -177,10 +177,13 @@ function ExportMenu({
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
     };
   }, [isOpen]);
 
@@ -522,7 +525,7 @@ function ExportMenu({
                 type="button"
                 className="btn btn-primary"
                 onClick={handleDownload}
-                disabled={!startDate || !endDate || selectedColumns.length === 0}
+                disabled={buttonDisabled || !startDate || !endDate || selectedColumns.length === 0}
               >
                 파일 저장
               </button>
