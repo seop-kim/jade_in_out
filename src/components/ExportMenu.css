@@ -202,6 +202,14 @@
   background: var(--color-surface-muted);
 }
 
+.export-date-picker-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 480px;
+  max-height: 480px;
+}
+
 .export-date-picker-heading {
   display: flex;
   align-items: center;
@@ -259,6 +267,10 @@
 }
 
 .export-calendar {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
   width: 100%;
   margin: 0;
   padding: 10px;
@@ -291,7 +303,7 @@
 }
 
 .export-calendar-day {
-  min-height: 36px;
+  min-height: 0;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -329,7 +341,13 @@
 }
 
 .export-calendar-empty {
-  min-height: 36px;
+  min-height: 0;
+}
+
+.export-calendar-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-auto-rows: minmax(36px, 1fr);
 }
 
 .export-columns-heading {
@@ -537,6 +555,11 @@
   }
 
   .export-columns-panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .export-date-picker-panel {
     height: auto;
     max-height: none;
   }

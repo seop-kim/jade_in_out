@@ -380,7 +380,7 @@ function ExportMenu({
             </div>
 
             <div className="export-settings-grid">
-              <div className="export-date-picker-section">
+              <div className="export-date-picker-section export-date-picker-panel">
               <div className="export-date-picker-heading">
                 <div>
                   <strong>조회 기간</strong>

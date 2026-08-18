@@ -32,6 +32,7 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
     expect(document.querySelector('.export-settings-grid')).toBeInTheDocument();
     expect(document.querySelector('.export-columns-panel')).toBeInTheDocument();
+    expect(document.querySelector('.export-date-picker-section')).toHaveClass('export-date-picker-panel');
     expect(document.querySelector('.export-preview-section')).toBeInTheDocument();
     expect(document.querySelector('.export-date-selection-status')).not.toBeInTheDocument();
     expect(document.querySelector('.export-date-instruction')).not.toBeInTheDocument();
