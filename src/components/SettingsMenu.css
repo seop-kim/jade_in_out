@@ -34,8 +34,15 @@
   color: var(--color-accent);
 }
 
+.settings-button:disabled,
+.settings-button:disabled:hover {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 .settings-button:focus-visible,
-.settings-action:focus-visible,
 .settings-reset:focus-visible,
 .settings-option input:focus-visible + .settings-switch {
   outline: 3px solid var(--color-focus-ring);
@@ -172,29 +179,6 @@ html[data-theme='dark'] .settings-status-value.is-error {
   font-size: 13px;
   text-align: center;
   cursor: pointer;
-}
-
-.settings-action {
-  width: 100%;
-  padding: 9px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 13px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.settings-action:hover:not(:disabled) {
-  border-color: var(--color-border-strong);
-  background: var(--color-border);
-}
-
-.settings-action:disabled {
-  color: var(--color-disabled-text);
-  cursor: not-allowed;
 }
 
 .settings-reset:hover:not(:disabled) {

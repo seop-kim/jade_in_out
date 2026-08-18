@@ -72,7 +72,8 @@ describe('App system tabs', () => {
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
-    expect(screen.getByRole('button', {name: '파일 저장'})).toBeDisabled();
+    expect(screen.getByRole('button', {name: '내보내기'})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
 
     await userEvent.click(screen.getByRole('tab', {name: '신규'}));
@@ -83,7 +84,8 @@ describe('App system tabs', () => {
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
-    expect(screen.getByRole('button', {name: '파일 저장'})).toBeDisabled();
+    expect(screen.getByRole('button', {name: '내보내기'})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
   });
 
   test('returns to Jade authentication setup when the session expires', async () => {
@@ -152,7 +154,7 @@ describe('App system tabs', () => {
     expect(screen.getByRole('button', {name: '인증 정보 초기화'})).toBeDisabled();
   });
 
-  test('opens the file save popup from the settings menu', async () => {
+  test('opens the file save popup from the export icon', async () => {
     saveCredentials({
       cookie: 'jade-session',
       body: 'S_STD_YMD=20260812',
@@ -179,11 +181,10 @@ describe('App system tabs', () => {
     });
 
     render(<App />);
-    await userEvent.click(screen.getByRole('button', {name: '설정'}));
-    const fileSaveButton = await screen.findByRole('button', {name: '파일 저장'});
-    expect(fileSaveButton).not.toBeDisabled();
+    const exportButton = await screen.findByRole('button', {name: '내보내기'});
+    expect(exportButton).not.toBeDisabled();
 
-    await userEvent.click(fileSaveButton);
+    await userEvent.click(exportButton);
 
     expect(screen.getByRole('dialog', {name: 'CSV 다운로드 설정'})).toBeInTheDocument();
     expect(screen.getByText('기간과 항목을 선택한 뒤 CSV 파일로 저장합니다.')).toBeInTheDocument();

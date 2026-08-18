@@ -33,6 +33,14 @@ interface JadeBridgeConnection {
   transport: JadeBridgeTransport;
 }
 
+function ExportIcon() {
+  return (
+    <svg className="export-header-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
 function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(() => loadCredentials());
   const [jadeBridgeConnection, setJadeBridgeConnection] = useState<JadeBridgeConnection | null>(null);
@@ -349,6 +357,16 @@ function App() {
                 {userLabel || '날짜별 출근/퇴근 시간을 한눈에 확인하세요'}
               </p>
             )}
+            <button
+              type="button"
+              className="settings-button header-export-button"
+              aria-label="내보내기"
+              title="내보내기"
+              onClick={handleOpenExport}
+              disabled={!canExport}
+            >
+              <ExportIcon />
+            </button>
             <SettingsMenu
               theme={theme}
               onThemeChange={handleThemeChange}
@@ -356,8 +374,6 @@ function App() {
               insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
-              canExport={canExport}
-              onOpenExport={handleOpenExport}
             />
           </div>
         </div>
