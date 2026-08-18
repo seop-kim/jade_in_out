@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import {buildCsv, buildExcelFile, filterRowsByDateRange} from './csvExport';
+import {buildCsv, buildExcelFile, buildExportFileName, filterRowsByDateRange} from './csvExport';
 
 describe('CSV export', () => {
   test('uses the selected column order and escapes CSV values', () => {
@@ -52,5 +52,12 @@ describe('CSV export', () => {
       ['날짜', '근무 상세'],
       ['2026-08-05', '연장 2시간'],
     ]);
+  });
+
+  test('builds a system and date range based Excel file name', () => {
+    expect(buildExportFileName('Jade', '2026-08-05', '2026-08-10'))
+      .toBe('Jade_2026-08-05~2026-08-10.xlsx');
+    expect(buildExportFileName('신규인사시스템.xlsx', '2026-08-05', '2026-08-10'))
+      .toBe('신규인사시스템_2026-08-05~2026-08-10.xlsx');
   });
 });

@@ -2,6 +2,7 @@ import {DragEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouse
 import {
   CsvColumn,
   CsvRow,
+  buildExportFileName,
   downloadExcel,
   ExportColumnWidths,
   filterRowsByDateRange,
@@ -398,7 +399,7 @@ function ExportMenu({
 
       setExportProgress({phase: 'creating', progress: 75});
       const filteredExportRows = filterRowsByDateRange(nextRows, 'date', startDate, endDate);
-      downloadExcel(fileName, selectedColumns, filteredExportRows, columnWidths);
+      downloadExcel(buildExportFileName(fileName, startDate, endDate), selectedColumns, filteredExportRows, columnWidths);
       if (controller.signal.aborted || operationId !== exportOperationRef.current) return;
 
       clearDateRange();

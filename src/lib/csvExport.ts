@@ -35,6 +35,12 @@ function excelColumnWidth(widthInPixels: number | undefined): number {
   return Math.max(8, Math.round((widthInPixels ?? 140) / 7));
 }
 
+export function buildExportFileName(systemName: string, startDate: string, endDate: string): string {
+  const baseName = systemName.trim().replace(/\.(?:xlsx|xls|csv)$/i, '');
+  const safeSystemName = (baseName || '근태').replace(/[\\/:*?"<>|]/g, '-');
+  return `${safeSystemName}_${startDate}~${endDate}.xlsx`;
+}
+
 export function buildExcelFile(
   columns: CsvColumn[],
   rows: CsvRow[],
