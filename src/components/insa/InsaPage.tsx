@@ -142,9 +142,14 @@ function InsaPage({
   const monthCache = useRef(new Map<string, CachedMonth>());
 
   useEffect(() => {
+    if (!cookie && !bridgeReady) {
+      onExportReady?.(null);
+      return undefined;
+    }
+
     onExportReady?.(() => setExportOpen(true));
     return () => onExportReady?.(null);
-  }, [onExportReady]);
+  }, [bridgeReady, cookie, onExportReady]);
 
   const disposeBridge = useCallback((closePopup = false): void => {
     bridgeClientRef.current?.dispose();

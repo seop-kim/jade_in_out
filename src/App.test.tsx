@@ -270,6 +270,20 @@ describe('App system tabs', () => {
     expect(within(dialog).getByText('연결됨')).toBeInTheDocument();
   });
 
+  test('enables INSA export after authentication is completed from setup', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await userEvent.click(screen.getByRole('tab', {name: '수동인증'}));
+    await userEvent.type(screen.getByLabelText('INSA Cookie'), 'synthetic-session');
+    await userEvent.click(screen.getByRole('button', {name: '저장하고 달력 보기'}));
+
+    await screen.findByText(/연차/);
+    await screen.findByText(/^최근 조회/);
+
+    expect(screen.getByRole('button', {name: '엑셀 다운로드'})).not.toBeDisabled();
+  });
+
   test('connects Jade through the logged-in tab without storing a Cookie', async () => {
     const jadeTab = {
       closed: false,
