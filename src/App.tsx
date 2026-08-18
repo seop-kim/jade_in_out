@@ -360,8 +360,8 @@ function App() {
             <button
               type="button"
               className="settings-button header-export-button"
-              aria-label="내보내기"
-              title="내보내기"
+              aria-label="엑셀로 다운로드"
+              title="엑셀로 다운로드"
               onClick={handleOpenExport}
               disabled={!canExport}
             >

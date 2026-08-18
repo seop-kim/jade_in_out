@@ -72,7 +72,7 @@ describe('App system tabs', () => {
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
-    expect(screen.getByRole('button', {name: '내보내기'})).toBeDisabled();
+    expect(screen.getByRole('button', {name: '엑셀로 다운로드'})).toBeDisabled();
     expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
 
@@ -84,7 +84,7 @@ describe('App system tabs', () => {
     expect(screen.queryByRole('heading', {name: 'Jade 자동 연결'})).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
-    expect(screen.getByRole('button', {name: '내보내기'})).toBeDisabled();
+    expect(screen.getByRole('button', {name: '엑셀로 다운로드'})).toBeDisabled();
     expect(screen.queryByRole('button', {name: '파일 저장'})).not.toBeInTheDocument();
   });
 
@@ -128,9 +128,13 @@ describe('App system tabs', () => {
     const headerActions = document.querySelector('.app-header-actions');
     const userLabel = screen.getByText('김태섭 (20250304)');
     const settingsButton = screen.getByRole('button', {name: '설정'});
+    const exportButton = screen.getByRole('button', {name: '엑셀로 다운로드'});
 
     expect(headerActions).toContainElement(userLabel);
+    expect(headerActions).toContainElement(exportButton);
     expect(headerActions).toContainElement(settingsButton);
+    expect(exportButton).toHaveAttribute('title', '엑셀로 다운로드');
+    expect(settingsButton).toHaveAttribute('title', '설정');
     expect(userLabel.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -181,7 +185,7 @@ describe('App system tabs', () => {
     });
 
     render(<App />);
-    const exportButton = await screen.findByRole('button', {name: '내보내기'});
+    const exportButton = await screen.findByRole('button', {name: '엑셀로 다운로드'});
     expect(exportButton).not.toBeDisabled();
 
     await userEvent.click(exportButton);
