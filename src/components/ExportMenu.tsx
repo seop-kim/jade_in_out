@@ -323,6 +323,7 @@ function ExportMenu({
       downloadCsv(fileName, buildCsv(selectedColumns, filteredExportRows));
       if (controller.signal.aborted || operationId !== exportOperationRef.current) return;
 
+      clearDateRange();
       setExportProgress({phase: 'complete', progress: 100});
       window.setTimeout(() => {
         if (operationId !== exportOperationRef.current) return;

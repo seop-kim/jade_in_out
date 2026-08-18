@@ -231,6 +231,53 @@ describe('ExportMenu', () => {
     expect(screen.queryByText('김태섭')).not.toBeInTheDocument();
   });
 
+  test('clears the selected date range after a successful file save', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: jest.fn(() => 'blob:test'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: jest.fn(),
+    });
+
+    try {
+      const onRangeDataRequest = jest.fn(async () => rows);
+
+      render(
+        <ExportMenu
+          rows={[]}
+          columns={columns}
+          minDate="2020-01-01"
+          maxDate="2030-12-31"
+          initialDate="2026-08-01"
+          fileName="test.csv"
+          onRangeDataRequest={onRangeDataRequest}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', {name: 'CSV 다운로드'}));
+      await userEvent.click(screen.getByRole('button', {name: '2026년 8월 5일'}));
+      await userEvent.click(screen.getByRole('button', {name: '2026년 8월 10일'}));
+      await userEvent.click(screen.getByRole('button', {name: '파일 저장'}));
+
+      await waitFor(() => expect(screen.getByText('다운로드가 완료되었습니다.')).toBeInTheDocument());
+      expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('시작일');
+      expect(screen.getByTestId('export-date-range-display')).toHaveTextContent('종료일');
+    } finally {
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: originalCreateObjectURL,
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        value: originalRevokeObjectURL,
+      });
+    }
+  });
+
   test('uses the attendance calendar month picker before selecting days', async () => {
     render(
       <ExportMenu
