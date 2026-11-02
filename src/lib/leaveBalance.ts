@@ -107,9 +107,10 @@ function parseDurationHours(durationLabel: string, type: string): number | null 
   return null;
 }
 
-function periodKey(durationLabel: string): string {
+function periodKey(durationLabel: string, hours?: number | null): string {
   const value = compact(durationLabel);
   if (!value) return 'full-day';
+  if (hours !== null && hours !== undefined && hours >= 8) return 'full-day';
   if (/(?:전일|종일|하루)/.test(value)) return 'full-day';
   if (/^\d+(?:\.\d+)?(?:시간|h|일|d)$/i.test(value)) return 'full-day';
   const clockRangeMatch = value.match(/^(?:\d+(?:\.\d+)?시간)?(\d{1,2})(?::\d{2})?[-~]\d{1,2}(?::\d{2})?$/i);
@@ -161,7 +162,7 @@ function normalizeJadeLeave(
     durationLabel: [durationLabel, time ? `(${time})` : '']
       .filter(Boolean)
       .join(' '),
-    periodKey: periodKey(time || durationLabel),
+    periodKey: periodKey(time || durationLabel, hours),
     hours,
     status: '확정',
     source: 'jade',
@@ -205,7 +206,7 @@ function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
     type: record.type,
     canonicalType: canonicalType(record.type),
     durationLabel: record.durationLabel,
-    periodKey: periodKey(record.durationLabel),
+    periodKey: periodKey(record.durationLabel, hours),
     hours,
     status: record.approvalStatus,
     source: 'insa',

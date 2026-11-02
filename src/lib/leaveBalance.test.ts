@@ -128,6 +128,25 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('deduplicates a full-day INSA record with an eight-hour Jade range', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-05-14', '연차휴가', '8시간', '09:00~18:00', 8)],
+      insaData([insaRecord(
+        '2026-05-14',
+        '연차휴가(종일)',
+        '1',
+        '루상민 (2026.05.14:승인) 유현철 (2026.05.14:승인)'
+      )])
+    );
+
+    expect(result.duplicateHours).toBe(8);
+    expect(result.usedHours).toBe(8);
+    expect(result.records).toEqual([
+      expect.objectContaining({ymd: '2026-05-14', source: 'both', hours: 8}),
+    ]);
+  });
+
   test('normalizes compact Jade dates before filtering and matching', () => {
     const result = reconcileLeaveBalance(
       2026,
