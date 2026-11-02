@@ -237,7 +237,10 @@ function App() {
       (body) => {
         const parsedBody = parseBody(body);
         const programId = parsedBody.S_PAGE_PGM_ID ?? '';
-        if (!programId.includes('ess_tam4_010_m01')) return;
+        const isLeaveBalanceRequest = programId.includes('ess_tam4_010_m01')
+          || parsedBody.S_PAGE_MENU_ID === 'essme41'
+          || (parsedBody.S_FORWARD === 'xsheetResultXML' && Boolean(parsedBody.S_STD_YY));
+        if (!isLeaveBalanceRequest) return;
         pendingJadeLeaveBodyRef.current = body;
         setJadeBridgeConnection((current) => current ? {...current, leaveBalanceBody: body} : current);
       },
