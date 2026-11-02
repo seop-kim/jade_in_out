@@ -1,24 +1,28 @@
 import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
-import {fetchAttendanceForMonth} from './api/jadeApi';
-import {fetchInsaDayDetails, InsaMonthLoadResult, loadInsaMonth} from './api/insaApi';
+import {fetchAttendanceForMonth, fetchLeaveUsageForYear} from './api/jadeApi';
+import {fetchInsaDayDetails, fetchInsaLeave, InsaMonthLoadResult, loadInsaMonth} from './api/insaApi';
 import {JADE_BRIDGE_ATTENDANCE, JADE_BRIDGE_ORIGIN} from './lib/jadeBridge';
 import {clearInsaCookie, saveInsaCookie} from './lib/insaStorage';
 import {clearCredentials, saveCredentials} from './lib/storage';
 
 jest.mock('./api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  fetchInsaLeave: jest.fn(),
   isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 jest.mock('./api/jadeApi', () => ({
   fetchAttendanceForMonth: jest.fn(),
+  fetchLeaveUsageForYear: jest.fn(),
 }));
 
 const mockedLoadInsaMonth = loadInsaMonth as jest.MockedFunction<typeof loadInsaMonth>;
 const mockedFetchInsaDayDetails = fetchInsaDayDetails as jest.MockedFunction<typeof fetchInsaDayDetails>;
 const mockedFetchAttendanceForMonth = fetchAttendanceForMonth as jest.MockedFunction<typeof fetchAttendanceForMonth>;
+const mockedFetchLeaveUsageForYear = fetchLeaveUsageForYear as jest.MockedFunction<typeof fetchLeaveUsageForYear>;
+const mockedFetchInsaLeave = fetchInsaLeave as jest.MockedFunction<typeof fetchInsaLeave>;
 const normalJadeResponse = '<SHEET><ETC-DATA><ETC KEY="YMD"><![CDATA[20260812]]></ETC><ETC KEY="EMP_ID"><![CDATA[20250304]]></ETC><ETC KEY="WORK_TYPE_NM"><![CDATA[기본근무]]></ETC></ETC-DATA></SHEET>';
 
 function monthResult(year: number, month: number): InsaMonthLoadResult {
@@ -51,6 +55,8 @@ describe('App system tabs', () => {
       scheduleLabel: 'Synthetic leave',
       durationLabel: '4 hours',
     }]);
+    mockedFetchLeaveUsageForYear.mockResolvedValue([]);
+    mockedFetchInsaLeave.mockResolvedValue({balances: [], records: []});
   });
 
   afterEach(() => {
@@ -257,6 +263,39 @@ describe('App system tabs', () => {
     expect(within(dialog).getByText('기존 시스템')).toBeInTheDocument();
     expect(within(dialog).getByText('신규 인사시스템')).toBeInTheDocument();
     expect(within(dialog).getAllByText('인증 필요')).toHaveLength(2);
+  });
+
+  test('opens the annual leave balance after both systems are connected', async () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {S_EMP_NM: '김태섭', S_EMP_ID: '20250304'},
+    });
+    saveInsaCookie('insa-session');
+    mockedFetchAttendanceForMonth.mockResolvedValue({});
+    mockedLoadInsaMonth.mockResolvedValue(monthResult(2026, 7));
+    mockedFetchLeaveUsageForYear.mockResolvedValue([]);
+    mockedFetchInsaLeave.mockResolvedValue({
+      balances: [{year: 2026, period: '2026', accruedHours: 160, usedHours: 0, remainingHours: 160}],
+      records: [],
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findAllByText(/^최근 조회/);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+
+    const leaveButton = screen.getByRole('button', {name: '휴가 현황'});
+    expect(leaveButton).not.toBeDisabled();
+    await userEvent.click(leaveButton);
+
+    expect(screen.getByRole('dialog', {name: '휴가 현황'})).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', {name: '설정'})).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
+
+    expect(await screen.findByText('잔여 시간')).toBeInTheDocument();
+    expect(mockedFetchLeaveUsageForYear).toHaveBeenCalledWith(expect.objectContaining({year: 2026}));
+    expect(mockedFetchInsaLeave).toHaveBeenCalledWith(expect.objectContaining({cookie: 'insa-session'}));
   });
 
   test('shows a connected diagnostic after a successful INSA month request', async () => {

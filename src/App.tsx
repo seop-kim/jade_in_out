@@ -5,6 +5,7 @@ import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
 import SettingsMenu from './components/SettingsMenu';
+import LeaveBalanceModal, {LeaveBalanceLoad, LeaveBalanceProgress} from './components/LeaveBalanceModal';
 import {appConfig} from './config';
 import {
   JADE_APP_WINDOW_NAME,
@@ -17,6 +18,13 @@ import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 import {loadThemePreference, saveThemePreference, Theme} from './lib/theme';
 import {ConnectionStatus} from './lib/connectionStatus';
+import {
+  InsaLeaveLoader,
+  LeaveBalanceResult,
+  LeaveUsageLoader,
+  reconcileLeaveBalance,
+} from './lib/leaveBalance';
+import {isInsaAuthenticationError} from './api/insaApi';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -65,6 +73,13 @@ function App() {
   const insaExportOpenerRef = useRef<(() => void) | null>(null);
   const [jadeExportReady, setJadeExportReady] = useState(false);
   const [insaExportReady, setInsaExportReady] = useState(false);
+  const jadeLeaveLoaderRef = useRef<LeaveUsageLoader | null>(null);
+  const insaLeaveLoaderRef = useRef<InsaLeaveLoader | null>(null);
+  const [leaveBalanceOpen, setLeaveBalanceOpen] = useState(false);
+  const [leaveBalanceResult, setLeaveBalanceResult] = useState<LeaveBalanceResult | null>(null);
+  const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
+  const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
+  const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -115,13 +130,22 @@ function App() {
     setCredentials(creds);
   };
 
+  const clearLeaveBalance = useCallback((): void => {
+    setLeaveBalanceOpen(false);
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    setLeaveBalanceLoading(false);
+    setLeaveBalanceProgress(null);
+  }, []);
+
   const handleResetCredentials = useCallback((): void => {
     closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
     setJadeConnectionStatus('not-configured');
     setJadeExportReady(false);
-  }, [closeJadeBridge]);
+    clearLeaveBalance();
+  }, [clearLeaveBalance, closeJadeBridge]);
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
     saveThemePreference(nextTheme);
@@ -133,8 +157,9 @@ function App() {
     if (!connected) {
       setInsaConnectionStatus('not-configured');
       setInsaExportReady(false);
+      clearLeaveBalance();
     }
-  }, []);
+  }, [clearLeaveBalance]);
 
   const showErrorToast = useCallback((message: string): void => {
     const id = nextToastId.current + 1;
@@ -291,6 +316,64 @@ function App() {
   const canExport = systemTab === 'jade'
     ? Boolean(activeJadeCredentials && jadeExportReady)
     : Boolean(insaConnected && insaExportReady);
+  const canViewLeaveBalance = Boolean(
+    activeJadeCredentials
+    && jadeConnectionStatus === 'connected'
+    && insaConnected
+    && insaConnectionStatus === 'connected'
+    && jadeLeaveLoaderRef.current
+    && insaLeaveLoaderRef.current
+  );
+  const registerJadeLeaveLoader = useCallback((loader: LeaveUsageLoader | null): void => {
+    jadeLeaveLoaderRef.current = loader;
+  }, []);
+  const registerInsaLeaveLoader = useCallback((loader: InsaLeaveLoader | null): void => {
+    insaLeaveLoaderRef.current = loader;
+  }, []);
+  const handleOpenLeaveBalance = useCallback((): void => {
+    if (!canViewLeaveBalance) return;
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    setLeaveBalanceProgress(null);
+    setLeaveBalanceOpen(true);
+  }, [canViewLeaveBalance]);
+  const loadLeaveBalance: LeaveBalanceLoad = useCallback(async (year, signal, onProgress) => {
+    const jadeLoader = jadeLeaveLoaderRef.current;
+    const insaLoader = insaLeaveLoaderRef.current;
+    if (!jadeLoader || !insaLoader) throw new Error('Leave balance requires both systems');
+
+    setLeaveBalanceLoading(true);
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    setLeaveBalanceProgress(null);
+    try {
+      const [jadeRecords, insaData] = await Promise.all([
+        jadeLoader(year, signal, (progress) => {
+          setLeaveBalanceProgress(progress);
+          onProgress(progress);
+        }),
+        insaLoader(year, signal),
+      ]);
+      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData);
+      setLeaveBalanceResult(nextResult);
+      return nextResult;
+    } catch (reason) {
+      if (reason instanceof Error && reason.name === 'JadeAuthenticationError') {
+        handleJadeAuthenticationExpired();
+      } else if (isInsaAuthenticationError(reason)) {
+        handleInsaAuthenticationExpired();
+      } else if (!signal.aborted) {
+        setLeaveBalanceError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
+        showErrorToast('휴가 현황 조회에 실패했습니다.');
+      }
+      throw reason;
+    } finally {
+      if (!signal.aborted) setLeaveBalanceLoading(false);
+    }
+  }, [handleInsaAuthenticationExpired, handleJadeAuthenticationExpired, showErrorToast]);
+  const handleCloseLeaveBalance = useCallback((): void => {
+    clearLeaveBalance();
+  }, [clearLeaveBalance]);
   const handleOpenExport = (): void => {
     if (!canExport) return;
     if (systemTab === 'jade') jadeExportOpenerRef.current?.();
@@ -374,6 +457,8 @@ function App() {
               insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
+              canViewLeaveBalance={canViewLeaveBalance}
+              onOpenLeaveBalance={handleOpenLeaveBalance}
             />
           </div>
         </div>
@@ -394,6 +479,7 @@ function App() {
                 onAuthenticationExpired={handleJadeAuthenticationExpired}
                 onConnectionStatusChange={setJadeConnectionStatus}
                 onExportReady={registerJadeExportOpener}
+                onLeaveUsageReady={registerJadeLeaveLoader}
               />
             ) : (
               <Setup
@@ -419,11 +505,21 @@ function App() {
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
               onExportReady={registerInsaExportOpener}
+              onLeaveDataReady={registerInsaLeaveLoader}
             />
           )}
         </div>
       </main>
       <ToastViewport toasts={toasts} onDismiss={dismissToast}/>
+      <LeaveBalanceModal
+        open={leaveBalanceOpen}
+        onClose={handleCloseLeaveBalance}
+        onLoad={loadLeaveBalance}
+        result={leaveBalanceResult}
+        error={leaveBalanceError}
+        loading={leaveBalanceLoading}
+        progress={leaveBalanceProgress}
+      />
     </div>
   );
 }
