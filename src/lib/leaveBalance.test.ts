@@ -73,6 +73,36 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('normalizes compact Jade dates before filtering and matching', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('20260807', '연차휴가', '4시간', '후4', 4)],
+      insaData([insaRecord('2026-08-07', '연차', '(후4)')])
+    );
+
+    expect(result.jadeUsedHours).toBe(4);
+    expect(result.duplicateHours).toBe(4);
+    expect(result.records).toEqual([
+      expect.objectContaining({ymd: '2026-08-07', source: 'both'}),
+    ]);
+  });
+
+  test('keeps every Jade leave row on a day as a separate usage entry', () => {
+    const record = {
+      ...jadeRecord('20260807', '연차', '4시간', '전4', 4),
+      workList: [
+        {type: '연차', duration: '4시간', time: '전4'},
+        {type: '연차', duration: '4시간', time: '후4'},
+      ],
+    };
+
+    const result = reconcileLeaveBalance(2026, [record], insaData([]));
+
+    expect(result.jadeUsedHours).toBe(8);
+    expect(result.records).toHaveLength(2);
+    expect(result.records.map((leave) => leave.durationLabel)).toEqual(['4시간 (전4)', '4시간 (후4)']);
+  });
+
   test('deduplicates full-day labels with different system formatting', () => {
     const result = reconcileLeaveBalance(
       2026,
@@ -132,6 +162,33 @@ describe('reconcileLeaveBalance', () => {
     expect(result.usedHours).toBe(4);
     expect(result.records.filter((record) => record.source === 'insa')).toHaveLength(3);
     expect(result.records.filter((record) => record.deductible)).toHaveLength(1);
+  });
+
+  test('does not deduct pending, unapproved, or completed cancellation statuses', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([
+        insaRecord('2026-08-01', '연차', '(후4)', '승인대기'),
+        insaRecord('2026-08-02', '연차', '(후4)', '미승인'),
+        insaRecord('2026-08-03', '연차', '(후4)', '취소완료'),
+      ])
+    );
+
+    expect(result.insaUsedHours).toBe(0);
+    expect(result.usedHours).toBe(0);
+    expect(result.records.every((record) => !record.deductible)).toBe(true);
+  });
+
+  test('matches equivalent full-day labels without treating 전일 as morning', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('20260808', '연차', '8시간', '', 8)],
+      insaData([insaRecord('2026-08-08', '연차휴가', '전일')])
+    );
+
+    expect(result.duplicateHours).toBe(8);
+    expect(result.usedHours).toBe(8);
   });
 
   test('sums target-year accrual and calculates the remaining hours', () => {

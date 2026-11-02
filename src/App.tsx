@@ -29,6 +29,12 @@ import {isInsaAuthenticationError} from './api/insaApi';
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
 
+function createAbortError(): Error {
+  const error = new Error('Request was cancelled');
+  error.name = 'AbortError';
+  return error;
+}
+
 interface InsaRequestToastState {
   id: number;
   messages: string[];
@@ -80,6 +86,7 @@ function App() {
   const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
   const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
   const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress | null>(null);
+  const leaveBalanceRequestRef = useRef(0);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -131,6 +138,7 @@ function App() {
   };
 
   const clearLeaveBalance = useCallback((): void => {
+    leaveBalanceRequestRef.current += 1;
     setLeaveBalanceOpen(false);
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
@@ -342,6 +350,9 @@ function App() {
     const insaLoader = insaLeaveLoaderRef.current;
     if (!jadeLoader || !insaLoader) throw new Error('Leave balance requires both systems');
 
+    const requestId = leaveBalanceRequestRef.current + 1;
+    leaveBalanceRequestRef.current = requestId;
+    const isCurrentRequest = (): boolean => requestId === leaveBalanceRequestRef.current && !signal.aborted;
     setLeaveBalanceLoading(true);
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
@@ -349,15 +360,19 @@ function App() {
     try {
       const [jadeRecords, insaData] = await Promise.all([
         jadeLoader(year, signal, (progress) => {
+          if (!isCurrentRequest()) return;
           setLeaveBalanceProgress(progress);
           onProgress(progress);
         }),
         insaLoader(year, signal),
       ]);
+      if (!isCurrentRequest()) throw createAbortError();
       const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData);
+      if (!isCurrentRequest()) throw createAbortError();
       setLeaveBalanceResult(nextResult);
       return nextResult;
     } catch (reason) {
+      if (!isCurrentRequest()) throw reason;
       if (reason instanceof Error && reason.name === 'JadeAuthenticationError') {
         handleJadeAuthenticationExpired();
       } else if (isInsaAuthenticationError(reason)) {
@@ -368,7 +383,7 @@ function App() {
       }
       throw reason;
     } finally {
-      if (!signal.aborted) setLeaveBalanceLoading(false);
+      if (isCurrentRequest()) setLeaveBalanceLoading(false);
     }
   }, [handleInsaAuthenticationExpired, handleJadeAuthenticationExpired, showErrorToast]);
   const handleCloseLeaveBalance = useCallback((): void => {

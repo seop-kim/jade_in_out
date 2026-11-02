@@ -47,6 +47,9 @@ function LeaveBalanceModal({
   const [localError, setLocalError] = useState<string | null>(null);
   const [localProgress, setLocalProgress] = useState<LeaveBalanceProgress | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const requestSequenceRef = useRef(0);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const hasRunRef = useRef(false);
   const previousOverflowRef = useRef('');
   const years = useMemo(() => {
@@ -77,11 +80,8 @@ function LeaveBalanceModal({
     setRequesting(false);
   }, [open, result]);
 
-  useEffect(() => () => {
-    controllerRef.current?.abort();
-  }, []);
-
   const handleClose = useCallback((): void => {
+    requestSequenceRef.current += 1;
     controllerRef.current?.abort();
     controllerRef.current = null;
     setRequesting(false);
@@ -89,12 +89,51 @@ function LeaveBalanceModal({
   }, [onClose]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+      setRequesting(false);
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const initialFocus = dialogRef.current?.querySelector<HTMLButtonElement>('[aria-label="닫기"]');
+    (initialFocus ?? dialogRef.current)?.focus();
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') handleClose();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), select:not(:disabled), input:not(:disabled), textarea:not(:disabled), a[href]'
+      ));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+      previousFocusRef.current?.focus();
+    };
   }, [handleClose, open]);
 
   if (!open) return null;
@@ -111,24 +150,45 @@ function LeaveBalanceModal({
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+    const requestId = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestId;
     hasRunRef.current = true;
     setRequesting(true);
     setLocalResult(null);
     setLocalError(null);
     setLocalProgress(null);
     try {
-      const nextResult = await onLoad(year, controller.signal, setLocalProgress);
-      if (!controller.signal.aborted) setLocalResult(nextResult);
+      const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
+        if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
+          setLocalProgress(nextProgress);
+        }
+      };
+      const nextResult = await onLoad(year, controller.signal, handleProgress);
+      if (requestSequenceRef.current === requestId && !controller.signal.aborted) setLocalResult(nextResult);
     } catch (reason) {
-      if (!controller.signal.aborted) setLocalError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
+      if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
+        setLocalError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
+      }
     } finally {
-      if (!controller.signal.aborted) setRequesting(false);
+      if (requestSequenceRef.current === requestId && !controller.signal.aborted) setRequesting(false);
     }
+  };
+
+  const handleYearChange = (nextYear: number): void => {
+    requestSequenceRef.current += 1;
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    hasRunRef.current = true;
+    setYear(nextYear);
+    setLocalResult(null);
+    setLocalError(null);
+    setLocalProgress(null);
+    setRequesting(false);
   };
 
   return (
     <div className="leave-balance-backdrop">
-      <div className="leave-balance-dialog" role="dialog" aria-modal="true" aria-label="휴가 현황">
+      <div ref={dialogRef} className="leave-balance-dialog" role="dialog" aria-modal="true" aria-label="휴가 현황" tabIndex={-1}>
         <div className="leave-balance-header">
           <div>
             <p className="leave-balance-eyebrow">연차 조회</p>
@@ -139,7 +199,7 @@ function LeaveBalanceModal({
 
         <div className="leave-balance-controls">
           <label htmlFor="leave-balance-year">조회 연도</label>
-          <select id="leave-balance-year" value={year} onChange={(event) => setYear(Number(event.target.value))} disabled={isLoading}>
+          <select id="leave-balance-year" value={year} onChange={(event) => handleYearChange(Number(event.target.value))} disabled={isLoading}>
             {years.map((option) => <option key={option} value={option}>{option}년</option>)}
           </select>
           <button type="button" className="leave-balance-load" onClick={handleLoad} disabled={isLoading}>

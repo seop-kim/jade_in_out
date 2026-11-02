@@ -43,6 +43,29 @@ describe('LeaveBalanceModal', () => {
     expect(document.body.style.overflow).toBe('auto');
   });
 
+  test('moves focus into the dialog, traps Tab, and restores focus on close', async () => {
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const onClose = jest.fn();
+    const {rerender} = render(
+      <LeaveBalanceModal open onClose={onClose} onLoad={jest.fn()} result={null} error={null} loading={false} progress={null} />
+    );
+
+    const dialog = screen.getByRole('dialog', {name: '휴가 현황'});
+    expect(screen.getByRole('button', {name: '닫기'})).toHaveFocus();
+    await userEvent.tab({shift: true});
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    await userEvent.click(screen.getByRole('button', {name: '닫기'}));
+    rerender(
+      <LeaveBalanceModal open={false} onClose={onClose} onLoad={jest.fn()} result={null} error={null} loading={false} progress={null} />
+    );
+    expect(trigger).toHaveFocus();
+    trigger.remove();
+  });
+
   test('does not request data until 조회 is clicked and renders the balance details', async () => {
     let resolve!: (value: LeaveBalanceResult) => void;
     const onLoad = jest.fn(() => new Promise<LeaveBalanceResult>((nextResolve) => {
@@ -77,6 +100,35 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('전4')).toBeInTheDocument();
     expect(screen.getByText('Jade + 신규')).toBeInTheDocument();
     expect(screen.getByText('승인')).toBeInTheDocument();
+  });
+
+  test('clears a loaded balance when the selected year changes', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn().mockResolvedValue(result)} result={result} error={null} loading={false} progress={null} />
+    );
+
+    expect(screen.getByText('잔여 시간')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('조회 연도'), '2025');
+    expect(screen.queryByText('잔여 시간')).not.toBeInTheDocument();
+  });
+
+  test('does not publish a result after a request is cancelled by closing', async () => {
+    let resolve!: (value: LeaveBalanceResult) => void;
+    const onLoad = jest.fn(() => new Promise<LeaveBalanceResult>((nextResolve) => {
+      resolve = nextResolve;
+    }));
+    const onClose = jest.fn();
+    const {rerender} = render(
+      <LeaveBalanceModal open onClose={onClose} onLoad={onLoad} result={null} error={null} loading={false} progress={null} />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
+    await userEvent.click(screen.getByRole('button', {name: '닫기'}));
+    rerender(<LeaveBalanceModal open={false} onClose={onClose} onLoad={onLoad} result={null} error={null} loading={false} progress={null} />);
+    resolve(result);
+    await Promise.resolve();
+    rerender(<LeaveBalanceModal open onClose={onClose} onLoad={onLoad} result={null} error={null} loading={false} progress={null} />);
+    expect(screen.queryByText('잔여 시간')).not.toBeInTheDocument();
   });
 
   test('shows unresolved warnings and does not expose a partial result on failure', async () => {

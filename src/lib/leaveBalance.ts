@@ -59,6 +59,12 @@ function compact(value: string): string {
   return value.replace(/[\s()]/g, '').trim();
 }
 
+function normalizeYmd(ymd: string): string | null {
+  const match = ymd.trim().match(/^(\d{4})[-./]?(\d{2})[-./]?(\d{2})$/);
+  if (!match?.[1] || !match[2] || !match[3]) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
 function canonicalType(type: string): string {
   const value = compact(type);
   if (value.includes('연차') || value.includes('시간차') || value === '휴가') return 'annual';
@@ -72,6 +78,12 @@ function parseDurationHours(durationLabel: string, type: string): number | null 
   const compactValue = compact(value);
   const hoursMatch = compactValue.match(/(\d+(?:\.\d+)?)시간/);
   if (hoursMatch?.[1]) return Number(hoursMatch[1]);
+
+  const shortHoursMatch = compactValue.match(/^(\d+(?:\.\d+)?)h$/i);
+  if (shortHoursMatch?.[1]) return Number(shortHoursMatch[1]);
+
+  const shortDaysMatch = compactValue.match(/^(\d+(?:\.\d+)?)d$/i);
+  if (shortDaysMatch?.[1]) return Number(shortDaysMatch[1]) * 8;
 
   const markerMatch = compactValue.match(/(?:출|퇴|전|후)(\d+(?:\.\d+)?)/);
   if (markerMatch?.[1]) return Number(markerMatch[1]);
@@ -88,28 +100,45 @@ function parseDurationHours(durationLabel: string, type: string): number | null 
 function periodKey(durationLabel: string): string {
   const value = compact(durationLabel);
   if (!value) return 'full-day';
+  if (/(?:전일|종일|하루)/.test(value)) return 'full-day';
+  if (/^\d+(?:\.\d+)?(?:시간|h|일|d)$/i.test(value)) return 'full-day';
   if (/(?:오전|출|전)\d*/.test(value)) return 'morning';
   if (/(?:오후|퇴|후)\d*/.test(value)) return 'afternoon';
-  if (/(?:전일|종일|하루)/.test(value)) return 'full-day';
-  if (/^\d+(?:\.\d+)?(?:시간|h|일)$/.test(value)) return 'full-day';
   return value;
 }
 
 function isApproved(status: string): boolean {
-  return /승인|완료/.test(status);
+  return /^(?:승인|승인완료|완료|approved|complete|completed|confirmed)$/i.test(compact(status));
 }
 
-function normalizeJadeRecord(record: AttendanceRecord): NormalizedLeaveRecord | null {
-  if (!record.vacation) return null;
-  const hours = record.vacation.hours > 0 ? record.vacation.hours : null;
+function isJadeLeaveType(type: string): boolean {
+  const value = compact(type);
+  return value.includes('연차')
+    || value.includes('시간차')
+    || value.includes('휴가')
+    || value.includes('병가')
+    || value.includes('공가');
+}
+
+function normalizeJadeLeave(
+  ymd: string,
+  type: string,
+  durationLabel: string,
+  time: string,
+  hoursOverride?: number
+): NormalizedLeaveRecord {
+  const parsedHours = parseDurationHours(durationLabel, type);
+  const hours = hoursOverride !== undefined && hoursOverride > 0
+    ? hoursOverride
+    : parsedHours;
   return {
-    ymd: record.ymd,
-    type: record.vacation.type,
-    canonicalType: canonicalType(record.vacation.type),
-    durationLabel: [record.vacation.duration, record.vacation.time ? `(${record.vacation.time})` : '']
+    ymd,
+    type,
+    canonicalType: canonicalType(type),
+    durationLabel: [durationLabel, time ? `(${time})` : '']
       .filter(Boolean)
       .join(' '),
-    periodKey: periodKey(record.vacation.time),
+    periodKey: periodKey(time || durationLabel),
     hours,
     status: '확정',
     source: 'jade',
@@ -117,10 +146,39 @@ function normalizeJadeRecord(record: AttendanceRecord): NormalizedLeaveRecord | 
   };
 }
 
+function normalizeJadeRecords(record: AttendanceRecord): NormalizedLeaveRecord[] {
+  const ymd = normalizeYmd(record.ymd) ?? record.ymd;
+  const leaveRows = record.workList.filter((row) => isJadeLeaveType(row.type));
+  if (leaveRows.length > 0) {
+    return leaveRows.map((row, index) => {
+      const matchesConvenienceField = index === 0
+        && record.vacation
+        && compact(record.vacation.type) === compact(row.type)
+        && compact(record.vacation.duration) === compact(row.duration)
+        && compact(record.vacation.time) === compact(row.time);
+      return normalizeJadeLeave(
+        ymd,
+        row.type,
+        row.duration,
+        row.time,
+        matchesConvenienceField ? record.vacation?.hours : undefined,
+      );
+    });
+  }
+  if (!record.vacation) return [];
+  return [normalizeJadeLeave(
+    ymd,
+    record.vacation.type,
+    record.vacation.duration,
+    record.vacation.time,
+    record.vacation.hours,
+  )];
+}
+
 function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
   const hours = parseDurationHours(record.durationLabel, record.type);
   return {
-    ymd: record.ymd,
+    ymd: normalizeYmd(record.ymd) ?? record.ymd,
     type: record.type,
     canonicalType: canonicalType(record.type),
     durationLabel: record.durationLabel,
@@ -133,7 +191,8 @@ function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
 }
 
 function yearFromYmd(ymd: string): number | null {
-  const match = ymd.match(/^(\d{4})-/);
+  const normalized = normalizeYmd(ymd);
+  const match = normalized?.match(/^(\d{4})-/);
   return match?.[1] ? Number(match[1]) : null;
 }
 
@@ -157,8 +216,7 @@ export function reconcileLeaveBalance(
 ): LeaveBalanceResult {
   const jade = jadeRecords
     .filter((record) => yearFromYmd(record.ymd) === year)
-    .map(normalizeJadeRecord)
-    .filter((record): record is NormalizedLeaveRecord => record !== null);
+    .flatMap(normalizeJadeRecords);
   const insa = insaData.records
     .filter((record) => yearFromYmd(record.ymd) === year)
     .map(normalizeInsaRecord);
