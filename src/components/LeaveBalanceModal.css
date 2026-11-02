@@ -173,6 +173,26 @@
   color: #b91c1c;
 }
 
+.leave-balance-error p {
+  margin: 0;
+}
+
+.leave-balance-error-details {
+  margin-top: 10px;
+}
+
+.leave-balance-error-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.leave-balance-error-details ul {
+  max-height: 180px;
+  margin: 8px 0 0;
+  overflow-y: auto;
+  padding-left: 18px;
+}
+
 .leave-balance-warning {
   background: color-mix(in srgb, #d97706 12%, var(--color-surface));
   color: #92400e;

@@ -28,6 +28,7 @@ interface LeaveBalanceModalProps {
   onLoad: LeaveBalanceLoad;
   result: LeaveBalanceResult | null;
   error: string | null;
+  errorDetails?: string[] | null;
   loading: boolean;
   progress: LeaveBalanceProgress[] | null;
 }
@@ -54,6 +55,7 @@ function LeaveBalanceModal({
   onLoad,
   result,
   error,
+  errorDetails,
   loading,
   progress,
 }: LeaveBalanceModalProps) {
@@ -304,7 +306,19 @@ function LeaveBalanceModal({
           </div>
         )}
 
-        {!isLoading && displayError && <p className="leave-balance-error" role="alert">{displayError}</p>}
+        {!isLoading && displayError && (
+          <div className="leave-balance-error" role="alert">
+            <p>{displayError}</p>
+            {errorDetails && errorDetails.length > 0 && (
+              <details className="leave-balance-error-details">
+                <summary>자세히 보기</summary>
+                <ul>
+                  {errorDetails.map((detail) => <li key={detail}>{detail}</li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
 
         {!isLoading && !displayError && displayResult && displaySummary && (
           <div className="leave-balance-content">

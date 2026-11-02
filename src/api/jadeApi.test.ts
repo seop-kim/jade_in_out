@@ -1,4 +1,4 @@
-import {fetchAttendanceForDate, fetchLeaveUsageForYear} from './jadeApi';
+import {fetchAttendanceForDate, fetchLeaveUsageForYear, JadeAnnualLeaveRequestError} from './jadeApi';
 
 describe('Jade API', () => {
   test('uses a browser transport when Jade credentials stay in the logged-in tab', async () => {
@@ -161,5 +161,25 @@ describe('Jade API', () => {
     })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
     expect(post).toHaveBeenCalledTimes(4);
     expect(post.mock.calls.every((call) => call[1].includes('202601'))).toBe(true);
+  });
+
+  test('exposes failed dates when a non-partial annual request fails', async () => {
+    const transport = {
+      post: jest.fn().mockRejectedValue(new Error('HTTP 500')),
+    };
+
+    await expect(fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+    })).rejects.toMatchObject({
+      name: 'JadeAnnualLeaveRequestError',
+      year: 2025,
+      failures: expect.arrayContaining([
+        expect.objectContaining({ymd: '20250101', error: 'HTTP 500'}),
+      ]),
+    } satisfies Partial<JadeAnnualLeaveRequestError>);
   });
 });

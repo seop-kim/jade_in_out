@@ -84,6 +84,7 @@ function App() {
   const [leaveBalanceOpen, setLeaveBalanceOpen] = useState(false);
   const [leaveBalanceResult, setLeaveBalanceResult] = useState<LeaveBalanceResult | null>(null);
   const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
+  const [leaveBalanceErrorDetails, setLeaveBalanceErrorDetails] = useState<string[] | null>(null);
   const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
   const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress[] | null>(null);
   const leaveBalanceRequestRef = useRef(0);
@@ -142,6 +143,7 @@ function App() {
     setLeaveBalanceOpen(false);
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
+    setLeaveBalanceErrorDetails(null);
     setLeaveBalanceLoading(false);
     setLeaveBalanceProgress(null);
   }, []);
@@ -342,6 +344,7 @@ function App() {
     if (!canViewLeaveBalance) return;
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
+    setLeaveBalanceErrorDetails(null);
     setLeaveBalanceProgress(null);
     setLeaveBalanceOpen(true);
   }, [canViewLeaveBalance]);
@@ -387,6 +390,20 @@ function App() {
         handleInsaAuthenticationExpired();
       } else if (!signal.aborted) {
         setLeaveBalanceError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
+        const isJadeAnnualError = reason instanceof Error
+          && reason.name === 'JadeAnnualLeaveRequestError'
+          && Array.isArray((reason as {failures?: unknown}).failures);
+        const jadeAnnualError = isJadeAnnualError
+          ? reason as unknown as {year: number; failures: Array<{ymd: string; error: string}>}
+          : null;
+        const failures = jadeAnnualError?.failures ?? [];
+        setLeaveBalanceErrorDetails(isJadeAnnualError
+          ? [
+              `Jade ${String(jadeAnnualError?.year)}년 조회 실패 (${failures.length}건)`,
+              ...failures.slice(0, 20).map(({ymd, error}) => `${ymd} · ${error}`),
+              ...(failures.length > 20 ? [`외 ${failures.length - 20}건`] : []),
+            ]
+          : [reason instanceof Error ? `오류 유형: ${reason.name}` : '원인을 확인할 수 없는 오류']);
         showErrorToast('휴가 현황 조회에 실패했습니다.');
       }
       throw reason;
@@ -540,6 +557,7 @@ function App() {
         onLoad={loadLeaveBalance}
         result={leaveBalanceResult}
         error={leaveBalanceError}
+        errorDetails={leaveBalanceErrorDetails}
         loading={leaveBalanceLoading}
         progress={leaveBalanceProgress}
       />

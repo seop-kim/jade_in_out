@@ -72,6 +72,23 @@ export class JadeAuthenticationError extends Error {
   }
 }
 
+export interface JadeAnnualLeaveFailure {
+  ymd: string;
+  error: string;
+}
+
+export class JadeAnnualLeaveRequestError extends Error {
+  readonly year: number;
+  readonly failures: JadeAnnualLeaveFailure[];
+
+  constructor(year: number, failures: readonly JadeAnnualLeaveFailure[]) {
+    super('Jade annual leave request failed');
+    this.name = 'JadeAnnualLeaveRequestError';
+    this.year = year;
+    this.failures = failures.map(({ymd, error}) => ({ymd, error}));
+  }
+}
+
 class JadeNoAttendanceDataError extends Error {
   constructor(message = '근태 데이터 없음') {
     super(message);
@@ -454,7 +471,6 @@ export async function fetchAttendanceForMonth({
         const message = error.response?.status
           ? `HTTP ${error.response.status}`
           : error.message ?? String(err);
-        console.error('[jade] fetch failed', ymd, message, err);
         dayResult = {
           ymd,
           error: message,
@@ -525,7 +541,18 @@ export async function fetchLeaveUsageForYear({
     const errors = Object.values(monthResults).filter((result): result is AttendanceError => 'error' in result);
     const authError = errors.find((error) => error.authError);
     if (authError) throw new JadeAuthenticationError();
-    if (errors.length > 0 && !allowPartial) throw new Error('Jade annual leave request failed');
+    if (errors.length > 0) {
+      const failures = errors.map(({ymd, error}) => ({ymd, error}));
+      console.warn('[jade] annual leave request diagnostics', {
+        year,
+        month: month + 1,
+        failedCount: failures.length,
+        failures: failures.slice(0, 20),
+        truncated: failures.length > 20,
+        partial: allowPartial,
+      });
+      if (!allowPartial) throw new JadeAnnualLeaveRequestError(year, failures);
+    }
     records.push(...Object.values(monthResults).filter(
       (result): result is AttendanceRecord => !('error' in result)
     ));

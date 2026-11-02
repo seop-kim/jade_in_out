@@ -184,6 +184,27 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('progressbar', {name: '2026년 휴가 정보 조회 진행률'})).toHaveAttribute('aria-valuenow', '8');
   });
 
+  test('reveals sanitized request failure details on demand', async () => {
+    render(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error="휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요."
+        errorDetails={['Jade 2025년 조회 실패 (1건)', '20250101 · HTTP 500']}
+        loading={false}
+        progress={null}
+      />
+    );
+
+    expect(screen.getByText('자세히 보기')).toBeInTheDocument();
+    expect(screen.queryByText('20250101 · HTTP 500')).not.toBeVisible();
+    await userEvent.click(screen.getByText('자세히 보기'));
+    expect(screen.getByText('Jade 2025년 조회 실패 (1건)')).toBeVisible();
+    expect(screen.getByText('20250101 · HTTP 500')).toBeVisible();
+  });
+
   test('renders every source row with review columns and the original reason', () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
