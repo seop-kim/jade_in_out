@@ -1,5 +1,12 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {LeaveBalanceResult} from '../lib/leaveBalance';
+import {
+  calculateLeaveBalanceSummary,
+  LeaveBalanceResult,
+  LeaveDecision,
+  LeaveDecisionByRowId,
+  LeaveHoursByRowId,
+  LeaveReviewRow,
+} from '../lib/leaveBalance';
 import './LeaveBalanceModal.css';
 
 export interface LeaveBalanceProgress {
@@ -27,9 +34,16 @@ function hoursLabel(hours: number | null): string {
   return hours === null ? '확인 필요' : `${hours}시간`;
 }
 
-function sourceLabel(source: LeaveBalanceResult['records'][number]['source']): string {
+function sourceLabel(source: LeaveBalanceResult['records'][number]['source'] | LeaveReviewRow['source']): string {
   if (source === 'both') return 'Jade + 신규';
   return source === 'jade' ? 'Jade' : '신규';
+}
+
+function decisionLabel(decision: LeaveDecision): string {
+  if (decision === 'auto') return '자동';
+  if (decision === 'deduct') return '차감';
+  if (decision === 'duplicate') return '중복 제외';
+  return '차감 제외';
 }
 
 function LeaveBalanceModal({
@@ -46,6 +60,8 @@ function LeaveBalanceModal({
   const [localResult, setLocalResult] = useState<LeaveBalanceResult | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localProgress, setLocalProgress] = useState<LeaveBalanceProgress | null>(null);
+  const [decisionByRowId, setDecisionByRowId] = useState<LeaveDecisionByRowId>({});
+  const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -71,6 +87,14 @@ function LeaveBalanceModal({
     else if (!hasRunRef.current) setLocalResult(null);
   }, [result]);
 
+  const displayResult = hasRunRef.current ? localResult : (result ?? localResult);
+
+  useEffect(() => {
+    if (!displayResult) return;
+    setDecisionByRowId({});
+    setHoursByRowId({});
+  }, [displayResult]);
+
   useEffect(() => {
     if (open) return;
     hasRunRef.current = false;
@@ -78,6 +102,8 @@ function LeaveBalanceModal({
     setLocalError(null);
     setLocalProgress(null);
     setRequesting(false);
+    setDecisionByRowId({});
+    setHoursByRowId({});
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -85,6 +111,8 @@ function LeaveBalanceModal({
     controllerRef.current?.abort();
     controllerRef.current = null;
     setRequesting(false);
+    setDecisionByRowId({});
+    setHoursByRowId({});
     onClose();
   }, [onClose]);
 
@@ -139,9 +167,11 @@ function LeaveBalanceModal({
   if (!open) return null;
 
   const isLoading = loading || requesting;
-  const displayResult = hasRunRef.current ? localResult : (result ?? localResult);
   const displayError = localError ?? error;
   const displayProgress = localProgress ?? progress;
+  const displaySummary = displayResult
+    ? calculateLeaveBalanceSummary(displayResult, decisionByRowId, hoursByRowId)
+    : null;
   const progressPercent = displayProgress && displayProgress.total > 0
     ? Math.min(100, Math.round((displayProgress.completed / displayProgress.total) * 100))
     : null;
@@ -157,6 +187,8 @@ function LeaveBalanceModal({
     setLocalResult(null);
     setLocalError(null);
     setLocalProgress(null);
+    setDecisionByRowId({});
+    setHoursByRowId({});
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
         if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
@@ -184,6 +216,8 @@ function LeaveBalanceModal({
     setLocalError(null);
     setLocalProgress(null);
     setRequesting(false);
+    setDecisionByRowId({});
+    setHoursByRowId({});
   };
 
   return (
@@ -221,39 +255,84 @@ function LeaveBalanceModal({
 
         {!isLoading && displayError && <p className="leave-balance-error" role="alert">{displayError}</p>}
 
-        {!isLoading && !displayError && displayResult && (
+        {!isLoading && !displayError && displayResult && displaySummary && (
           <div className="leave-balance-content">
             <div className="leave-balance-summary" aria-label="휴가 합계">
               <div><span>발생</span><strong>{hoursLabel(displayResult.accruedHours)}</strong></div>
               <div><span>Jade 사용</span><strong>{hoursLabel(displayResult.jadeUsedHours)}</strong></div>
               <div><span>신규 사용</span><strong>{hoursLabel(displayResult.insaUsedHours)}</strong></div>
-              <div><span>중복 제외</span><strong>{hoursLabel(displayResult.duplicateHours)}</strong></div>
-              <div><span>최종 사용</span><strong>{hoursLabel(displayResult.usedHours)}</strong></div>
-              <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displayResult.remainingHours)}</strong></div>
+              <div><span>중복 제외</span><strong>{hoursLabel(displaySummary.duplicateHours)}</strong></div>
+              <div><span>최종 사용</span><strong>{hoursLabel(displaySummary.usedHours)}</strong></div>
+              <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displaySummary.remainingHours)}</strong></div>
             </div>
 
-            {displayResult.unresolved.length > 0 && (
+            {displaySummary.unresolved.length > 0 && (
               <p className="leave-balance-warning" role="alert">확인되지 않은 사용 내역이 있습니다.</p>
             )}
 
             <div className="leave-balance-records">
               <h3>사용 내역</h3>
-              {displayResult.records.length === 0 ? (
+              {displayResult.reviewRows.length === 0 ? (
                 <p className="leave-balance-empty">사용 내역이 없습니다.</p>
               ) : (
                 <div className="leave-balance-table-wrap">
                   <table>
-                    <thead><tr><th>날짜</th><th>구분</th><th>시간</th><th>출처</th><th>상태</th></tr></thead>
+                    <thead><tr><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th></tr></thead>
                     <tbody>
-                      {displayResult.records.map((record) => (
-                        <tr key={`${record.ymd}-${record.source}-${record.durationLabel}`}>
-                          <td>{record.ymd}</td>
-                          <td>{record.type}</td>
-                          <td>{record.durationLabel || hoursLabel(record.hours)}</td>
-                          <td>{sourceLabel(record.source)}</td>
-                          <td>{record.status}</td>
+                      {displayResult.reviewRows.map((row) => {
+                        const selectedDecision = decisionByRowId[row.id] ?? 'auto';
+                        const effective = selectedDecision === 'auto' ? row.autoDecision : selectedDecision;
+                        const enteredHours = hoursByRowId[row.id];
+                        const effectiveHours = typeof enteredHours === 'number' && enteredHours > 0
+                          ? enteredHours
+                          : row.hours;
+                        const rowLabel = `${row.ymd} ${sourceLabel(row.source)}`;
+                        return (
+                        <tr key={row.id}>
+                          <td>{row.ymd}</td>
+                          <td>{row.type}</td>
+                          <td>{row.reason || '-'}</td>
+                          <td>{row.durationLabel || hoursLabel(row.hours)}</td>
+                          <td>{sourceLabel(row.source)}</td>
+                          <td>{row.status || '-'}</td>
+                          <td>{decisionLabel(row.autoDecision)}</td>
+                          <td>
+                            <select
+                              aria-label={`최종 판정 ${rowLabel}`}
+                              value={selectedDecision}
+                              onChange={(event) => {
+                                const nextDecision = event.target.value as LeaveDecision;
+                                setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
+                              }}
+                            >
+                              <option value="auto">자동</option>
+                              <option value="deduct">차감</option>
+                              <option value="exclude">차감 제외</option>
+                              <option value="duplicate">중복 제외</option>
+                            </select>
+                          </td>
+                          <td>
+                            {row.hours === null ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                aria-label={`반영시간 ${rowLabel}`}
+                                value={enteredHours ?? ''}
+                                onChange={(event) => {
+                                  const nextValue = event.target.value;
+                                  setHoursByRowId((current) => ({
+                                    ...current,
+                                    [row.id]: nextValue === '' ? undefined : Number(nextValue),
+                                  }));
+                                }}
+                              />
+                            ) : hoursLabel(effectiveHours)}
+                            {effective === 'deduct' && effectiveHours === null && <span className="leave-balance-review-needed">확인 필요</span>}
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

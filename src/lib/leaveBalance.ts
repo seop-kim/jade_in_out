@@ -432,9 +432,6 @@ export function reconcileLeaveBalance(
   const insaUsedHours = insa
     .filter((record) => record.deductible && record.hours !== null)
     .reduce((total, record) => total + (record.hours ?? 0), 0);
-  const usedHours = records
-    .filter((record) => record.deductible && record.hours !== null)
-    .reduce((total, record) => total + (record.hours ?? 0), 0);
   const accruedHours = insaData.balances
     .filter((balance) => balance.year === year)
     .reduce((total, balance) => total + balance.accruedHours, 0);

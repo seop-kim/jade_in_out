@@ -24,6 +24,38 @@ const result: LeaveBalanceResult = {
       duplicate: true,
     },
   ],
+  reviewRows: [
+    {
+      id: 'jade-0',
+      ymd: '2026-08-05',
+      type: '연차',
+      canonicalType: 'annual',
+      durationLabel: '전4',
+      hours: 4,
+      status: '확정',
+      reason: '',
+      source: 'jade',
+      deductible: true,
+      duplicateGroup: 'duplicate-0',
+      autoDecision: 'deduct',
+      needsReview: false,
+    },
+    {
+      id: 'insa-0',
+      ymd: '2026-08-05',
+      type: '연차휴가(시간차)',
+      canonicalType: 'annual',
+      durationLabel: '(전4)',
+      hours: 4,
+      status: '승인',
+      reason: '신규 사유',
+      source: 'insa',
+      deductible: true,
+      duplicateGroup: 'duplicate-0',
+      autoDecision: 'duplicate',
+      needsReview: false,
+    },
+  ],
   unresolved: [],
 };
 
@@ -92,14 +124,87 @@ describe('LeaveBalanceModal', () => {
     expect(await screen.findByText('발생')).toBeInTheDocument();
     expect(screen.getByText('Jade 사용')).toBeInTheDocument();
     expect(screen.getByText('신규 사용')).toBeInTheDocument();
-    expect(screen.getByText('중복 제외')).toBeInTheDocument();
+    expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
-    expect(screen.getByText('2026-08-05')).toBeInTheDocument();
+    expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();
-    expect(screen.getByText('Jade + 신규')).toBeInTheDocument();
+    expect(screen.getByText('Jade')).toBeInTheDocument();
+    expect(screen.getByText('신규')).toBeInTheDocument();
     expect(screen.getByText('승인')).toBeInTheDocument();
+  });
+
+  test('renders every source row with review columns and the original reason', () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    expect(screen.getByRole('columnheader', {name: '날짜'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '휴가 유형'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '사유'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '시간'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '출처'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '승인상태'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '자동 판정'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '최종 판정'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '반영시간'})).toBeInTheDocument();
+    expect(screen.getByText('신규 사유')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
+  });
+
+  test('updates the final usage immediately when a row decision changes', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    const finalDecisions = screen.getAllByRole('combobox', {name: /최종 판정/});
+    await userEvent.selectOptions(finalDecisions[1]!, 'deduct');
+
+    expect(screen.getByText('최종 사용')).toBeInTheDocument();
+    expect(screen.getByText('8시간')).toBeInTheDocument();
+    expect(finalDecisions[1]).toHaveValue('deduct');
+  });
+
+  test('accepts entered hours for an unknown-duration row', async () => {
+    const unknownResult: LeaveBalanceResult = {
+      ...result,
+      records: [{...result.records[0]!, hours: null, source: 'insa', duplicate: false}],
+      reviewRows: [{...result.reviewRows[1]!, id: 'insa-unknown', hours: null, autoDecision: 'exclude', needsReview: true}],
+      usedHours: 0,
+      remainingHours: 160,
+      unresolved: [{...result.records[0]!, hours: null, source: 'insa', duplicate: false, reason: 'unknown-duration'}],
+    };
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={unknownResult} error={null} loading={false} progress={null} />
+    );
+
+    await userEvent.selectOptions(screen.getByRole('combobox', {name: /최종 판정/}), 'deduct');
+    await userEvent.clear(screen.getByRole('spinbutton', {name: /반영시간/}));
+    await userEvent.type(screen.getByRole('spinbutton', {name: /반영시간/}), '4');
+
+    expect(screen.getByText('4시간')).toBeInTheDocument();
+    expect(screen.queryByText('확인되지 않은 사용 내역이 있습니다.')).not.toBeInTheDocument();
+  });
+
+  test('resets manual decisions when a new query starts and when the modal closes', async () => {
+    const onLoad = jest.fn().mockResolvedValue(result);
+    const onClose = jest.fn();
+    const {rerender} = render(
+      <LeaveBalanceModal open onClose={onClose} onLoad={onLoad} result={result} error={null} loading={false} progress={null} />
+    );
+    const finalDecisions = screen.getAllByRole('combobox', {name: /최종 판정/});
+    await userEvent.selectOptions(finalDecisions[0]!, 'exclude');
+    expect(finalDecisions[0]).toHaveValue('exclude');
+
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
+    expect(await screen.findAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
+    expect(screen.getAllByRole('combobox', {name: /최종 판정/})[0]).toHaveValue('auto');
+
+    await userEvent.click(screen.getByRole('button', {name: '닫기'}));
+    rerender(<LeaveBalanceModal open={false} onClose={onClose} onLoad={onLoad} result={null} error={null} loading={false} progress={null} />);
+    rerender(<LeaveBalanceModal open onClose={onClose} onLoad={onLoad} result={result} error={null} loading={false} progress={null} />);
+    expect(screen.getAllByRole('combobox', {name: /최종 판정/})[0]).toHaveValue('auto');
   });
 
   test('clears a loaded balance when the selected year changes', async () => {
@@ -144,7 +249,11 @@ describe('LeaveBalanceModal', () => {
         open
         onClose={onClose}
         onLoad={onLoad}
-        result={{...result, unresolved: [unresolvedRecord]}}
+        result={{
+          ...result,
+          reviewRows: [{...result.reviewRows[0]!, id: 'unknown', hours: null, autoDecision: 'exclude', needsReview: true}],
+          unresolved: [unresolvedRecord],
+        }}
         error={null}
         loading={false}
         progress={null}

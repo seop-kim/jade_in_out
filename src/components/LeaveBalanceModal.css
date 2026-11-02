@@ -209,7 +209,7 @@
 }
 
 .leave-balance-table-wrap table {
-  width: 100%;
+  width: max(100%, 1080px);
   border-collapse: collapse;
   font-size: 12px;
   white-space: nowrap;
@@ -225,6 +225,61 @@
 .leave-balance-table-wrap th {
   background: var(--color-surface-muted);
   color: var(--color-muted-strong);
+  font-weight: 700;
+}
+
+.leave-balance-table-wrap th:nth-child(2),
+.leave-balance-table-wrap td:nth-child(2) {
+  min-width: 150px;
+}
+
+.leave-balance-table-wrap th:nth-child(3),
+.leave-balance-table-wrap td:nth-child(3) {
+  min-width: 150px;
+  white-space: normal;
+}
+
+.leave-balance-table-wrap th:nth-child(8),
+.leave-balance-table-wrap td:nth-child(8) {
+  min-width: 112px;
+}
+
+.leave-balance-table-wrap th:nth-child(9),
+.leave-balance-table-wrap td:nth-child(9) {
+  min-width: 96px;
+}
+
+.leave-balance-table-wrap select,
+.leave-balance-table-wrap input {
+  min-height: 30px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.leave-balance-table-wrap select {
+  padding: 0 8px;
+}
+
+.leave-balance-table-wrap input {
+  width: 78px;
+  padding: 0 8px;
+}
+
+.leave-balance-table-wrap select:focus,
+.leave-balance-table-wrap input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.leave-balance-review-needed {
+  display: block;
+  margin-top: 4px;
+  color: #b45309;
+  font-size: 11px;
   font-weight: 700;
 }
 
