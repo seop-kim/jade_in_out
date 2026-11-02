@@ -17,7 +17,8 @@ export interface LeaveBalanceProgress {
 export type LeaveBalanceLoad = (
   year: number,
   signal: AbortSignal,
-  onProgress: (progress: LeaveBalanceProgress) => void
+  onProgress: (progress: LeaveBalanceProgress) => void,
+  includePreviousPeriod?: boolean
 ) => Promise<LeaveBalanceResult>;
 
 interface LeaveBalanceModalProps {
@@ -63,6 +64,7 @@ function LeaveBalanceModal({
   const [decisionByRowId, setDecisionByRowId] = useState<LeaveDecisionByRowId>({});
   const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
+  const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -95,6 +97,7 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setIncludePreviousPeriod(displayResult.includePreviousPeriod);
   }, [displayResult]);
 
   useEffect(() => {
@@ -107,6 +110,7 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setIncludePreviousPeriod(false);
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -117,6 +121,7 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setIncludePreviousPeriod(false);
     onClose();
   }, [onClose]);
 
@@ -182,11 +187,14 @@ function LeaveBalanceModal({
   const displaySummary = summaryResult
     ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
     : null;
+  const canIncludePreviousPeriod = Boolean(
+    displayResult?.availablePeriods.some((period) => period.year < year && period.isNewHire)
+  );
   const progressPercent = displayProgress && displayProgress.total > 0
     ? Math.min(100, Math.round((displayProgress.completed / displayProgress.total) * 100))
     : null;
 
-  const handleLoad = async (): Promise<void> => {
+  const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -200,13 +208,14 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setIncludePreviousPeriod(requestedIncludePreviousPeriod);
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
         if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
           setLocalProgress(nextProgress);
         }
       };
-      const nextResult = await onLoad(year, controller.signal, handleProgress);
+      const nextResult = await onLoad(year, controller.signal, handleProgress, requestedIncludePreviousPeriod);
       if (requestSequenceRef.current === requestId && !controller.signal.aborted) setLocalResult(nextResult);
     } catch (reason) {
       if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
@@ -230,6 +239,7 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setIncludePreviousPeriod(false);
   };
 
   return (
@@ -248,7 +258,22 @@ function LeaveBalanceModal({
           <select id="leave-balance-year" value={year} onChange={(event) => handleYearChange(Number(event.target.value))} disabled={isLoading}>
             {years.map((option) => <option key={option} value={option}>{option}년</option>)}
           </select>
-          <button type="button" className="leave-balance-load" onClick={handleLoad} disabled={isLoading}>
+          {canIncludePreviousPeriod && (
+            <label className="leave-balance-previous-toggle">
+              <input
+                type="checkbox"
+                checked={includePreviousPeriod}
+                disabled={isLoading}
+                onChange={(event) => {
+                  const nextValue = event.target.checked;
+                  setIncludePreviousPeriod(nextValue);
+                  void handleLoad(nextValue);
+                }}
+              />
+              이전 발생기간 포함
+            </label>
+          )}
+          <button type="button" className="leave-balance-load" onClick={() => void handleLoad()} disabled={isLoading}>
             {isLoading ? '조회 중...' : '조회'}
           </button>
         </div>
@@ -278,6 +303,25 @@ function LeaveBalanceModal({
               <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displaySummary.remainingHours)}</strong></div>
             </div>
 
+            {displayResult.periods.length > 0 && (
+              <div className="leave-balance-periods" aria-label="휴가 발생기간">
+                {displayResult.periods.map((period) => (
+                  <div className="leave-balance-period" key={period.id}>
+                    <div className="leave-balance-period-heading">
+                      <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
+                      {period.isNewHire && <span>입사 1년차</span>}
+                    </div>
+                    <span>{period.period}</span>
+                    <div className="leave-balance-period-values">
+                      <span>발생 <strong>{hoursLabel(period.accruedHours)}</strong></span>
+                      <span>사용 <strong>{hoursLabel(period.usedHours)}</strong></span>
+                      <span>잔여 <strong>{hoursLabel(period.remainingHours)}</strong></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {displaySummary.unresolved.length > 0 && (
               <p className="leave-balance-warning" role="alert">확인되지 않은 사용 내역이 있습니다.</p>
             )}
@@ -289,7 +333,7 @@ function LeaveBalanceModal({
               ) : (
                 <div className="leave-balance-table-wrap">
                   <table>
-                    <thead><tr><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th><th>관리</th></tr></thead>
+                    <thead><tr><th>발생기간</th><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th><th>관리</th></tr></thead>
                     <tbody>
                       {displayRows.map((row) => {
                         const selectedDecision = decisionByRowId[row.id] ?? 'auto';
@@ -302,6 +346,7 @@ function LeaveBalanceModal({
                         const rowIsDismissed = effective === 'exclude' || effective === 'duplicate';
                         return (
                         <tr key={row.id} className={rowIsDismissed ? 'leave-balance-row-dismissed' : undefined}>
+                          <td>{row.periodLabel || '-'}</td>
                           <td>{row.ymd}</td>
                           <td>{row.type}</td>
                           <td>{row.reason || '-'}</td>

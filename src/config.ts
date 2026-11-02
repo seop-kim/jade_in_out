@@ -10,6 +10,10 @@ function requiredNumberEnv(name: string): number {
   return value;
 }
 
+function optionalEnv(name: string, fallback: string): string {
+  return process.env[name]?.trim() || fallback;
+}
+
 export const appConfig = {
   jade: {
     origin: requiredEnv('REACT_APP_JADE_ORIGIN'),
@@ -40,6 +44,7 @@ export const appConfig = {
       home: requiredEnv('REACT_APP_INSA_HOME_PATH'),
       worktime: requiredEnv('REACT_APP_INSA_WORKTIME_PATH'),
       leave: requiredEnv('REACT_APP_INSA_LEAVE_PATH'),
+      leavePeriod: optionalEnv('REACT_APP_INSA_LEAVE_PERIOD_PATH', '/leave/pop_leave.asp'),
     },
     query: {
       year: requiredEnv('REACT_APP_INSA_QUERY_YEAR'),

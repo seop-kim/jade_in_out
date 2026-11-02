@@ -92,6 +92,19 @@
   padding: 0 10px;
 }
 
+.leave-balance-previous-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.leave-balance-previous-toggle input {
+  accent-color: var(--color-accent);
+}
+
 .leave-balance-load {
   margin-left: auto;
   padding: 0 16px;
@@ -192,6 +205,58 @@
   color: var(--color-accent);
 }
 
+.leave-balance-periods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.leave-balance-period {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-muted);
+}
+
+.leave-balance-period-heading,
+.leave-balance-period-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-balance-period-heading {
+  justify-content: space-between;
+}
+
+.leave-balance-period-heading strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.leave-balance-period-heading span,
+.leave-balance-period > span,
+.leave-balance-period-values span {
+  color: var(--color-muted-strong);
+  font-size: 11px;
+}
+
+.leave-balance-period > span {
+  display: block;
+  margin-top: 4px;
+}
+
+.leave-balance-period-values {
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.leave-balance-period-values strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
 .leave-balance-records {
   margin-top: 22px;
 }
@@ -209,7 +274,7 @@
 }
 
 .leave-balance-table-wrap table {
-  width: max(100%, 1080px);
+  width: max(100%, 1180px);
   border-collapse: collapse;
   font-size: 12px;
   white-space: nowrap;
@@ -228,24 +293,24 @@
   font-weight: 700;
 }
 
-.leave-balance-table-wrap th:nth-child(2),
-.leave-balance-table-wrap td:nth-child(2) {
+.leave-balance-table-wrap th:nth-child(3),
+.leave-balance-table-wrap td:nth-child(3) {
   min-width: 150px;
 }
 
-.leave-balance-table-wrap th:nth-child(3),
-.leave-balance-table-wrap td:nth-child(3) {
+.leave-balance-table-wrap th:nth-child(4),
+.leave-balance-table-wrap td:nth-child(4) {
   min-width: 150px;
   white-space: normal;
 }
 
-.leave-balance-table-wrap th:nth-child(8),
-.leave-balance-table-wrap td:nth-child(8) {
+.leave-balance-table-wrap th:nth-child(9),
+.leave-balance-table-wrap td:nth-child(9) {
   min-width: 112px;
 }
 
-.leave-balance-table-wrap th:nth-child(9),
-.leave-balance-table-wrap td:nth-child(9) {
+.leave-balance-table-wrap th:nth-child(10),
+.leave-balance-table-wrap td:nth-child(10) {
   min-width: 96px;
 }
 

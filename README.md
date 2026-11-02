@@ -66,6 +66,8 @@ cp .env.example .env.local
 | `INSA_TARGET_*` | 신규 인사시스템 서버 프록시 대상 설정 |
 | `INSA_ALLOWED_ROUTES_JSON` | 신규 인사시스템 프록시 허용 경로 설정 |
 
+휴가 현황에서 `이전 발생기간 포함`을 사용하려면 `INSA_ALLOWED_ROUTES_JSON`에 `"/leave/pop_leave.asp":"GET"` 경로도 추가해야 합니다. 이 경로는 신규 인사시스템의 기간별 `보기` 상세내역을 조회할 때 사용합니다.
+
 `REACT_APP_*` 값은 React 빌드 결과에 포함되므로 브라우저에서 완전히 숨겨지는 비밀값이 아닙니다. 이 프로젝트에서는 GitHub 소스에 운영 설정값이 노출되지 않도록 환경변수로 분리하는 용도로 사용합니다. Cookie와 Request Body는 환경변수에 넣지 말고 앱의 인증 화면에서 입력하세요.
 
 ### 2. 의존성 설치 및 실행

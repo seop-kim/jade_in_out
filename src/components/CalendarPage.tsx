@@ -102,14 +102,24 @@ function CalendarPage({
   const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
-    const loader: LeaveUsageLoader = (year, signal, onProgress) => fetchLeaveUsageForYear({
-      cookie: credentials.cookie,
-      parsedBody: credentials.parsedBody,
-      year,
-      signal,
-      transport,
-      onProgress,
-    });
+    const loader: LeaveUsageLoader = async (year, signal, onProgress, includePreviousPeriod = false) => {
+      const years = includePreviousPeriod ? [year - 1, year] : [year];
+      const totals = years.map((targetYear) => new Date(targetYear, 1, 29).getMonth() === 1 ? 366 : 365);
+      const offsets = totals.map((_, index) => totals.slice(0, index).reduce((sum, total) => sum + total, 0));
+      const total = totals.reduce((sum, value) => sum + value, 0);
+      const records = await Promise.all(years.map((targetYear, index) => fetchLeaveUsageForYear({
+        cookie: credentials.cookie,
+        parsedBody: credentials.parsedBody,
+        year: targetYear,
+        signal,
+        transport,
+        onProgress: (progress) => onProgress?.({
+          completed: (offsets[index] ?? 0) + progress.completed,
+          total,
+        }),
+      })));
+      return records.flat();
+    };
     onLeaveUsageReady?.(loader);
     return () => onLeaveUsageReady?.(null);
   }, [credentials, onLeaveUsageReady, transport]);

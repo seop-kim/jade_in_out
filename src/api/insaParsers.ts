@@ -41,6 +41,7 @@ export interface InsaLeaveRecord {
   reason: string;
   appliedAt: string;
   approvalStatus: string;
+  periodId?: string;
 }
 
 export interface InsaLeaveBalance {
@@ -49,6 +50,7 @@ export interface InsaLeaveBalance {
   accruedHours: number;
   usedHours: number;
   remainingHours: number;
+  detailPath?: string;
 }
 
 export interface InsaLeavePageData {
@@ -106,6 +108,13 @@ function parseQueryNumber(onclick: string, parameter: string): number | null {
 function numberFromSummaryCell(cell: HTMLTableCellElement): number {
   const emphasizedNumber = cell.querySelector('b, strong');
   return parseNumber(emphasizedNumber ? cleanText(emphasizedNumber) : cleanText(cell)) ?? 0;
+}
+
+function popupPathFromCell(cell: HTMLTableCellElement): string | undefined {
+  const href = cell.querySelector('a')?.getAttribute('href') ?? '';
+  const match = href.match(/pop2\(\s*['"]([^'"]+)['"]/i);
+  const path = match?.[1]?.replace(/&amp;/g, '&');
+  return path ? (path.startsWith('/') ? path : `/leave/${path}`) : undefined;
 }
 
 function normalizeHolidayLabel(text: string): string {
@@ -257,12 +266,14 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
       if (cells.length === appConfig.insa.parser.balanceColumnCount) {
         const year = parseNumber(cleanText(cells[0]!));
         if (year === null) continue;
+        const detailPath = popupPathFromCell(cells[5]!);
         balances.push({
           year,
           period: cleanText(cells[1]!),
           accruedHours: numberFromSummaryCell(cells[3]!),
           usedHours: numberFromSummaryCell(cells[4]!),
           remainingHours: numberFromSummaryCell(cells[5]!),
+          ...(detailPath ? {detailPath} : {}),
         });
       }
       if (cells.length === appConfig.insa.parser.leaveRecordColumnCount) {
@@ -281,4 +292,26 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   }
 
   return {balances, records};
+}
+
+export function parseInsaLeaveRecordsHtml(html: string): InsaLeaveRecord[] {
+  const doc = parseDocument(html);
+  const records: InsaLeaveRecord[] = [];
+  for (const table of Array.from(doc.querySelectorAll(appConfig.insa.parser.tableSelector))) {
+    for (const row of Array.from(table.querySelectorAll('tr'))) {
+      const cells = directCells(row);
+      if (cells.length !== appConfig.insa.parser.leaveRecordColumnCount) continue;
+      const ymd = parseYmd(cleanText(cells[1]!));
+      if (!ymd) continue;
+      records.push({
+        ymd,
+        durationLabel: cleanText(cells[2]!),
+        type: cleanText(cells[3]!),
+        reason: cleanText(cells[4]!),
+        appliedAt: cleanText(cells[6]!),
+        approvalStatus: cleanText(cells[7]!),
+      });
+    }
+  }
+  return records;
 }

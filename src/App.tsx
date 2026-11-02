@@ -345,7 +345,7 @@ function App() {
     setLeaveBalanceProgress(null);
     setLeaveBalanceOpen(true);
   }, [canViewLeaveBalance]);
-  const loadLeaveBalance: LeaveBalanceLoad = useCallback(async (year, signal, onProgress) => {
+  const loadLeaveBalance: LeaveBalanceLoad = useCallback(async (year, signal, onProgress, includePreviousPeriod = false) => {
     const jadeLoader = jadeLeaveLoaderRef.current;
     const insaLoader = insaLeaveLoaderRef.current;
     if (!jadeLoader || !insaLoader) throw new Error('Leave balance requires both systems');
@@ -363,11 +363,11 @@ function App() {
           if (!isCurrentRequest()) return;
           setLeaveBalanceProgress(progress);
           onProgress(progress);
-        }),
-        insaLoader(year, signal),
+        }, includePreviousPeriod),
+        insaLoader(year, signal, undefined, includePreviousPeriod),
       ]);
       if (!isCurrentRequest()) throw createAbortError();
-      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData);
+      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData, includePreviousPeriod);
       if (!isCurrentRequest()) throw createAbortError();
       setLeaveBalanceResult(nextResult);
       return nextResult;

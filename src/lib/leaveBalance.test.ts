@@ -346,6 +346,28 @@ describe('reconcileLeaveBalance', () => {
     expect(result.remainingHours).toBe(128);
   });
 
+  test('includes the prior new-hire period only when requested', () => {
+    const data: InsaLeavePageData = {
+      balances: [
+        {year: 2025, period: '2025-03-04 ~ 2026-03-03', accruedHours: 88, usedHours: 66, remainingHours: 22},
+        {year: 2026, period: '2026-01-01 ~ 2026-12-31', accruedHours: 128, usedHours: 12, remainingHours: 116},
+      ],
+      records: [
+        insaRecord('2025-04-01', '연차휴가', '(후4)'),
+        insaRecord('2026-03-18', '연차휴가', '(후4)'),
+      ],
+    };
+
+    const currentOnly = reconcileLeaveBalance(2026, [], data);
+    expect(currentOnly.periods.map((period) => period.year)).toEqual([2026]);
+    expect(currentOnly.reviewRows.every((row) => row.periodLabel === '2026 연차')).toBe(true);
+
+    const withPrevious = reconcileLeaveBalance(2026, [], data, true);
+    expect(withPrevious.periods.map((period) => period.year)).toEqual([2025, 2026]);
+    expect(withPrevious.accruedHours).toBe(216);
+    expect(withPrevious.reviewRows.map((row) => row.periodLabel)).toEqual(['2025 신입휴가', '2026 연차']);
+  });
+
   test('keeps unknown durations unresolved instead of counting them as zero usage', () => {
     const result = reconcileLeaveBalance(
       2026,

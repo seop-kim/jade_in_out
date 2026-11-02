@@ -27,10 +27,24 @@ export interface LeaveReviewRow {
   status: string;
   reason: string;
   source: LeaveSource;
+  periodId: string | null;
+  periodLabel: string | null;
   deductible: boolean;
   duplicateGroup: string | null;
   autoDecision: Exclude<LeaveDecision, 'auto'>;
   needsReview: boolean;
+}
+
+export interface LeaveBalancePeriod {
+  id: string;
+  year: number;
+  period: string;
+  startYmd: string;
+  endYmd: string;
+  isNewHire: boolean;
+  accruedHours: number;
+  usedHours: number;
+  remainingHours: number;
 }
 
 export interface UnresolvedLeaveRecord extends LeaveBalanceRecord {
@@ -47,6 +61,9 @@ export interface LeaveBalanceResult {
   remainingHours: number;
   records: LeaveBalanceRecord[];
   reviewRows: LeaveReviewRow[];
+  periods: LeaveBalancePeriod[];
+  availablePeriods: LeaveBalancePeriod[];
+  includePreviousPeriod: boolean;
   unresolved: UnresolvedLeaveRecord[];
 }
 
@@ -65,13 +82,15 @@ export interface LeaveBalanceSummary {
 export type LeaveUsageLoader = (
   year: number,
   signal?: AbortSignal,
-  onProgress?: (progress: {completed: number; total: number}) => void
+  onProgress?: (progress: {completed: number; total: number}) => void,
+  includePreviousPeriod?: boolean
 ) => Promise<AttendanceRecord[]>;
 
 export type InsaLeaveLoader = (
   year: number,
   signal?: AbortSignal,
-  onProgress?: (progress: {completed: number; total: number}) => void
+  onProgress?: (progress: {completed: number; total: number}) => void,
+  includePreviousPeriod?: boolean
 ) => Promise<InsaLeavePageData>;
 
 interface NormalizedLeaveRecord {
@@ -84,6 +103,7 @@ interface NormalizedLeaveRecord {
   status: string;
   reason: string;
   source: LeaveSource;
+  periodId: string | null;
   deductible: boolean;
 }
 
@@ -95,6 +115,41 @@ function normalizeYmd(ymd: string): string | null {
   const match = ymd.trim().match(/^(\d{4})[-./]?(\d{2})[-./]?(\d{2})$/);
   if (!match?.[1] || !match[2] || !match[3]) return null;
   return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function periodId(year: number, period: string): string {
+  return `${year}|${period}`;
+}
+
+function periodRange(year: number, period: string): {startYmd: string; endYmd: string; isNewHire: boolean} {
+  const dates = period.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
+  const startYmd = dates[0] ?? `${year}-01-01`;
+  const endYmd = dates[1] ?? `${year}-12-31`;
+  return {
+    startYmd,
+    endYmd,
+    isNewHire: startYmd !== `${year}-01-01`,
+  };
+}
+
+function toLeaveBalancePeriod(balance: InsaLeavePageData['balances'][number]): LeaveBalancePeriod {
+  const range = periodRange(balance.year, balance.period);
+  return {
+    id: periodId(balance.year, balance.period),
+    year: balance.year,
+    period: balance.period,
+    ...range,
+    accruedHours: balance.accruedHours,
+    usedHours: balance.usedHours,
+    remainingHours: balance.remainingHours,
+  };
+}
+
+function periodForYmd(ymd: string, periods: readonly LeaveBalancePeriod[]): string | null {
+  const candidates = periods
+    .filter((period) => ymd >= period.startYmd && ymd <= period.endYmd)
+    .sort((left, right) => right.startYmd.localeCompare(left.startYmd));
+  return candidates[0]?.id ?? null;
 }
 
 function canonicalType(type: string): string {
@@ -188,7 +243,8 @@ function normalizeJadeLeave(
   type: string,
   durationLabel: string,
   time: string,
-  hoursOverride?: number
+  hoursOverride?: number,
+  periodIdValue: string | null = null,
 ): NormalizedLeaveRecord {
   const parsedHours = parseDurationHours(durationLabel, type);
   const hours = hoursOverride !== undefined && hoursOverride > 0
@@ -206,12 +262,14 @@ function normalizeJadeLeave(
     status: '확정',
     reason: '',
     source: 'jade',
+    periodId: periodIdValue,
     deductible: hours !== null && isAnnualLeaveType(type),
   };
 }
 
-function normalizeJadeRecords(record: AttendanceRecord): NormalizedLeaveRecord[] {
+function normalizeJadeRecords(record: AttendanceRecord, periods: readonly LeaveBalancePeriod[]): NormalizedLeaveRecord[] {
   const ymd = normalizeYmd(record.ymd) ?? record.ymd;
+  const recordPeriodId = periodForYmd(ymd, periods);
   const leaveRows = record.workList.filter((row) => isReviewLeaveType(row.type));
   if (leaveRows.length > 0) {
     return leaveRows.map((row, index) => {
@@ -226,6 +284,7 @@ function normalizeJadeRecords(record: AttendanceRecord): NormalizedLeaveRecord[]
         row.duration,
         row.time,
         matchesConvenienceField ? record.vacation?.hours : undefined,
+        recordPeriodId,
       );
     });
   }
@@ -236,13 +295,15 @@ function normalizeJadeRecords(record: AttendanceRecord): NormalizedLeaveRecord[]
     record.vacation.duration,
     record.vacation.time,
     record.vacation.hours,
+    recordPeriodId,
   )];
 }
 
-function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
+function normalizeInsaRecord(record: InsaLeaveRecord, periods: readonly LeaveBalancePeriod[]): NormalizedLeaveRecord {
+  const ymd = normalizeYmd(record.ymd) ?? record.ymd;
   const hours = parseDurationHours(record.durationLabel, record.type);
   return {
-    ymd: normalizeYmd(record.ymd) ?? record.ymd,
+    ymd,
     type: record.type,
     canonicalType: canonicalType(record.type),
     durationLabel: record.durationLabel,
@@ -251,6 +312,7 @@ function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
     status: record.approvalStatus,
     reason: record.reason,
     source: 'insa',
+    periodId: record.periodId ?? periodForYmd(ymd, periods),
     deductible: hours !== null
       && isApproved(record.approvalStatus)
       && isAnnualLeaveType(record.type),
@@ -302,7 +364,8 @@ function defaultDecision(record: NormalizedLeaveRecord): Exclude<LeaveDecision, 
 
 function buildReviewRows(
   jade: readonly NormalizedLeaveRecord[],
-  insa: readonly NormalizedLeaveRecord[]
+  insa: readonly NormalizedLeaveRecord[],
+  periods: readonly LeaveBalancePeriod[]
 ): LeaveReviewRow[] {
   const allRecords = [...jade, ...insa];
   const groupByRecord = new Map<NormalizedLeaveRecord, string>();
@@ -341,21 +404,26 @@ function buildReviewRows(
     });
   });
 
-  return allRecords.map((record, index) => ({
-    id: `${record.source}-${index}`,
-    ymd: record.ymd,
-    type: record.type,
-    canonicalType: record.canonicalType,
-    durationLabel: record.durationLabel,
-    hours: record.hours,
-    status: record.status,
-    reason: record.reason,
-    source: record.source,
-    deductible: record.deductible,
-    duplicateGroup: groupByRecord.get(record) ?? null,
-    autoDecision: decisionByRecord.get(record) ?? defaultDecision(record),
-    needsReview: needsReview(record),
-  })).sort((left, right) => `${left.ymd}|${left.source}|${left.id}`.localeCompare(`${right.ymd}|${right.source}|${right.id}`));
+  return allRecords.map((record, index) => {
+    const period = periods.find((candidate) => candidate.id === record.periodId);
+    return {
+      id: `${record.source}-${index}`,
+      ymd: record.ymd,
+      type: record.type,
+      canonicalType: record.canonicalType,
+      durationLabel: record.durationLabel,
+      hours: record.hours,
+      status: record.status,
+      reason: record.reason,
+      source: record.source,
+      periodId: record.periodId,
+      periodLabel: period ? `${period.year} ${period.isNewHire ? '신입휴가' : '연차'}` : null,
+      deductible: record.deductible,
+      duplicateGroup: groupByRecord.get(record) ?? null,
+      autoDecision: decisionByRecord.get(record) ?? defaultDecision(record),
+      needsReview: needsReview(record),
+    };
+  }).sort((left, right) => `${left.ymd}|${left.source}|${left.id}`.localeCompare(`${right.ymd}|${right.source}|${right.id}`));
 }
 
 function effectiveDecision(row: LeaveReviewRow, decisions: LeaveDecisionByRowId): Exclude<LeaveDecision, 'auto'> {
@@ -413,14 +481,21 @@ export function calculateLeaveBalanceSummary(
 export function reconcileLeaveBalance(
   year: number,
   jadeRecords: readonly AttendanceRecord[],
-  insaData: InsaLeavePageData
+  insaData: InsaLeavePageData,
+  includePreviousPeriod = false,
 ): LeaveBalanceResult {
+  const allPeriods = insaData.balances.map(toLeaveBalancePeriod);
+  const periods = allPeriods.filter((period) => (
+    period.year === year
+    || (includePreviousPeriod && period.year === year - 1 && period.isNewHire)
+  ));
+  const includedYears = new Set(periods.map((period) => period.year));
   const jade = jadeRecords
-    .filter((record) => yearFromYmd(record.ymd) === year)
-    .flatMap(normalizeJadeRecords);
+    .filter((record) => includedYears.has(yearFromYmd(record.ymd) ?? -1))
+    .flatMap((record) => normalizeJadeRecords(record, periods));
   const insa = insaData.records
-    .filter((record) => yearFromYmd(record.ymd) === year)
-    .map(normalizeInsaRecord);
+    .filter((record) => includedYears.has(yearFromYmd(record.ymd) ?? -1))
+    .map((record) => normalizeInsaRecord(record, periods));
 
   const insaByKey = new Map<string, NormalizedLeaveRecord[]>();
   for (const record of insa) {
@@ -458,10 +533,8 @@ export function reconcileLeaveBalance(
   const insaUsedHours = insa
     .filter((record) => record.deductible && record.hours !== null)
     .reduce((total, record) => total + (record.hours ?? 0), 0);
-  const accruedHours = insaData.balances
-    .filter((balance) => balance.year === year)
-    .reduce((total, balance) => total + balance.accruedHours, 0);
-  const reviewRows = buildReviewRows(jade, insa);
+  const accruedHours = periods.reduce((total, period) => total + period.accruedHours, 0);
+  const reviewRows = buildReviewRows(jade, insa, periods);
   const baseResult: LeaveBalanceResult = {
     year,
     accruedHours,
@@ -472,6 +545,9 @@ export function reconcileLeaveBalance(
     remainingHours: accruedHours,
     records,
     reviewRows,
+    periods,
+    availablePeriods: allPeriods,
+    includePreviousPeriod,
     unresolved: [],
   };
   const automaticSummary = calculateLeaveBalanceSummary(

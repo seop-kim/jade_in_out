@@ -11,6 +11,29 @@ const result: LeaveBalanceResult = {
   duplicateHours: 8,
   usedHours: 32,
   remainingHours: 128,
+  periods: [{
+    id: '2026|2026-01-01 ~ 2026-12-31',
+    year: 2026,
+    period: '2026-01-01 ~ 2026-12-31',
+    startYmd: '2026-01-01',
+    endYmd: '2026-12-31',
+    isNewHire: false,
+    accruedHours: 160,
+    usedHours: 32,
+    remainingHours: 128,
+  }],
+  availablePeriods: [{
+    id: '2026|2026-01-01 ~ 2026-12-31',
+    year: 2026,
+    period: '2026-01-01 ~ 2026-12-31',
+    startYmd: '2026-01-01',
+    endYmd: '2026-12-31',
+    isNewHire: false,
+    accruedHours: 160,
+    usedHours: 32,
+    remainingHours: 128,
+  }],
+  includePreviousPeriod: false,
   records: [
     {
       ymd: '2026-08-05',
@@ -35,6 +58,8 @@ const result: LeaveBalanceResult = {
       status: '확정',
       reason: '',
       source: 'jade',
+      periodId: '2026|2026-01-01 ~ 2026-12-31',
+      periodLabel: '2026 연차',
       deductible: true,
       duplicateGroup: 'duplicate-0',
       autoDecision: 'deduct',
@@ -50,6 +75,8 @@ const result: LeaveBalanceResult = {
       status: '승인',
       reason: '신규 사유',
       source: 'insa',
+      periodId: '2026|2026-01-01 ~ 2026-12-31',
+      periodLabel: '2026 연차',
       deductible: true,
       duplicateGroup: 'duplicate-0',
       autoDecision: 'duplicate',
@@ -117,11 +144,11 @@ describe('LeaveBalanceModal', () => {
 
     expect(onLoad).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', {name: '조회'}));
-    expect(onLoad).toHaveBeenCalledWith(2026, expect.any(AbortSignal), expect.any(Function));
+    expect(onLoad).toHaveBeenCalledWith(2026, expect.any(AbortSignal), expect.any(Function), false);
     expect(screen.getByText('휴가 현황을 불러오는 중입니다.')).toBeInTheDocument();
 
     resolve(result);
-    expect(await screen.findByText('발생')).toBeInTheDocument();
+    expect((await screen.findAllByText('발생')).length).toBeGreaterThan(0);
     expect(screen.getByText('Jade 사용')).toBeInTheDocument();
     expect(screen.getByText('신규 사용')).toBeInTheDocument();
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
@@ -194,6 +221,44 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
     expect(screen.queryByRole('button', {name: '행 삭제 2026-08-05 Jade'})).not.toBeInTheDocument();
     expect(screen.getByText('Jade 사용').parentElement).toHaveTextContent('0시간');
+  });
+
+  test('reloads with the previous new-hire period when the option is enabled', async () => {
+    const previousPeriod = {
+      id: '2025|2025-03-04 ~ 2026-03-03',
+      year: 2025,
+      period: '2025-03-04 ~ 2026-03-03',
+      startYmd: '2025-03-04',
+      endYmd: '2026-03-03',
+      isNewHire: true,
+      accruedHours: 88,
+      usedHours: 66,
+      remainingHours: 22,
+    };
+    const previousResult: LeaveBalanceResult = {
+      ...result,
+      accruedHours: 248,
+      periods: [...result.periods, previousPeriod],
+      availablePeriods: [...result.availablePeriods, previousPeriod],
+      includePreviousPeriod: true,
+    };
+    const initialResult: LeaveBalanceResult = {
+      ...result,
+      availablePeriods: [...result.availablePeriods, previousPeriod],
+    };
+    const onLoad = jest.fn((_year: number, _signal: AbortSignal, _onProgress: unknown, includePrevious = false) => (
+      Promise.resolve(includePrevious ? previousResult : result)
+    ));
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={onLoad} result={initialResult} error={null} loading={false} progress={null} />
+    );
+
+    const toggle = screen.getByRole('checkbox', {name: '이전 발생기간 포함'});
+    await userEvent.click(toggle);
+
+    expect(onLoad).toHaveBeenCalledWith(2026, expect.any(AbortSignal), expect.any(Function), true);
+    expect(await screen.findByText('2025 신입휴가')).toBeInTheDocument();
+    expect(screen.getByText('2025-03-04 ~ 2026-03-03')).toBeInTheDocument();
   });
 
   test('accepts entered hours for an unknown-duration row', async () => {

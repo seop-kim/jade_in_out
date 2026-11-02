@@ -2,6 +2,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   fetchInsaDayDetails,
   fetchInsaLeave,
+  fetchInsaLeavePeriod,
   isInsaAuthenticationError,
   InsaMonthLoadResult,
   InsaMonthSource,
@@ -194,11 +195,43 @@ function InsaPage({
       return undefined;
     }
 
-    const loader: InsaLeaveLoader = (_year, signal) => fetchInsaLeave({
-      cookie: cookie ?? undefined,
-      signal,
-      requestHtml: cookie ? undefined : requestHtmlViaBridge,
-    });
+    const loader: InsaLeaveLoader = async (_year, signal, _onProgress, includePreviousPeriod = false) => {
+      const requestOptions = {
+        cookie: cookie ?? undefined,
+        signal,
+        requestHtml: cookie ? undefined : requestHtmlViaBridge,
+      };
+      const page = await fetchInsaLeave(requestOptions);
+      const isNewHirePeriod = (period: string, year: number): boolean => {
+        const start = period.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+        return Boolean(start && start !== `${year}-01-01`);
+      };
+      const targetBalances = page.balances.filter((balance) => (
+        balance.year === _year
+        || (includePreviousPeriod && balance.year === _year - 1 && isNewHirePeriod(balance.period, balance.year))
+      ));
+      const pageHasSelectedYearRecords = page.records.some((record) => Number(record.ymd.slice(0, 4)) === _year);
+      const detailResults = await Promise.all(targetBalances
+        .filter((balance) => balance.detailPath && (balance.year !== _year || !pageHasSelectedYearRecords))
+        .map(async (balance) => ({
+          periodId: `${balance.year}|${balance.period}`,
+          records: await fetchInsaLeavePeriod(balance.detailPath!, requestOptions),
+        })));
+      const fetchedPeriodIds = new Set(detailResults.map((result) => result.periodId));
+      const fallbackRecords = page.records
+        .filter((record) => Number(record.ymd.slice(0, 4)) === _year && !fetchedPeriodIds.has(`${_year}|${page.balances.find((balance) => balance.year === _year)?.period ?? ''}`))
+        .map((record) => ({
+          ...record,
+          periodId: `${_year}|${page.balances.find((balance) => balance.year === _year)?.period ?? ''}`,
+        }));
+      return {
+        ...page,
+        records: [
+          ...fallbackRecords,
+          ...detailResults.flatMap((result) => result.records.map((record) => ({...record, periodId: result.periodId}))),
+        ],
+      };
+    };
     onLeaveDataReady?.(loader);
     return () => onLeaveDataReady?.(null);
   }, [bridgeReady, cookie, onLeaveDataReady, requestHtmlViaBridge]);
