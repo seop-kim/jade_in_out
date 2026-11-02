@@ -298,6 +298,57 @@ describe('App system tabs', () => {
     expect(mockedFetchInsaLeave).toHaveBeenCalledWith(expect.objectContaining({cookie: 'insa-session'}));
   });
 
+  test('passes both source leave rows into the manual review grid', async () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {S_EMP_NM: '김태섭', S_EMP_ID: '20250304'},
+    });
+    saveInsaCookie('insa-session');
+    mockedFetchAttendanceForMonth.mockResolvedValue({});
+    mockedLoadInsaMonth.mockResolvedValue(monthResult(2026, 7));
+    mockedFetchLeaveUsageForYear.mockResolvedValue([{
+      ymd: '2026-08-07',
+      workDay: '(금)',
+      workType: '기본근무',
+      vacation: {type: '연차휴가', duration: '4시간', time: '후4', hours: 4, isFullDay: false},
+      overtime: null,
+      dayOffWork: null,
+      remoteWork: null,
+      clockIn: '',
+      clockInChanged: false,
+      clockInLocal: false,
+      clockOut: '',
+      clockOutChanged: false,
+      clockOutLocal: false,
+      workList: [],
+      raw: {},
+    }]);
+    mockedFetchInsaLeave.mockResolvedValue({
+      balances: [{year: 2026, period: '2026', accruedHours: 160, usedHours: 0, remainingHours: 160}],
+      records: [{
+        ymd: '2026-08-07',
+        durationLabel: '(후4)',
+        type: '연차휴가(시간차)',
+        reason: '신규 승인 이력',
+        appliedAt: '2026-08-07',
+        approvalStatus: '승인',
+      }],
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findAllByText(/^최근 조회/);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    await userEvent.click(screen.getByRole('button', {name: '휴가 현황'}));
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
+
+    expect(await screen.findByText('신규 승인 이력')).toBeInTheDocument();
+    expect(screen.getAllByText('Jade', {exact: true})).toHaveLength(1);
+    expect(screen.getByRole('cell', {name: '신규'})).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
+  });
+
   test('shows a connected diagnostic after a successful INSA month request', async () => {
     saveInsaCookie('synthetic-session');
     render(<App />);
