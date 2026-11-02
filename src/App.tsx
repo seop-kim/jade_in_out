@@ -63,10 +63,9 @@ class LeaveBalanceSourceError extends Error {
 
 function safeLeaveBalanceErrorMessage(reason: unknown): string | null {
   const message = reason instanceof Error ? reason.message.trim() : '';
-  if (/^HTTP \d{3}$/.test(message) || message === 'Failed to fetch' || message === 'Network Error') {
-    return message;
-  }
-  return null;
+  if (!message || message === (reason instanceof Error ? reason.name : '')) return null;
+  if (/(?:cookie|authorization|password|passwd|sessionid|asp_session|\bS_[A-Z0-9_]+\s*=)/i.test(message)) return null;
+  return message.length > 160 ? `${message.slice(0, 157)}...` : message;
 }
 
 function ExportIcon() {
@@ -429,6 +428,12 @@ function App() {
           : null;
         const failures = jadeAnnualError?.failures ?? [];
         const sourceLabel = sourceError?.source ?? '알 수 없는 시스템';
+        const safeMessage = safeLeaveBalanceErrorMessage(rootReason);
+        console.warn('[leave-balance] request failed', {
+          source: sourceLabel,
+          errorType: rootReason instanceof Error ? rootReason.name : 'UnknownError',
+          errorMessage: safeMessage ?? '메시지 없음',
+        });
         setLeaveBalanceErrorDetails(isJadeAnnualError
           ? [
               `${sourceLabel} ${String(jadeAnnualError?.year)}년 조회 실패 (${failures.length}건)`,
@@ -438,8 +443,8 @@ function App() {
           : [
               `${sourceLabel} 휴가 조회 실패`,
               `오류 유형: ${rootReason instanceof Error ? rootReason.name : '알 수 없음'}`,
-              ...(safeLeaveBalanceErrorMessage(rootReason)
-                ? [`오류 내용: ${safeLeaveBalanceErrorMessage(rootReason)}`]
+              ...(safeMessage
+                ? [`오류 내용: ${safeMessage}`]
                 : []),
             ]);
         showErrorToast('휴가 현황 조회에 실패했습니다.');
