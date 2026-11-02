@@ -107,6 +107,8 @@ function periodKey(durationLabel: string): string {
   if (!value) return 'full-day';
   if (/(?:전일|종일|하루)/.test(value)) return 'full-day';
   if (/^\d+(?:\.\d+)?(?:시간|h|일|d)$/i.test(value)) return 'full-day';
+  const clockRangeMatch = value.match(/^(?:\d+(?:\.\d+)?시간)?(\d{1,2})(?::\d{2})?[-~]\d{1,2}(?::\d{2})?$/i);
+  if (clockRangeMatch?.[1]) return Number(clockRangeMatch[1]) < 12 ? 'morning' : 'afternoon';
   if (/(?:오전|출|전)\d*/.test(value)) return 'morning';
   if (/(?:오후|퇴|후)\d*/.test(value)) return 'afternoon';
   return value;

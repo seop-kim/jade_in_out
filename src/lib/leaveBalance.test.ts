@@ -73,6 +73,20 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('deduplicates a clock-range Jade record with an INSA 출4 label', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-03-18', '연차휴가', '4시간 (09:00~14:00)', '', 4)],
+      insaData([insaRecord('2026-03-18', '연차휴가(시간차)', '(출4)')])
+    );
+
+    expect(result.duplicateHours).toBe(4);
+    expect(result.usedHours).toBe(4);
+    expect(result.records).toEqual([
+      expect.objectContaining({ymd: '2026-03-18', source: 'both', hours: 4}),
+    ]);
+  });
+
   test('normalizes compact Jade dates before filtering and matching', () => {
     const result = reconcileLeaveBalance(
       2026,
