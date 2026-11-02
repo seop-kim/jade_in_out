@@ -62,6 +62,7 @@ function LeaveBalanceModal({
   const [localProgress, setLocalProgress] = useState<LeaveBalanceProgress | null>(null);
   const [decisionByRowId, setDecisionByRowId] = useState<LeaveDecisionByRowId>({});
   const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
+  const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +94,7 @@ function LeaveBalanceModal({
     if (!displayResult) return;
     setDecisionByRowId({});
     setHoursByRowId({});
+    setDeletedRowIds(new Set());
   }, [displayResult]);
 
   useEffect(() => {
@@ -104,6 +106,7 @@ function LeaveBalanceModal({
     setRequesting(false);
     setDecisionByRowId({});
     setHoursByRowId({});
+    setDeletedRowIds(new Set());
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -113,6 +116,7 @@ function LeaveBalanceModal({
     setRequesting(false);
     setDecisionByRowId({});
     setHoursByRowId({});
+    setDeletedRowIds(new Set());
     onClose();
   }, [onClose]);
 
@@ -169,8 +173,14 @@ function LeaveBalanceModal({
   const isLoading = loading || requesting;
   const displayError = localError ?? error;
   const displayProgress = localProgress ?? progress;
-  const displaySummary = displayResult
-    ? calculateLeaveBalanceSummary(displayResult, decisionByRowId, hoursByRowId)
+  const displayRows = displayResult
+    ? displayResult.reviewRows.filter((row) => !deletedRowIds.has(row.id))
+    : [];
+  const summaryResult = displayResult
+    ? {...displayResult, reviewRows: displayRows}
+    : null;
+  const displaySummary = summaryResult
+    ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
     : null;
   const progressPercent = displayProgress && displayProgress.total > 0
     ? Math.min(100, Math.round((displayProgress.completed / displayProgress.total) * 100))
@@ -189,6 +199,7 @@ function LeaveBalanceModal({
     setLocalProgress(null);
     setDecisionByRowId({});
     setHoursByRowId({});
+    setDeletedRowIds(new Set());
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
         if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
@@ -218,6 +229,7 @@ function LeaveBalanceModal({
     setRequesting(false);
     setDecisionByRowId({});
     setHoursByRowId({});
+    setDeletedRowIds(new Set());
   };
 
   return (
@@ -272,14 +284,14 @@ function LeaveBalanceModal({
 
             <div className="leave-balance-records">
               <h3>사용 내역</h3>
-              {displayResult.reviewRows.length === 0 ? (
+              {displayRows.length === 0 ? (
                 <p className="leave-balance-empty">사용 내역이 없습니다.</p>
               ) : (
                 <div className="leave-balance-table-wrap">
                   <table>
-                    <thead><tr><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th></tr></thead>
+                    <thead><tr><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th><th>관리</th></tr></thead>
                     <tbody>
-                      {displayResult.reviewRows.map((row) => {
+                      {displayRows.map((row) => {
                         const selectedDecision = decisionByRowId[row.id] ?? 'auto';
                         const effective = selectedDecision === 'auto' ? row.autoDecision : selectedDecision;
                         const enteredHours = hoursByRowId[row.id];
@@ -287,8 +299,9 @@ function LeaveBalanceModal({
                           ? enteredHours
                           : row.hours;
                         const rowLabel = `${row.ymd} ${sourceLabel(row.source)}`;
+                        const rowIsDismissed = effective === 'exclude' || effective === 'duplicate';
                         return (
-                        <tr key={row.id}>
+                        <tr key={row.id} className={rowIsDismissed ? 'leave-balance-row-dismissed' : undefined}>
                           <td>{row.ymd}</td>
                           <td>{row.type}</td>
                           <td>{row.reason || '-'}</td>
@@ -332,6 +345,16 @@ function LeaveBalanceModal({
                               />
                             ) : hoursLabel(effectiveHours)}
                             {effective === 'deduct' && effectiveHours === null && <span className="leave-balance-review-needed">확인 필요</span>}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="leave-balance-delete"
+                              aria-label={`행 삭제 ${rowLabel}`}
+                              onClick={() => setDeletedRowIds((current) => new Set([...current, row.id]))}
+                            >
+                              삭제
+                            </button>
                           </td>
                         </tr>
                         );

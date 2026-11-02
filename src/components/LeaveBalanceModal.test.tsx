@@ -178,6 +178,22 @@ describe('LeaveBalanceModal', () => {
     expect(finalDecisions[1]).toHaveValue('deduct');
   });
 
+  test('dims excluded rows and removes a row only for the current modal view', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    const finalDecisions = screen.getAllByRole('combobox', {name: /최종 판정/});
+    expect(finalDecisions[1]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
+
+    await userEvent.selectOptions(finalDecisions[0]!, 'exclude');
+    expect(finalDecisions[0]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
+
+    await userEvent.click(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'}));
+    expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
+    expect(screen.queryByRole('button', {name: '행 삭제 2026-08-05 Jade'})).not.toBeInTheDocument();
+  });
+
   test('accepts entered hours for an unknown-duration row', async () => {
     const unknownResult: LeaveBalanceResult = {
       ...result,
