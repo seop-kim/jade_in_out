@@ -121,6 +121,31 @@ describe('Jade API', () => {
     }));
   });
 
+  test('keeps successful records when a historical year has isolated request errors', async () => {
+    let failed = false;
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        if (!failed) {
+          failed = true;
+          return Promise.reject(new Error('historical date unavailable'));
+        }
+        return Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+      allowPartial: true,
+    });
+
+    expect(records.length).toBeGreaterThan(0);
+    expect(transport.post).toHaveBeenCalled();
+  });
+
   test('stops the annual loader immediately when Jade authentication expires', async () => {
     const post = jest.fn().mockResolvedValue(`
       <SHEET>

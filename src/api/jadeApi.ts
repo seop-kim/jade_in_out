@@ -378,6 +378,7 @@ export interface FetchLeaveUsageYearOptions {
   retryCount?: number;
   retryDelayMs?: number;
   ignoreMissing?: boolean;
+  allowPartial?: boolean;
   transport?: JadeBridgeTransport;
   onProgress?: (info: ProgressInfo) => void;
 }
@@ -394,6 +395,7 @@ export interface FetchMonthOptions {
   onProgress?: (info: ProgressInfo) => void;
   onDayResult?: (ymd: string, result: AttendanceResult) => void;
   ignoreMissing?: boolean;
+  allowPartial?: boolean;
   transport?: JadeBridgeTransport;
 }
 
@@ -409,6 +411,7 @@ export async function fetchAttendanceForMonth({
   onProgress,
   onDayResult,
   ignoreMissing = false,
+  allowPartial = false,
   transport,
 }: FetchMonthOptions): Promise<Record<string, AttendanceResult>> {
   const lastDay = new Date(year, month + 1, 0).getDate();
@@ -484,6 +487,7 @@ export async function fetchLeaveUsageForYear({
   retryCount = 2,
   retryDelayMs = 250,
   ignoreMissing = true,
+  allowPartial = false,
   transport,
   onProgress,
 }: FetchLeaveUsageYearOptions): Promise<AttendanceRecord[]> {
@@ -507,6 +511,7 @@ export async function fetchLeaveUsageForYear({
       retryDelayMs,
       signal: monthController.signal,
       ignoreMissing,
+      allowPartial,
       transport,
       onDayResult: (_ymd, result) => {
         if ('error' in result && 'authError' in result && result.authError) monthController.abort();
@@ -520,7 +525,7 @@ export async function fetchLeaveUsageForYear({
     const errors = Object.values(monthResults).filter((result): result is AttendanceError => 'error' in result);
     const authError = errors.find((error) => error.authError);
     if (authError) throw new JadeAuthenticationError();
-    if (errors.length > 0) throw new Error('Jade annual leave request failed');
+    if (errors.length > 0 && !allowPartial) throw new Error('Jade annual leave request failed');
     records.push(...Object.values(monthResults).filter(
       (result): result is AttendanceRecord => !('error' in result)
     ));

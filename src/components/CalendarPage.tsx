@@ -111,6 +111,7 @@ function CalendarPage({
         year: targetYear,
         signal,
         transport,
+        allowPartial: includePreviousPeriod && targetYear === year - 1,
         onProgress: (progress) => onProgress?.({
           year: targetYear,
           completed: progress.completed,
