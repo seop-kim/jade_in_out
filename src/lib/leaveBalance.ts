@@ -120,7 +120,18 @@ function periodKey(durationLabel: string): string {
 }
 
 function isApproved(status: string): boolean {
-  return /^(?:승인|승인완료|완료|approved|complete|completed|confirmed)$/i.test(compact(status));
+  const compactStatus = compact(status);
+  if (/(?:반려|취소|대기|미승인|신청)/.test(compactStatus)) return false;
+
+  const isApprovedToken = (token: string): boolean => (
+    /^(?:승인|승인완료|완료|approved|complete|completed|confirmed)$/i.test(compact(token))
+  );
+  if (isApprovedToken(status)) return true;
+
+  const approvalTokens = status.match(/:\s*([^\s)]+)/g)
+    ?.map((entry) => entry.replace(/^:\s*/, ''))
+    ?? [];
+  return approvalTokens.length > 0 && approvalTokens.every(isApprovedToken);
 }
 
 function isJadeLeaveType(type: string): boolean {

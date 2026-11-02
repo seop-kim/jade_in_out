@@ -108,6 +108,26 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('deduplicates records when INSA approval status contains approval history', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-03-18', '연차휴가', '4시간', '출4', 4)],
+      insaData([insaRecord(
+        '2026-03-18',
+        '연차휴가(시간차)',
+        '(출4)',
+        '루상민 (2026.03.18:승인) 유현철 (2026.03.18:승인)'
+      )])
+    );
+
+    expect(result.insaUsedHours).toBe(4);
+    expect(result.duplicateHours).toBe(4);
+    expect(result.usedHours).toBe(4);
+    expect(result.records).toEqual([
+      expect.objectContaining({ymd: '2026-03-18', source: 'both', deductible: true}),
+    ]);
+  });
+
   test('normalizes compact Jade dates before filtering and matching', () => {
     const result = reconcileLeaveBalance(
       2026,
