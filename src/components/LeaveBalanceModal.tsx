@@ -74,6 +74,7 @@ function LeaveBalanceModal({
   const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
   const [accruedHoursByPeriodId, setAccruedHoursByPeriodId] = useState<Record<string, number | undefined>>({});
   const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
+  const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +112,7 @@ function LeaveBalanceModal({
     setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
     setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
+    setDeleteRowId(null);
   }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
@@ -126,6 +128,7 @@ function LeaveBalanceModal({
     setIncludePreviousPeriod(false);
     setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
+    setDeleteRowId(null);
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -226,12 +229,31 @@ function LeaveBalanceModal({
       return effective === 'exclude' || effective === 'duplicate';
     })
     .map((row) => row.id);
+  const activeDateCounts = displayRows.reduce((counts, row) => {
+    const selectedDecision = decisionByRowId[row.id] ?? 'auto';
+    const effective = selectedDecision === 'auto' ? row.autoDecision : selectedDecision;
+    if (effective !== 'exclude' && effective !== 'duplicate') {
+      counts.set(row.ymd, (counts.get(row.ymd) ?? 0) + 1);
+    }
+    return counts;
+  }, new Map<string, number>());
   const handleOpenDeleteDismissedDialog = (): void => {
     setDeleteDismissedDialogOpen(true);
   };
   const handleConfirmDeleteDismissedRows = (): void => {
     setDeletedRowIds((current) => new Set([...current, ...dismissibleRowIds]));
     setDeleteDismissedDialogOpen(false);
+  };
+  const handleRequestRowDelete = (rowId: string, rowIsDismissed: boolean): void => {
+    if (rowIsDismissed) {
+      setDeletedRowIds((current) => new Set([...current, rowId]));
+      return;
+    }
+    setDeleteRowId(rowId);
+  };
+  const handleConfirmDeleteRow = (): void => {
+    if (deleteRowId) setDeletedRowIds((current) => new Set([...current, deleteRowId]));
+    setDeleteRowId(null);
   };
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
@@ -438,8 +460,9 @@ function LeaveBalanceModal({
                           : row.hours;
                         const rowLabel = `${row.ymd} ${sourceLabel(row.source)}`;
                         const rowIsDismissed = effective === 'exclude' || effective === 'duplicate';
+                        const rowIsDuplicate = !rowIsDismissed && (activeDateCounts.get(row.ymd) ?? 0) > 1;
                         return (
-                        <tr key={row.id} className={rowIsDismissed ? 'leave-balance-row-dismissed' : undefined}>
+                        <tr key={row.id} className={[rowIsDismissed && 'leave-balance-row-dismissed', rowIsDuplicate && 'leave-balance-row-duplicate'].filter(Boolean).join(' ') || undefined}>
                           <td>{row.periodLabel || '-'}</td>
                           <td>{row.ymd}</td>
                           <td>{row.type}</td>
@@ -490,7 +513,7 @@ function LeaveBalanceModal({
                               type="button"
                               className="leave-balance-delete"
                               aria-label={`행 삭제 ${rowLabel}`}
-                              onClick={() => setDeletedRowIds((current) => new Set([...current, row.id]))}
+                              onClick={() => handleRequestRowDelete(row.id, rowIsDismissed)}
                             >
                               삭제
                             </button>
@@ -522,6 +545,18 @@ function LeaveBalanceModal({
                     ) : (
                       <button type="button" onClick={() => setDeleteDismissedDialogOpen(false)}>확인</button>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleteRowId && (
+              <div className="leave-balance-confirm-backdrop">
+                <div className="leave-balance-confirm-dialog" role="dialog" aria-modal="true" aria-label="행 삭제 확인">
+                  <h3>행 삭제</h3>
+                  <p>취소선이 없는 사용 내역을 삭제할까요?</p>
+                  <div className="leave-balance-confirm-actions">
+                    <button type="button" onClick={() => setDeleteRowId(null)}>취소</button>
+                    <button type="button" className="leave-balance-confirm-danger" onClick={handleConfirmDeleteRow}>삭제</button>
                   </div>
                 </div>
               </div>

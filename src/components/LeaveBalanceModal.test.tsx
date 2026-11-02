@@ -343,6 +343,41 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('Jade 사용').parentElement).toHaveTextContent('0시간');
   });
 
+  test('asks for confirmation before deleting an active row', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'}));
+    expect(screen.getByRole('dialog', {name: '행 삭제 확인'})).toHaveTextContent('취소선이 없는 사용 내역을 삭제할까요?');
+
+    await userEvent.click(screen.getByRole('button', {name: '취소'}));
+    expect(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'})).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'}));
+    await userEvent.click(screen.getByRole('button', {name: '삭제'}));
+    expect(screen.queryByRole('button', {name: '행 삭제 2026-08-05 Jade'})).not.toBeInTheDocument();
+  });
+
+  test('highlights active rows with the same date and clears it when one is dismissed', async () => {
+    const duplicateResult: LeaveBalanceResult = {
+      ...result,
+      reviewRows: result.reviewRows.map((row) => ({...row, autoDecision: 'deduct' as const})),
+    };
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={duplicateResult} error={null} loading={false} progress={null} />
+    );
+
+    const finalDecisions = screen.getAllByRole('combobox', {name: /최종 판정/});
+    expect(finalDecisions[0]!.closest('tr')).toHaveClass('leave-balance-row-duplicate');
+    expect(finalDecisions[1]!.closest('tr')).toHaveClass('leave-balance-row-duplicate');
+
+    await userEvent.selectOptions(finalDecisions[1]!, 'duplicate');
+    expect(finalDecisions[0]!.closest('tr')).not.toHaveClass('leave-balance-row-duplicate');
+    expect(finalDecisions[1]!.closest('tr')).not.toHaveClass('leave-balance-row-duplicate');
+    expect(finalDecisions[1]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
+  });
+
   test('deletes all dismissed rows at once', async () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
