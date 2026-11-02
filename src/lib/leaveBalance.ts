@@ -2,6 +2,8 @@ import {AttendanceRecord} from '../api/jadeApi';
 import {InsaLeavePageData, InsaLeaveRecord} from '../api/insaParsers';
 
 export type LeaveRecordSource = 'jade' | 'insa' | 'both';
+export type LeaveSource = Exclude<LeaveRecordSource, 'both'>;
+export type LeaveDecision = 'auto' | 'deduct' | 'exclude' | 'duplicate';
 
 export interface LeaveBalanceRecord {
   ymd: string;
@@ -13,6 +15,22 @@ export interface LeaveBalanceRecord {
   source: LeaveRecordSource;
   deductible: boolean;
   duplicate: boolean;
+}
+
+export interface LeaveReviewRow {
+  id: string;
+  ymd: string;
+  type: string;
+  canonicalType: string;
+  durationLabel: string;
+  hours: number | null;
+  status: string;
+  reason: string;
+  source: LeaveSource;
+  deductible: boolean;
+  duplicateGroup: string | null;
+  autoDecision: Exclude<LeaveDecision, 'auto'>;
+  needsReview: boolean;
 }
 
 export interface UnresolvedLeaveRecord extends LeaveBalanceRecord {
@@ -28,6 +46,17 @@ export interface LeaveBalanceResult {
   usedHours: number;
   remainingHours: number;
   records: LeaveBalanceRecord[];
+  reviewRows: LeaveReviewRow[];
+  unresolved: UnresolvedLeaveRecord[];
+}
+
+export type LeaveDecisionByRowId = Readonly<Record<string, LeaveDecision>>;
+export type LeaveHoursByRowId = Readonly<Record<string, number | undefined>>;
+
+export interface LeaveBalanceSummary {
+  duplicateHours: number;
+  usedHours: number;
+  remainingHours: number;
   unresolved: UnresolvedLeaveRecord[];
 }
 
@@ -51,7 +80,8 @@ interface NormalizedLeaveRecord {
   periodKey: string;
   hours: number | null;
   status: string;
-  source: Exclude<LeaveRecordSource, 'both'>;
+  reason: string;
+  source: LeaveSource;
   deductible: boolean;
 }
 
@@ -74,8 +104,22 @@ function canonicalType(type: string): string {
   return value.toLowerCase();
 }
 
-function isNonDeductibleLeaveType(type: string): boolean {
-  return canonicalType(type) === 'health';
+function isAnnualLeaveType(type: string): boolean {
+  const value = compact(type);
+  return value.includes('연차') || value.includes('시간차') || value === '휴가';
+}
+
+function isKnownNonDeductibleLeaveType(type: string): boolean {
+  const value = compact(type);
+  return canonicalType(type) === 'health'
+    || value.includes('비전리더')
+    || value.includes('건강검진')
+    || value.includes('예비군');
+}
+
+function isReviewLeaveType(type: string): boolean {
+  const value = compact(type);
+  return !['연장', '휴무일', '재택근무', '현지출근신청', '현지퇴근신청'].includes(value);
 }
 
 function parseDurationHours(durationLabel: string, type: string): number | null {
@@ -135,15 +179,6 @@ function isApproved(status: string): boolean {
   return approvalTokens.length > 0 && approvalTokens.every(isApprovedToken);
 }
 
-function isJadeLeaveType(type: string): boolean {
-  const value = compact(type);
-  return value.includes('연차')
-    || value.includes('시간차')
-    || value.includes('휴가')
-    || value.includes('병가')
-    || value.includes('공가');
-}
-
 function normalizeJadeLeave(
   ymd: string,
   type: string,
@@ -165,14 +200,15 @@ function normalizeJadeLeave(
     periodKey: periodKey(time || durationLabel, hours),
     hours,
     status: '확정',
+    reason: '',
     source: 'jade',
-    deductible: hours !== null && !isNonDeductibleLeaveType(type),
+    deductible: hours !== null && isAnnualLeaveType(type),
   };
 }
 
 function normalizeJadeRecords(record: AttendanceRecord): NormalizedLeaveRecord[] {
   const ymd = normalizeYmd(record.ymd) ?? record.ymd;
-  const leaveRows = record.workList.filter((row) => isJadeLeaveType(row.type));
+  const leaveRows = record.workList.filter((row) => isReviewLeaveType(row.type));
   if (leaveRows.length > 0) {
     return leaveRows.map((row, index) => {
       const matchesConvenienceField = index === 0
@@ -209,10 +245,11 @@ function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
     periodKey: periodKey(record.durationLabel, hours),
     hours,
     status: record.approvalStatus,
+    reason: record.reason,
     source: 'insa',
     deductible: hours !== null
       && isApproved(record.approvalStatus)
-      && !isNonDeductibleLeaveType(record.type),
+      && isAnnualLeaveType(record.type),
   };
 }
 
@@ -224,7 +261,6 @@ function yearFromYmd(ymd: string): number | null {
 
 function matchKey(record: NormalizedLeaveRecord): string | null {
   if (record.hours === null) return null;
-  if (!record.deductible && record.canonicalType !== 'health') return null;
   return `${record.ymd}|${record.canonicalType}|${record.hours}|${record.periodKey}`;
 }
 
@@ -234,6 +270,118 @@ function toPublicRecord(
   duplicate = false
 ): LeaveBalanceRecord {
   return {...record, source, duplicate};
+}
+
+function reviewRowToPublicRecord(row: LeaveReviewRow): LeaveBalanceRecord {
+  return {
+    ymd: row.ymd,
+    type: row.type,
+    canonicalType: row.canonicalType,
+    durationLabel: row.durationLabel,
+    hours: row.hours,
+    status: row.status,
+    source: row.source,
+    deductible: row.deductible,
+    duplicate: row.autoDecision === 'duplicate',
+  };
+}
+
+function needsReview(record: NormalizedLeaveRecord): boolean {
+  if (record.hours === null) return true;
+  if (record.source === 'insa' && !isApproved(record.status)) return true;
+  return !isAnnualLeaveType(record.type) && !isKnownNonDeductibleLeaveType(record.type);
+}
+
+function defaultDecision(record: NormalizedLeaveRecord): Exclude<LeaveDecision, 'auto'> {
+  return record.deductible && record.hours !== null ? 'deduct' : 'exclude';
+}
+
+function buildReviewRows(
+  jade: readonly NormalizedLeaveRecord[],
+  insa: readonly NormalizedLeaveRecord[]
+): LeaveReviewRow[] {
+  const allRecords = [...jade, ...insa];
+  const grouped = new Map<string, NormalizedLeaveRecord[]>();
+  allRecords.forEach((record) => {
+    const key = matchKey(record);
+    if (!key) return;
+    const bucket = grouped.get(key) ?? [];
+    bucket.push(record);
+    grouped.set(key, bucket);
+  });
+
+  const groupByRecord = new Map<NormalizedLeaveRecord, string>();
+  const decisionByRecord = new Map<NormalizedLeaveRecord, Exclude<LeaveDecision, 'auto'>>();
+  let groupNumber = 0;
+  grouped.forEach((bucket) => {
+    if (bucket.length < 2) return;
+    const groupId = `duplicate-${groupNumber}`;
+    groupNumber += 1;
+    bucket.forEach((record) => groupByRecord.set(record, groupId));
+    const preferred = bucket.find((record) => record.source === 'jade' && record.deductible && record.hours !== null)
+      ?? bucket.find((record) => record.deductible && record.hours !== null);
+    bucket.forEach((record) => {
+      if (!record.deductible || record.hours === null) {
+        decisionByRecord.set(record, 'exclude');
+      } else if (record === preferred) {
+        decisionByRecord.set(record, 'deduct');
+      } else {
+        decisionByRecord.set(record, 'duplicate');
+      }
+    });
+  });
+
+  return allRecords.map((record, index) => ({
+    id: `${record.source}-${index}`,
+    ymd: record.ymd,
+    type: record.type,
+    canonicalType: record.canonicalType,
+    durationLabel: record.durationLabel,
+    hours: record.hours,
+    status: record.status,
+    reason: record.reason,
+    source: record.source,
+    deductible: record.deductible,
+    duplicateGroup: groupByRecord.get(record) ?? null,
+    autoDecision: decisionByRecord.get(record) ?? defaultDecision(record),
+    needsReview: needsReview(record),
+  })).sort((left, right) => `${left.ymd}|${left.source}|${left.id}`.localeCompare(`${right.ymd}|${right.source}|${right.id}`));
+}
+
+function effectiveDecision(row: LeaveReviewRow, decisions: LeaveDecisionByRowId): Exclude<LeaveDecision, 'auto'> {
+  const decision = decisions[row.id] ?? 'auto';
+  return decision === 'auto' ? row.autoDecision : decision;
+}
+
+export function calculateLeaveBalanceSummary(
+  result: LeaveBalanceResult,
+  decisions: LeaveDecisionByRowId = {},
+  hoursByRowId: LeaveHoursByRowId = {}
+): LeaveBalanceSummary {
+  let usedHours = 0;
+  let duplicateHours = 0;
+  const unresolved = result.reviewRows
+    .filter((row) => row.hours === null && !(hoursByRowId[row.id] && (hoursByRowId[row.id] ?? 0) > 0))
+    .map(reviewRowToPublicRecord)
+    .map((record) => ({...record, reason: 'unknown-duration' as const}));
+
+  result.reviewRows.forEach((row) => {
+    const decision = effectiveDecision(row, decisions);
+    const enteredHours = hoursByRowId[row.id];
+    const hours = typeof enteredHours === 'number' && Number.isFinite(enteredHours) && enteredHours > 0
+      ? enteredHours
+      : row.hours;
+    if (hours === null) return;
+    if (decision === 'deduct') usedHours += hours;
+    if (decision === 'duplicate') duplicateHours += hours;
+  });
+
+  return {
+    usedHours,
+    duplicateHours,
+    remainingHours: result.accruedHours - usedHours,
+    unresolved,
+  };
 }
 
 export function reconcileLeaveBalance(
@@ -259,7 +407,6 @@ export function reconcileLeaveBalance(
 
   const records: LeaveBalanceRecord[] = [];
   const matchedInsa = new Set<NormalizedLeaveRecord>();
-  let duplicateHours = 0;
 
   for (const jadeRecord of jade) {
     const key = matchKey(jadeRecord);
@@ -267,9 +414,6 @@ export function reconcileLeaveBalance(
     const matchingInsa = bucket?.find((record) => !matchedInsa.has(record));
     if (matchingInsa) {
       matchedInsa.add(matchingInsa);
-      if (jadeRecord.deductible && matchingInsa.deductible) {
-        duplicateHours += matchingInsa.hours ?? 0;
-      }
       records.push(toPublicRecord(jadeRecord, 'both', true));
     } else {
       records.push(toPublicRecord(jadeRecord));
@@ -294,19 +438,27 @@ export function reconcileLeaveBalance(
   const accruedHours = insaData.balances
     .filter((balance) => balance.year === year)
     .reduce((total, balance) => total + balance.accruedHours, 0);
-  const unresolved = records.filter(
-    (record): record is UnresolvedLeaveRecord => record.hours === null
-  ).map((record) => ({...record, reason: 'unknown-duration' as const}));
-
-  return {
+  const reviewRows = buildReviewRows(jade, insa);
+  const baseResult: LeaveBalanceResult = {
     year,
     accruedHours,
     jadeUsedHours,
     insaUsedHours,
-    duplicateHours,
-    usedHours,
-    remainingHours: accruedHours - usedHours,
+    duplicateHours: 0,
+    usedHours: 0,
+    remainingHours: accruedHours,
     records,
-    unresolved,
+    reviewRows,
+    unresolved: [],
+  };
+  const automaticSummary = calculateLeaveBalanceSummary(
+    baseResult,
+    Object.fromEntries(reviewRows.map((row) => [row.id, 'auto' as const])),
+    {}
+  );
+
+  return {
+    ...baseResult,
+    ...automaticSummary,
   };
 }

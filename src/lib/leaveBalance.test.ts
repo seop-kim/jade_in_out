@@ -1,6 +1,6 @@
 import {AttendanceRecord} from '../api/jadeApi';
 import {InsaLeavePageData, InsaLeaveRecord} from '../api/insaParsers';
-import {reconcileLeaveBalance} from './leaveBalance';
+import {calculateLeaveBalanceSummary, reconcileLeaveBalance} from './leaveBalance';
 
 function jadeRecord(
   ymd: string,
@@ -311,5 +311,85 @@ describe('reconcileLeaveBalance', () => {
     expect(result.records).toEqual([
       expect.objectContaining({ymd: '2026-08-07', hours: null, deductible: false}),
     ]);
+  });
+
+  test('keeps both source rows and assigns the default duplicate decisions', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-08-07', '연차휴가', '4시간', '후4', 4)],
+      insaData([insaRecord('2026-08-07', '연차휴가(시간차)', '(후4)')])
+    );
+
+    expect(result.reviewRows).toHaveLength(2);
+    expect(new Set(result.reviewRows.map((row) => row.duplicateGroup)).size).toBe(1);
+    expect(result.reviewRows.map((row) => row.source).sort()).toEqual(['insa', 'jade']);
+    expect(result.reviewRows.find((row) => row.source === 'jade')).toEqual(expect.objectContaining({
+      autoDecision: 'deduct',
+      duplicateGroup: expect.any(String),
+    }));
+    expect(result.reviewRows.find((row) => row.source === 'insa')).toEqual(expect.objectContaining({
+      autoDecision: 'duplicate',
+    }));
+  });
+
+  test('excludes non-annual Jade leave types from the automatic annual balance', () => {
+    const types = ['보건휴가', '생리휴가', '비전리더휴가', '건강검진휴가', '예비군훈련'];
+    const result = reconcileLeaveBalance(
+      2026,
+      types.map((type, index) => jadeRecord(`2026-08-${String(index + 1).padStart(2, '0')}`, type, '4시간', '', 4)),
+      insaData([])
+    );
+
+    expect(result.reviewRows).toHaveLength(types.length);
+    expect(result.reviewRows.every((row) => row.autoDecision === 'exclude')).toBe(true);
+    expect(result.reviewRows.every((row) => row.deductible === false)).toBe(true);
+    expect(result.usedHours).toBe(0);
+  });
+
+  test('marks pending and cancelled rows as excluded and needing review', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([
+        insaRecord('2026-08-01', '연차', '(후4)', '승인대기'),
+        insaRecord('2026-08-02', '연차', '(후4)', '취소완료'),
+      ])
+    );
+
+    expect(result.reviewRows).toHaveLength(2);
+    expect(result.reviewRows.every((row) => row.autoDecision === 'exclude' && row.needsReview)).toBe(true);
+  });
+
+  test('allows an unknown duration to be manually deducted with entered hours', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([insaRecord('2026-08-07', '연차휴가', '(미정)')])
+    );
+    const row = result.reviewRows[0]!;
+
+    expect(result.usedHours).toBe(0);
+    const summary = calculateLeaveBalanceSummary(
+      result,
+      {[row.id]: 'deduct'},
+      {[row.id]: 4}
+    );
+
+    expect(summary.usedHours).toBe(4);
+    expect(summary.remainingHours).toBe(116);
+    expect(summary.unresolved).toHaveLength(0);
+  });
+
+  test('recalculates both rows when a duplicate group is manually set to deduct', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-08-07', '연차휴가', '4시간', '후4', 4)],
+      insaData([insaRecord('2026-08-07', '연차휴가(시간차)', '(후4)')])
+    );
+    const decisions = Object.fromEntries(result.reviewRows.map((row) => [row.id, 'deduct' as const]));
+    const summary = calculateLeaveBalanceSummary(result, decisions, {});
+
+    expect(summary.usedHours).toBe(8);
+    expect(summary.duplicateHours).toBe(0);
   });
 });
