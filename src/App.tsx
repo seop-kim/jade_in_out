@@ -5,7 +5,7 @@ import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
 import SettingsMenu from './components/SettingsMenu';
-import LeaveBalanceModal, {LeaveBalanceLoad, LeaveBalanceProgress} from './components/LeaveBalanceModal';
+import LeaveBalanceModal, {LeaveBalanceLoad} from './components/LeaveBalanceModal';
 import {appConfig} from './config';
 import {
   JADE_APP_WINDOW_NAME,
@@ -107,7 +107,6 @@ function App() {
   const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
   const [leaveBalanceErrorDetails, setLeaveBalanceErrorDetails] = useState<string[] | null>(null);
   const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
-  const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress[] | null>(null);
   const leaveBalanceRequestRef = useRef(0);
 
   useEffect(() => {
@@ -166,7 +165,6 @@ function App() {
     setLeaveBalanceError(null);
     setLeaveBalanceErrorDetails(null);
     setLeaveBalanceLoading(false);
-    setLeaveBalanceProgress(null);
   }, []);
 
   const handleResetCredentials = useCallback((): void => {
@@ -366,7 +364,6 @@ function App() {
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
     setLeaveBalanceErrorDetails(null);
-    setLeaveBalanceProgress(null);
     setLeaveBalanceOpen(true);
   }, [canViewLeaveBalance]);
   const loadLeaveBalance: LeaveBalanceLoad = useCallback(async (year, signal, onProgress, includePreviousPeriod = false) => {
@@ -380,7 +377,6 @@ function App() {
     setLeaveBalanceLoading(true);
     setLeaveBalanceResult(null);
     setLeaveBalanceError(null);
-    setLeaveBalanceProgress(null);
     try {
       const loadSource = async <T,>(source: LeaveBalanceSource, loader: () => Promise<T>): Promise<T> => {
         try {
@@ -393,14 +389,6 @@ function App() {
         loadSource('Jade', () => jadeLoader(year, signal, (progress) => {
           if (!isCurrentRequest()) return;
           const progressYear = progress.year ?? year;
-          setLeaveBalanceProgress((previous) => {
-            const next = [...(previous ?? [])];
-            const index = next.findIndex((entry) => (entry.year ?? year) === progressYear);
-            const normalized = {...progress, year: progressYear};
-            if (index >= 0) next[index] = normalized;
-            else next.push(normalized);
-            return next.sort((left, right) => (left.year ?? year) - (right.year ?? year));
-          });
           onProgress({...progress, year: progressYear});
         }, includePreviousPeriod)),
         loadSource('신규', () => insaLoader(year, signal, undefined, includePreviousPeriod)),
@@ -602,7 +590,7 @@ function App() {
         error={leaveBalanceError}
         errorDetails={leaveBalanceErrorDetails}
         loading={leaveBalanceLoading}
-        progress={leaveBalanceProgress}
+        progress={null}
       />
     </div>
   );
