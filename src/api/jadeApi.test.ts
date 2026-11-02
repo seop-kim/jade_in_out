@@ -91,6 +91,36 @@ describe('Jade API', () => {
     expect(progress[progress.length - 1]).toEqual({completed: 365, total: 365});
   });
 
+  test('treats empty pre-employment dates as unused days during annual loading', async () => {
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        const ymd = new URLSearchParams(body).get('S_STD_YMD') ?? '';
+        return ymd < '20250304'
+          ? Promise.resolve('')
+          : Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+    });
+
+    expect(records).toHaveLength(365);
+    expect(records.find((record) => record.ymd === '20250101')).toEqual(expect.objectContaining({
+      ymd: '20250101',
+      clockIn: '',
+      workList: [],
+    }));
+    expect(records.find((record) => record.ymd === '20250304')).toEqual(expect.objectContaining({
+      ymd: '20250304',
+      clockIn: '08:50',
+    }));
+  });
+
   test('stops the annual loader immediately when Jade authentication expires', async () => {
     const post = jest.fn().mockResolvedValue(`
       <SHEET>

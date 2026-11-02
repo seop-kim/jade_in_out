@@ -72,6 +72,13 @@ export class JadeAuthenticationError extends Error {
   }
 }
 
+class JadeNoAttendanceDataError extends Error {
+  constructor(message = '근태 데이터 없음') {
+    super(message);
+    this.name = 'JadeNoAttendanceDataError';
+  }
+}
+
 const LEAVE_TYPE_KEYWORDS = ['휴가', '병가', '공가'] as const;
 
 function isLeaveType(type: string): boolean {
@@ -180,7 +187,7 @@ function parseAttendanceXml(xmlText: string): RawEtc {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   text = text.trim();
   if (!text) {
-    throw new Error('빈 응답');
+    throw new JadeNoAttendanceDataError('빈 응답');
   }
   text = text.replace(/^<\?xml[\s\S]*?\?>/, (m) => m.replace(/\s+/g, ' '));
 
@@ -204,7 +211,7 @@ function parseAttendanceXml(xmlText: string): RawEtc {
     throw new JadeAuthenticationError();
   }
   if (Object.keys(result).length === 0) {
-    throw new Error('오류');
+    throw new JadeNoAttendanceDataError();
   }
 
   if (messageText) result.__message = messageText;
@@ -370,6 +377,7 @@ export interface FetchLeaveUsageYearOptions {
   signal?: AbortSignal;
   retryCount?: number;
   retryDelayMs?: number;
+  ignoreMissing?: boolean;
   transport?: JadeBridgeTransport;
   onProgress?: (info: ProgressInfo) => void;
 }
@@ -385,6 +393,7 @@ export interface FetchMonthOptions {
   signal?: AbortSignal;
   onProgress?: (info: ProgressInfo) => void;
   onDayResult?: (ymd: string, result: AttendanceResult) => void;
+  ignoreMissing?: boolean;
   transport?: JadeBridgeTransport;
 }
 
@@ -399,6 +408,7 @@ export async function fetchAttendanceForMonth({
   signal,
   onProgress,
   onDayResult,
+  ignoreMissing = false,
   transport,
 }: FetchMonthOptions): Promise<Record<string, AttendanceResult>> {
   const lastDay = new Date(year, month + 1, 0).getDate();
@@ -428,6 +438,14 @@ export async function fetchAttendanceForMonth({
         });
         dayResult = buildRecord(ymd, etc);
       } catch (err) {
+        if (ignoreMissing && err instanceof JadeNoAttendanceDataError) {
+          dayResult = buildRecord(ymd, {});
+          result[ymd] = dayResult;
+          onDayResult?.(ymd, dayResult);
+          completed += 1;
+          onProgress?.({completed, total});
+          continue;
+        }
         const error = err as {name?: string; message?: string; response?: {status?: number}};
         if (error.name === 'CanceledError' || error.name === 'AbortError') return;
         const message = error.response?.status
@@ -465,6 +483,7 @@ export async function fetchLeaveUsageForYear({
   signal,
   retryCount = 2,
   retryDelayMs = 250,
+  ignoreMissing = true,
   transport,
   onProgress,
 }: FetchLeaveUsageYearOptions): Promise<AttendanceRecord[]> {
@@ -487,6 +506,7 @@ export async function fetchLeaveUsageForYear({
       retryCount,
       retryDelayMs,
       signal: monthController.signal,
+      ignoreMissing,
       transport,
       onDayResult: (_ymd, result) => {
         if ('error' in result && 'authError' in result && result.authError) monthController.abort();
