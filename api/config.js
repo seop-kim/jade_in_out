@@ -15,7 +15,12 @@ function routesFromEnv() {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('INSA_ALLOWED_ROUTES_JSON must be an object');
   }
-  return new Map(Object.entries(parsed));
+  const routes = new Map(Object.entries(parsed));
+  // Historical leave-period details are linked from the authenticated leave page.
+  // Keep this fixed read-only endpoint available even for older deployments whose
+  // route environment variable predates the new-hire period feature.
+  if (!routes.has('/leave/pop_leave.asp')) routes.set('/leave/pop_leave.asp', 'GET');
+  return routes;
 }
 
 const serverConfig = Object.freeze({

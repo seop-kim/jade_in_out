@@ -187,9 +187,6 @@ function LeaveBalanceModal({
   const displaySummary = summaryResult
     ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
     : null;
-  const canIncludePreviousPeriod = Boolean(
-    displayResult?.availablePeriods.some((period) => period.year < year && period.isNewHire)
-  );
   const progressPercent = displayProgress && displayProgress.total > 0
     ? Math.min(100, Math.round((displayProgress.completed / displayProgress.total) * 100))
     : null;
@@ -258,21 +255,15 @@ function LeaveBalanceModal({
           <select id="leave-balance-year" value={year} onChange={(event) => handleYearChange(Number(event.target.value))} disabled={isLoading}>
             {years.map((option) => <option key={option} value={option}>{option}년</option>)}
           </select>
-          {canIncludePreviousPeriod && (
-            <label className="leave-balance-previous-toggle">
-              <input
-                type="checkbox"
-                checked={includePreviousPeriod}
-                disabled={isLoading}
-                onChange={(event) => {
-                  const nextValue = event.target.checked;
-                  setIncludePreviousPeriod(nextValue);
-                  void handleLoad(nextValue);
-                }}
-              />
-              이전 발생기간 포함
-            </label>
-          )}
+          <label className="leave-balance-previous-toggle">
+            <input
+              type="checkbox"
+              checked={includePreviousPeriod}
+              disabled={isLoading}
+              onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
+            />
+            이전 발생기간 포함
+          </label>
           <button type="button" className="leave-balance-load" onClick={() => void handleLoad()} disabled={isLoading}>
             {isLoading ? '조회 중...' : '조회'}
           </button>

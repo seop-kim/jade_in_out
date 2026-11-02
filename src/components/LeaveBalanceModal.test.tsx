@@ -256,6 +256,8 @@ describe('LeaveBalanceModal', () => {
     const toggle = screen.getByRole('checkbox', {name: '이전 발생기간 포함'});
     await userEvent.click(toggle);
 
+    expect(onLoad).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
     expect(onLoad).toHaveBeenCalledWith(2026, expect.any(AbortSignal), expect.any(Function), true);
     expect(await screen.findByText('2025 신입휴가')).toBeInTheDocument();
     expect(screen.getByText('2025-03-04 ~ 2026-03-03')).toBeInTheDocument();
