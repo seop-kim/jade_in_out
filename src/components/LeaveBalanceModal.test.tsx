@@ -184,6 +184,39 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('progressbar', {name: '2026년 휴가 정보 조회 진행률'})).toHaveAttribute('aria-valuenow', '8');
   });
 
+  test('only enables 신입휴가 포함 for eligible new hires', async () => {
+    const {rerender} = render(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading={false}
+        progress={null}
+        canIncludePreviousPeriod={false}
+      />
+    );
+
+    const previousPeriodToggle = screen.getByRole('checkbox', {name: '신입휴가 포함'});
+    expect(previousPeriodToggle).toBeDisabled();
+
+    rerender(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading={false}
+        progress={null}
+        canIncludePreviousPeriod
+      />
+    );
+
+    expect(screen.getByRole('checkbox', {name: '신입휴가 포함'})).toBeEnabled();
+  });
+
   test('reveals sanitized request failure details on demand', async () => {
     render(
       <LeaveBalanceModal
@@ -296,7 +329,7 @@ describe('LeaveBalanceModal', () => {
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={onLoad} result={initialResult} error={null} loading={false} progress={null} />
     );
 
-    const toggle = screen.getByRole('checkbox', {name: '이전 발생기간 포함'});
+    const toggle = screen.getByRole('checkbox', {name: '신입휴가 포함'});
     await userEvent.click(toggle);
 
     expect(onLoad).not.toHaveBeenCalled();

@@ -31,6 +31,7 @@ interface LeaveBalanceModalProps {
   errorDetails?: string[] | null;
   loading: boolean;
   progress: LeaveBalanceProgress[] | null;
+  canIncludePreviousPeriod?: boolean;
 }
 
 function hoursLabel(hours: number | null): string {
@@ -58,6 +59,7 @@ function LeaveBalanceModal({
   errorDetails,
   loading,
   progress,
+  canIncludePreviousPeriod = true,
 }: LeaveBalanceModalProps) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [requesting, setRequesting] = useState(false);
@@ -204,7 +206,8 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
-    setIncludePreviousPeriod(requestedIncludePreviousPeriod);
+    const includePrevious = canIncludePreviousPeriod && requestedIncludePreviousPeriod;
+    setIncludePreviousPeriod(includePrevious);
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
         if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
@@ -219,7 +222,7 @@ function LeaveBalanceModal({
           });
         }
       };
-      const nextResult = await onLoad(year, controller.signal, handleProgress, requestedIncludePreviousPeriod);
+      const nextResult = await onLoad(year, controller.signal, handleProgress, includePrevious);
       if (requestSequenceRef.current === requestId && !controller.signal.aborted) setLocalResult(nextResult);
     } catch (reason) {
       if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
@@ -266,10 +269,10 @@ function LeaveBalanceModal({
             <input
               type="checkbox"
               checked={includePreviousPeriod}
-              disabled={isLoading}
+              disabled={isLoading || !canIncludePreviousPeriod}
               onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
             />
-            이전 발생기간 포함
+            신입휴가 포함
           </label>
           <button type="button" className="leave-balance-load" onClick={() => void handleLoad()} disabled={isLoading}>
             {isLoading ? '조회 중...' : '조회'}
