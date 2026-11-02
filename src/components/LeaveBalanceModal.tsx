@@ -271,8 +271,8 @@ function LeaveBalanceModal({
           <div className="leave-balance-content">
             <div className="leave-balance-summary" aria-label="휴가 합계">
               <div><span>발생</span><strong>{hoursLabel(displayResult.accruedHours)}</strong></div>
-              <div><span>Jade 사용</span><strong>{hoursLabel(displayResult.jadeUsedHours)}</strong></div>
-              <div><span>신규 사용</span><strong>{hoursLabel(displayResult.insaUsedHours)}</strong></div>
+              <div><span>Jade 사용</span><strong>{hoursLabel(displaySummary.jadeUsedHours)}</strong></div>
+              <div><span>신규 사용</span><strong>{hoursLabel(displaySummary.insaUsedHours)}</strong></div>
               <div><span>중복 제외</span><strong>{hoursLabel(displaySummary.duplicateHours)}</strong></div>
               <div><span>최종 사용</span><strong>{hoursLabel(displaySummary.usedHours)}</strong></div>
               <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displaySummary.remainingHours)}</strong></div>

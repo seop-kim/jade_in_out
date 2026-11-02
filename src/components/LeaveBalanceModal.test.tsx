@@ -185,6 +185,7 @@ describe('LeaveBalanceModal', () => {
 
     const finalDecisions = screen.getAllByRole('combobox', {name: /최종 판정/});
     expect(finalDecisions[1]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
+    expect(screen.getByText('Jade 사용').parentElement).toHaveTextContent('4시간');
 
     await userEvent.selectOptions(finalDecisions[0]!, 'exclude');
     expect(finalDecisions[0]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
@@ -192,6 +193,7 @@ describe('LeaveBalanceModal', () => {
     await userEvent.click(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'}));
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
     expect(screen.queryByRole('button', {name: '행 삭제 2026-08-05 Jade'})).not.toBeInTheDocument();
+    expect(screen.getByText('Jade 사용').parentElement).toHaveTextContent('0시간');
   });
 
   test('accepts entered hours for an unknown-duration row', async () => {
@@ -211,7 +213,7 @@ describe('LeaveBalanceModal', () => {
     await userEvent.clear(screen.getByRole('spinbutton', {name: /반영시간/}));
     await userEvent.type(screen.getByRole('spinbutton', {name: /반영시간/}), '4');
 
-    expect(screen.getByText('4시간')).toBeInTheDocument();
+    expect(screen.getAllByText('4시간').length).toBeGreaterThan(0);
     expect(screen.queryByText('확인되지 않은 사용 내역이 있습니다.')).not.toBeInTheDocument();
   });
 

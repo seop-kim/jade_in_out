@@ -54,6 +54,8 @@ export type LeaveDecisionByRowId = Readonly<Record<string, LeaveDecision>>;
 export type LeaveHoursByRowId = Readonly<Record<string, number | undefined>>;
 
 export interface LeaveBalanceSummary {
+  jadeUsedHours: number;
+  insaUsedHours: number;
   duplicateHours: number;
   usedHours: number;
   remainingHours: number;
@@ -366,6 +368,8 @@ export function calculateLeaveBalanceSummary(
   decisions: LeaveDecisionByRowId = {},
   hoursByRowId: LeaveHoursByRowId = {}
 ): LeaveBalanceSummary {
+  let jadeUsedHours = 0;
+  let insaUsedHours = 0;
   let usedHours = 0;
   let duplicateHours = 0;
   const unresolved = result.reviewRows
@@ -386,11 +390,19 @@ export function calculateLeaveBalanceSummary(
       ? enteredHours
       : row.hours;
     if (hours === null) return;
-    if (decision === 'deduct') usedHours += hours;
+    if (row.deductible) {
+      if (row.source === 'jade') jadeUsedHours += hours;
+      if (row.source === 'insa') insaUsedHours += hours;
+    }
+    if (decision === 'deduct') {
+      usedHours += hours;
+    }
     if (decision === 'duplicate') duplicateHours += hours;
   });
 
   return {
+    jadeUsedHours,
+    insaUsedHours,
     usedHours,
     duplicateHours,
     remainingHours: result.accruedHours - usedHours,

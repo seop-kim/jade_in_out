@@ -454,4 +454,22 @@ describe('reconcileLeaveBalance', () => {
     expect(summary.usedHours).toBe(8);
     expect(summary.duplicateHours).toBe(0);
   });
+
+  test('recalculates source usage from the current final decisions', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-08-07', '연차휴가', '4시간', '후4', 4)],
+      insaData([insaRecord('2026-08-07', '연차휴가(시간차)', '(후4)')])
+    );
+    const jadeRow = result.reviewRows.find((row) => row.source === 'jade')!;
+    const insaRow = result.reviewRows.find((row) => row.source === 'insa')!;
+
+    const summary = calculateLeaveBalanceSummary(result, {
+      [jadeRow.id]: 'exclude',
+      [insaRow.id]: 'deduct',
+    }, {});
+
+    expect(summary.jadeUsedHours).toBe(4);
+    expect(summary.insaUsedHours).toBe(4);
+  });
 });
