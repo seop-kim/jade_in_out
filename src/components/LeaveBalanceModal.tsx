@@ -346,7 +346,10 @@ function LeaveBalanceModal({
                   <div className="leave-balance-period" key={period.id}>
                     <div className="leave-balance-period-heading">
                       <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
-                      {period.isNewHire && <span>입사 1년차</span>}
+                      <div className="leave-balance-period-meta">
+                        <span>발생 기준: {period.isNewHire ? 'KIMS' : 'Jade'}</span>
+                        {period.isNewHire && <span>입사 1년차</span>}
+                      </div>
                     </div>
                     <span>{period.period}</span>
                     <div className="leave-balance-period-values">

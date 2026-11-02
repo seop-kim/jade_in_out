@@ -263,6 +263,12 @@
   justify-content: space-between;
 }
 
+.leave-balance-period-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .leave-balance-period-heading strong {
   color: var(--color-text);
   font-size: 13px;

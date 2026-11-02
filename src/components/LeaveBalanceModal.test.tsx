@@ -154,6 +154,7 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
+    expect(screen.getByText('발생 기준: Jade')).toBeInTheDocument();
     expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();
