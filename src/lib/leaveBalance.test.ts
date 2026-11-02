@@ -87,6 +87,27 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('keeps health leave visible without deducting it from annual leave', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [jadeRecord('2026-04-10', '보건휴가', '4시간', '출4', 4)],
+      insaData([insaRecord('2026-04-10', '보건휴가', '(출4)')])
+    );
+
+    expect(result.duplicateHours).toBe(0);
+    expect(result.usedHours).toBe(0);
+    expect(result.remainingHours).toBe(120);
+    expect(result.records).toEqual([
+      expect.objectContaining({
+        ymd: '2026-04-10',
+        canonicalType: 'health',
+        source: 'both',
+        hours: 4,
+        deductible: false,
+      }),
+    ]);
+  });
+
   test('normalizes compact Jade dates before filtering and matching', () => {
     const result = reconcileLeaveBalance(
       2026,

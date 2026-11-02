@@ -67,10 +67,15 @@ function normalizeYmd(ymd: string): string | null {
 
 function canonicalType(type: string): string {
   const value = compact(type);
+  if (value.includes('보건') || value.includes('생리')) return 'health';
   if (value.includes('연차') || value.includes('시간차') || value === '휴가') return 'annual';
   if (value.includes('병가')) return 'sick';
   if (value.includes('공가')) return 'official';
   return value.toLowerCase();
+}
+
+function isNonDeductibleLeaveType(type: string): boolean {
+  return canonicalType(type) === 'health';
 }
 
 function parseDurationHours(durationLabel: string, type: string): number | null {
@@ -149,7 +154,7 @@ function normalizeJadeLeave(
     hours,
     status: '확정',
     source: 'jade',
-    deductible: hours !== null,
+    deductible: hours !== null && !isNonDeductibleLeaveType(type),
   };
 }
 
@@ -193,7 +198,9 @@ function normalizeInsaRecord(record: InsaLeaveRecord): NormalizedLeaveRecord {
     hours,
     status: record.approvalStatus,
     source: 'insa',
-    deductible: hours !== null && isApproved(record.approvalStatus),
+    deductible: hours !== null
+      && isApproved(record.approvalStatus)
+      && !isNonDeductibleLeaveType(record.type),
   };
 }
 
@@ -204,7 +211,8 @@ function yearFromYmd(ymd: string): number | null {
 }
 
 function matchKey(record: NormalizedLeaveRecord): string | null {
-  if (!record.deductible || record.hours === null) return null;
+  if (record.hours === null) return null;
+  if (!record.deductible && record.canonicalType !== 'health') return null;
   return `${record.ymd}|${record.canonicalType}|${record.hours}|${record.periodKey}`;
 }
 
@@ -247,7 +255,9 @@ export function reconcileLeaveBalance(
     const matchingInsa = bucket?.find((record) => !matchedInsa.has(record));
     if (matchingInsa) {
       matchedInsa.add(matchingInsa);
-      duplicateHours += matchingInsa.hours ?? 0;
+      if (jadeRecord.deductible && matchingInsa.deductible) {
+        duplicateHours += matchingInsa.hours ?? 0;
+      }
       records.push(toPublicRecord(jadeRecord, 'both', true));
     } else {
       records.push(toPublicRecord(jadeRecord));
