@@ -370,7 +370,7 @@ describe('App system tabs', () => {
     await userEvent.click(screen.getByRole('button', {name: '조회'}));
 
     expect(await screen.findByText('신규 승인 이력')).toBeInTheDocument();
-    expect(screen.getAllByText('Jade', {exact: true})).toHaveLength(1);
+    expect(screen.getAllByText('Jade', {exact: true}).length).toBeGreaterThan(0);
     expect(screen.getByRole('cell', {name: '신규'})).toBeInTheDocument();
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
   });

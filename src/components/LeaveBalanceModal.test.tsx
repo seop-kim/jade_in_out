@@ -21,6 +21,7 @@ const result: LeaveBalanceResult = {
     accruedHours: 160,
     usedHours: 32,
     remainingHours: 128,
+    jadeAccruedHours: 96,
   }],
   availablePeriods: [{
     id: '2026|2026-01-01 ~ 2026-12-31',
@@ -32,6 +33,7 @@ const result: LeaveBalanceResult = {
     accruedHours: 160,
     usedHours: 32,
     remainingHours: 128,
+    jadeAccruedHours: 96,
   }],
   includePreviousPeriod: false,
   records: [

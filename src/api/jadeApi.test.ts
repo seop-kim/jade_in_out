@@ -1,6 +1,31 @@
-import {fetchAttendanceForDate, fetchLeaveUsageForYear, JadeAnnualLeaveRequestError} from './jadeApi';
+import {fetchAttendanceForDate, fetchJadeLeaveBalances, fetchLeaveUsageForYear, JadeAnnualLeaveRequestError} from './jadeApi';
 
 describe('Jade API', () => {
+  test('loads Jade accrual hours from the leave balance response', async () => {
+    const post = jest.fn().mockResolvedValue(`
+      <SHEET><DATA KEY="default">
+        <HTR><TD>C_CD</TD><TD>EMP_ID</TD><TD>HOLI_CLASS_NM</TD><TD>USE_YMD</TD><TD>CRT_D_CNT</TD><TD>USED_CNT</TD><TD>BLN_CNT</TD></HTR>
+        <TR><TD>2001010</TD><TD>20250304</TD><TD>연차휴가</TD><TD>2026.01.01 ~ 2026.12.31</TD><TD>96</TD><TD>36</TD><TD>60</TD></TR>
+      </DATA></SHEET>
+    `);
+
+    await expect(fetchJadeLeaveBalances({
+      body: 'F_STD_YY=2026&S_STD_YY=2026',
+      year: 2026,
+      transport: {post},
+    })).resolves.toEqual([expect.objectContaining({
+      accruedHours: 96,
+      usedHours: 36,
+      remainingHours: 60,
+      isNewHire: false,
+    })]);
+    expect(post).toHaveBeenCalledWith(
+      '/commonAction.do',
+      'F_STD_YY=2026&S_STD_YY=2026',
+      undefined,
+    );
+  });
+
   test('uses a browser transport when Jade credentials stay in the logged-in tab', async () => {
     const controller = new AbortController();
     const post = jest.fn().mockResolvedValue(`

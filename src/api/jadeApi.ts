@@ -65,6 +65,14 @@ export interface AttendanceError {
 
 export type AttendanceResult = AttendanceRecord | AttendanceError;
 
+export interface JadeLeaveBalance {
+  period: string;
+  accruedHours: number;
+  usedHours: number;
+  remainingHours: number;
+  isNewHire: boolean;
+}
+
 export class JadeAuthenticationError extends Error {
   constructor(message = '로그인 정보 만료') {
     super(message);
@@ -235,6 +243,34 @@ function parseAttendanceXml(xmlText: string): RawEtc {
   return result;
 }
 
+function parseJadeLeaveBalanceXml(xmlText: string): JadeLeaveBalance[] {
+  const doc = new DOMParser().parseFromString(String(xmlText ?? ''), 'application/xml');
+  const data = doc.querySelector('DATA[KEY="default"]') ?? doc.querySelector('DATA');
+  if (!data) throw new Error('Jade leave balance response format is invalid');
+  const headerRow = Array.from(data.children).find((child) => child.tagName === 'HTR');
+  const headers = headerRow
+    ? Array.from(headerRow.children).map((cell) => (cell.textContent ?? '').trim())
+    : [];
+  const indexOf = (key: string): number => headers.indexOf(key);
+  const rows = Array.from(data.children).filter((child) => child.tagName === 'TR');
+  return rows.flatMap((row) => {
+    const cells = Array.from(row.children).map((cell) => (cell.textContent ?? '').trim());
+    const period = cells[indexOf('USE_YMD')] ?? '';
+    const type = cells[indexOf('HOLI_CLASS_NM')] ?? '';
+    const startYear = Number(period.match(/^(\d{4})/)?.[1] ?? 0);
+    const normalizedPeriod = period.replace(/\./g, '-');
+    const accruedHours = Number(cells[indexOf('CRT_D_CNT')] ?? 0);
+    if (!period || !Number.isFinite(accruedHours) || accruedHours <= 0 || !startYear) return [];
+    return [{
+      period,
+      accruedHours,
+      usedHours: Number(cells[indexOf('USED_CNT')] ?? 0) || 0,
+      remainingHours: Number(cells[indexOf('BLN_CNT')] ?? 0) || 0,
+      isNewHire: /1년미만/.test(type) || !normalizedPeriod.startsWith(`${startYear}-01-01`),
+    }];
+  });
+}
+
 export interface FetchDateOptions {
   cookie?: string;
   parsedBody: Record<string, string>;
@@ -243,6 +279,43 @@ export interface FetchDateOptions {
   retryCount?: number;
   retryDelayMs?: number;
   transport?: JadeBridgeTransport;
+}
+
+export interface FetchJadeLeaveBalanceOptions {
+  body: string;
+  cookie?: string;
+  year: number;
+  signal?: AbortSignal;
+  transport?: JadeBridgeTransport;
+}
+
+function buildJadeLeaveBalanceBody(body: string, year: number): string {
+  const params = new URLSearchParams(body);
+  params.set('F_STD_YY', String(year));
+  params.set('S_STD_YY', String(year));
+  return params.toString();
+}
+
+export async function fetchJadeLeaveBalances({
+  body,
+  cookie,
+  year,
+  signal,
+  transport,
+}: FetchJadeLeaveBalanceOptions): Promise<JadeLeaveBalance[]> {
+  const requestBody = buildJadeLeaveBalanceBody(body, year);
+  if (transport) {
+    return parseJadeLeaveBalanceXml(await transport.post(appConfig.jade.requestPath, requestBody, signal));
+  }
+  if (!cookie) throw new Error('Jade authentication is not configured');
+  const res = await client.post(`${appConfig.jade.apiBasePath}${appConfig.jade.requestPath}`, requestBody, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Jade-Cookie': cookie,
+    },
+    signal,
+  });
+  return parseJadeLeaveBalanceXml(res.data);
 }
 
 export function isJadeAuthenticationError(error: unknown): boolean {

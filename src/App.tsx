@@ -25,6 +25,7 @@ import {
   reconcileLeaveBalance,
 } from './lib/leaveBalance';
 import {isInsaAuthenticationError} from './api/insaApi';
+import {fetchJadeLeaveBalances} from './api/jadeApi';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
@@ -45,6 +46,7 @@ interface InsaRequestToastState {
 interface JadeBridgeConnection {
   credentials: Credentials;
   transport: JadeBridgeTransport;
+  leaveBalanceBody?: string;
 }
 
 type LeaveBalanceSource = 'Jade' | '신규';
@@ -87,6 +89,7 @@ function App() {
   const [jadeBridgeConnection, setJadeBridgeConnection] = useState<JadeBridgeConnection | null>(null);
   const [jadeBridgeStatus, setJadeBridgeStatus] = useState<'idle' | 'waiting' | 'ready'>('idle');
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
+  const pendingJadeLeaveBodyRef = useRef<string | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
   const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? 'light');
   const [jadeConnectionStatus, setJadeConnectionStatus] = useState<ConnectionStatus>(
@@ -231,7 +234,13 @@ function App() {
         console.info('[jade-bridge] app-ready');
         setJadeBridgeStatus('ready');
       },
-      undefined,
+      (body) => {
+        const parsedBody = parseBody(body);
+        const programId = parsedBody.S_PAGE_PGM_ID ?? '';
+        if (!programId.includes('ess_tam4_010_m01')) return;
+        pendingJadeLeaveBodyRef.current = body;
+        setJadeBridgeConnection((current) => current ? {...current, leaveBalanceBody: body} : current);
+      },
       (body, response) => {
         console.info('[jade-bridge] app-attendance-candidate', {
           bodyLength: body.length,
@@ -243,6 +252,7 @@ function App() {
         setJadeBridgeConnection((current) => current ?? {
           credentials: {cookie: '', body, parsedBody},
           transport: jadeBridgeClientRef.current!,
+          leaveBalanceBody: pendingJadeLeaveBodyRef.current ?? undefined,
         });
       },
     );
@@ -391,16 +401,27 @@ function App() {
           throw new LeaveBalanceSourceError(source, reason);
         }
       };
-      const [jadeRecords, insaData] = await Promise.all([
+      const jadeLeaveBalanceBody = jadeBridgeConnection?.leaveBalanceBody
+        ?? (credentials?.body.includes('ess_tam4_010_m01') ? credentials.body : null);
+      const [jadeRecords, insaData, jadeBalances] = await Promise.all([
         loadSource('Jade', () => jadeLoader(year, signal, (progress) => {
           if (!isCurrentRequest()) return;
           const progressYear = progress.year ?? year;
           onProgress({...progress, year: progressYear});
         }, includePreviousPeriod)),
         loadSource('신규', () => insaLoader(year, signal, undefined, includePreviousPeriod)),
+        jadeLeaveBalanceBody
+          ? loadSource('Jade', () => fetchJadeLeaveBalances({
+            body: jadeLeaveBalanceBody,
+            cookie: credentials?.cookie,
+            year,
+            signal,
+            transport: activeJadeTransport,
+          }))
+          : Promise.resolve([]),
       ]);
       if (!isCurrentRequest()) throw createAbortError();
-      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData, includePreviousPeriod);
+      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData, includePreviousPeriod, jadeBalances);
       if (!isCurrentRequest()) throw createAbortError();
       setLeaveBalanceResult(nextResult);
       return nextResult;
@@ -447,7 +468,7 @@ function App() {
     } finally {
       if (isCurrentRequest()) setLeaveBalanceLoading(false);
     }
-  }, [handleInsaAuthenticationExpired, handleJadeAuthenticationExpired, showErrorToast]);
+  }, [activeJadeTransport, credentials, handleInsaAuthenticationExpired, handleJadeAuthenticationExpired, jadeBridgeConnection, showErrorToast]);
   const handleCloseLeaveBalance = useCallback((): void => {
     clearLeaveBalance();
   }, [clearLeaveBalance]);

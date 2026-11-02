@@ -362,9 +362,18 @@ describe('reconcileLeaveBalance', () => {
     expect(currentOnly.periods.map((period) => period.year)).toEqual([2026]);
     expect(currentOnly.reviewRows.every((row) => row.periodLabel === '2026 연차')).toBe(true);
 
-    const withPrevious = reconcileLeaveBalance(2026, [], data, true);
+    const withPrevious = reconcileLeaveBalance(2026, [], data, true, [
+      {
+        period: '2026.01.01 ~ 2026.12.31',
+        accruedHours: 96,
+        usedHours: 36,
+        remainingHours: 60,
+        isNewHire: false,
+      },
+    ]);
     expect(withPrevious.periods.map((period) => period.year)).toEqual([2025, 2026]);
     expect(withPrevious.accruedHours).toBe(216);
+    expect(withPrevious.periods.find((period) => period.year === 2026)?.jadeAccruedHours).toBe(96);
     expect(withPrevious.reviewRows.map((row) => row.periodLabel)).toEqual(['2025 신입휴가', '2026 연차']);
   });
 

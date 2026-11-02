@@ -200,8 +200,29 @@ function LeaveBalanceModal({
   const displayRows = displayResult
     ? displayResult.reviewRows.filter((row) => !deletedRowIds.has(row.id))
     : [];
+  const selectedPeriods = displayResult
+    ? displayResult.periods.map((period) => {
+      const defaultSource: AccrualSource = period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
+        ? (period.isNewHire ? 'KIMS' : 'Jade')
+        : 'KIMS';
+      const source = accrualSourceByPeriodId[period.id] ?? defaultSource;
+      const accruedHours = source === 'Jade' && period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
+        ? period.jadeAccruedHours
+        : period.accruedHours;
+      return {
+        ...period,
+        accruedHours,
+        remainingHours: accruedHours - period.usedHours,
+      };
+    })
+    : [];
   const summaryResult = displayResult
-    ? {...displayResult, reviewRows: displayRows}
+    ? {
+      ...displayResult,
+      accruedHours: selectedPeriods.reduce((total, period) => total + period.accruedHours, 0),
+      periods: selectedPeriods,
+      reviewRows: displayRows,
+    }
     : null;
   const displaySummary = summaryResult
     ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
@@ -356,7 +377,7 @@ function LeaveBalanceModal({
         {!isLoading && !displayError && displayResult && displaySummary && (
           <div className="leave-balance-content">
             <div className="leave-balance-summary" aria-label="휴가 합계">
-              <div><span>발생</span><strong>{hoursLabel(displayResult.accruedHours)}</strong></div>
+              <div><span>발생</span><strong>{hoursLabel(summaryResult?.accruedHours ?? displayResult.accruedHours)}</strong></div>
               <div><span>Jade 사용</span><strong>{hoursLabel(displaySummary.jadeUsedHours)}</strong></div>
               <div><span>신규 사용</span><strong>{hoursLabel(displaySummary.insaUsedHours)}</strong></div>
               <div><span>중복 제외</span><strong>{hoursLabel(displaySummary.duplicateHours)}</strong></div>
@@ -364,9 +385,9 @@ function LeaveBalanceModal({
               <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displaySummary.remainingHours)}</strong></div>
             </div>
 
-            {displayResult.periods.length > 0 && (
+            {summaryResult && summaryResult.periods.length > 0 && (
               <div className="leave-balance-periods" aria-label="휴가 발생기간">
-                {displayResult.periods.map((period) => (
+                {summaryResult.periods.map((period) => (
                   <div className="leave-balance-period" key={period.id}>
                     <div className="leave-balance-period-heading">
                       <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
@@ -375,7 +396,11 @@ function LeaveBalanceModal({
                           발생 기준
                           <select
                             aria-label={`발생 기준 ${period.year}년`}
-                            value={accrualSourceByPeriodId[period.id] ?? (period.isNewHire ? 'KIMS' : 'Jade')}
+                            value={accrualSourceByPeriodId[period.id] ?? (
+                              period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
+                                ? (period.isNewHire ? 'KIMS' : 'Jade')
+                                : 'KIMS'
+                            )}
                             onChange={(event) => setAccrualSourceByPeriodId((current) => ({
                               ...current,
                               [period.id]: event.target.value as AccrualSource,

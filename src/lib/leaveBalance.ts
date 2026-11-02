@@ -1,4 +1,4 @@
-import {AttendanceRecord} from '../api/jadeApi';
+import {AttendanceRecord, JadeLeaveBalance} from '../api/jadeApi';
 import {InsaLeavePageData, InsaLeaveRecord} from '../api/insaParsers';
 
 export type LeaveRecordSource = 'jade' | 'insa' | 'both';
@@ -45,6 +45,7 @@ export interface LeaveBalancePeriod {
   accruedHours: number;
   usedHours: number;
   remainingHours: number;
+  jadeAccruedHours?: number | null;
 }
 
 export interface UnresolvedLeaveRecord extends LeaveBalanceRecord {
@@ -483,12 +484,17 @@ export function reconcileLeaveBalance(
   jadeRecords: readonly AttendanceRecord[],
   insaData: InsaLeavePageData,
   includePreviousPeriod = false,
+  jadeBalances: readonly JadeLeaveBalance[] = [],
 ): LeaveBalanceResult {
   const allPeriods = insaData.balances.map(toLeaveBalancePeriod);
   const periods = allPeriods.filter((period) => (
     period.year === year
     || (includePreviousPeriod && period.year === year - 1 && period.isNewHire)
-  ));
+  )).map((period) => {
+    const normalizePeriod = (value: string): string => value.replace(/\./g, '-');
+    const jadeBalance = jadeBalances.find((balance) => normalizePeriod(balance.period) === normalizePeriod(period.period));
+    return {...period, jadeAccruedHours: jadeBalance?.accruedHours ?? null};
+  });
   const includedYears = new Set(periods.map((period) => period.year));
   const jade = jadeRecords
     .filter((record) => includedYears.has(yearFromYmd(record.ymd) ?? -1))
