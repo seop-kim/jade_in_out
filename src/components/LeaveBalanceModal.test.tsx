@@ -154,11 +154,14 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
-    expect(screen.getByText('발생 기준: Jade')).toBeInTheDocument();
+    const accrualSource = screen.getByRole('combobox', {name: '발생 기준 2026년'});
+    expect(accrualSource).toHaveValue('Jade');
+    await userEvent.selectOptions(accrualSource, 'KIMS');
+    expect(accrualSource).toHaveValue('KIMS');
     expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();
-    expect(screen.getByText('Jade')).toBeInTheDocument();
+    expect(screen.getAllByText('Jade').length).toBeGreaterThan(0);
     expect(screen.getByText('신규')).toBeInTheDocument();
     expect(screen.getByText('승인')).toBeInTheDocument();
   });

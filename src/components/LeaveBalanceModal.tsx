@@ -35,6 +35,8 @@ interface LeaveBalanceModalProps {
   previousPeriodEligibleYear?: number | null;
 }
 
+type AccrualSource = 'Jade' | 'KIMS';
+
 function hoursLabel(hours: number | null): string {
   return hours === null ? '확인 필요' : `${hours}시간`;
 }
@@ -72,6 +74,7 @@ function LeaveBalanceModal({
   const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
   const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
+  const [accrualSourceByPeriodId, setAccrualSourceByPeriodId] = useState<Record<string, AccrualSource>>({});
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -107,6 +110,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
+    setAccrualSourceByPeriodId({});
   }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
@@ -120,6 +124,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
+    setAccrualSourceByPeriodId({});
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -131,6 +136,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
+    setAccrualSourceByPeriodId({});
     onClose();
   }, [onClose]);
 
@@ -347,7 +353,20 @@ function LeaveBalanceModal({
                     <div className="leave-balance-period-heading">
                       <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
                       <div className="leave-balance-period-meta">
-                        <span>발생 기준: {period.isNewHire ? 'KIMS' : 'Jade'}</span>
+                        <label>
+                          발생 기준
+                          <select
+                            aria-label={`발생 기준 ${period.year}년`}
+                            value={accrualSourceByPeriodId[period.id] ?? (period.isNewHire ? 'KIMS' : 'Jade')}
+                            onChange={(event) => setAccrualSourceByPeriodId((current) => ({
+                              ...current,
+                              [period.id]: event.target.value as AccrualSource,
+                            }))}
+                          >
+                            <option value="Jade">Jade</option>
+                            <option value="KIMS">KIMS</option>
+                          </select>
+                        </label>
                         {period.isNewHire && <span>입사 1년차</span>}
                       </div>
                     </div>
