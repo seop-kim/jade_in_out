@@ -117,6 +117,19 @@ describe('reconcileLeaveBalance', () => {
     ]);
   });
 
+  test('treats a one-day full-day leave type as eight hours', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([insaRecord('2026-08-08', '연차휴가(종일)', '1')])
+    );
+
+    expect(result.insaUsedHours).toBe(8);
+    expect(result.records).toEqual([
+      expect.objectContaining({ymd: '2026-08-08', hours: 8, deductible: true}),
+    ]);
+  });
+
   test('includes usage that exists in only one source', () => {
     const result = reconcileLeaveBalance(
       2026,

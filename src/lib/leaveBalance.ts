@@ -76,6 +76,11 @@ function canonicalType(type: string): string {
 function parseDurationHours(durationLabel: string, type: string): number | null {
   const value = durationLabel.trim();
   const compactValue = compact(value);
+  const fullDayType = /(?:전일|종일|하루)/.test(compact(type));
+  const numericDayCount = compactValue.match(/^\d+(?:\.\d+)?$/);
+
+  if (fullDayType && numericDayCount?.[0]) return Number(numericDayCount[0]) * 8;
+
   const hoursMatch = compactValue.match(/(\d+(?:\.\d+)?)시간/);
   if (hoursMatch?.[1]) return Number(hoursMatch[1]);
 
