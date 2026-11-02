@@ -10,6 +10,7 @@ import {
 import './LeaveBalanceModal.css';
 
 export interface LeaveBalanceProgress {
+  year?: number;
   completed: number;
   total: number;
 }
@@ -28,7 +29,7 @@ interface LeaveBalanceModalProps {
   result: LeaveBalanceResult | null;
   error: string | null;
   loading: boolean;
-  progress: LeaveBalanceProgress | null;
+  progress: LeaveBalanceProgress[] | null;
 }
 
 function hoursLabel(hours: number | null): string {
@@ -60,7 +61,7 @@ function LeaveBalanceModal({
   const [requesting, setRequesting] = useState(false);
   const [localResult, setLocalResult] = useState<LeaveBalanceResult | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [localProgress, setLocalProgress] = useState<LeaveBalanceProgress | null>(null);
+  const [localProgress, setLocalProgress] = useState<LeaveBalanceProgress[] | null>(null);
   const [decisionByRowId, setDecisionByRowId] = useState<LeaveDecisionByRowId>({});
   const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
@@ -187,10 +188,6 @@ function LeaveBalanceModal({
   const displaySummary = summaryResult
     ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
     : null;
-  const progressPercent = displayProgress && displayProgress.total > 0
-    ? Math.min(100, Math.round((displayProgress.completed / displayProgress.total) * 100))
-    : null;
-
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -201,7 +198,7 @@ function LeaveBalanceModal({
     setRequesting(true);
     setLocalResult(null);
     setLocalError(null);
-    setLocalProgress(null);
+    setLocalProgress([]);
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
@@ -209,7 +206,15 @@ function LeaveBalanceModal({
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
         if (requestSequenceRef.current === requestId && !controller.signal.aborted) {
-          setLocalProgress(nextProgress);
+          const progressYear = nextProgress.year ?? year;
+          setLocalProgress((previous) => {
+            const next = [...(previous ?? [])];
+            const index = next.findIndex((entry) => (entry.year ?? year) === progressYear);
+            const normalized = {...nextProgress, year: progressYear};
+            if (index >= 0) next[index] = normalized;
+            else next.push(normalized);
+            return next.sort((left, right) => (left.year ?? year) - (right.year ?? year));
+          });
         }
       };
       const nextResult = await onLoad(year, controller.signal, handleProgress, requestedIncludePreviousPeriod);
@@ -272,12 +277,30 @@ function LeaveBalanceModal({
         {isLoading && (
           <div className="leave-balance-loading" role="status">
             <strong>휴가 현황을 불러오는 중입니다.</strong>
-            {progressPercent !== null && (
-              <>
-                <div className="leave-balance-progress-track"><span style={{width: `${progressPercent}%`}} /></div>
-                <span>{progressPercent}%</span>
-              </>
-            )}
+            {displayProgress?.map((entry) => {
+              const percent = entry.total > 0
+                ? Math.min(100, Math.round((entry.completed / entry.total) * 100))
+                : 0;
+              const label = entry.year ? `${entry.year}년 휴가 정보` : '휴가 정보';
+              return (
+                <div className="leave-balance-progress-item" key={entry.year ?? 'current'}>
+                  <div className="leave-balance-progress-label">
+                    <span>{label}</span>
+                    <span>{percent}%</span>
+                  </div>
+                  <div
+                    className="leave-balance-progress-track"
+                    role="progressbar"
+                    aria-label={`${label} 조회 진행률`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                  >
+                    <span style={{width: `${percent}%`}} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

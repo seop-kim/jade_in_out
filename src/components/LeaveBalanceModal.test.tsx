@@ -162,6 +162,28 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('승인')).toBeInTheDocument();
   });
 
+  test('renders separate progress bars for each year when both periods are loading', () => {
+    render(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading
+        progress={[
+          {year: 2025, completed: 120, total: 365},
+          {year: 2026, completed: 30, total: 365},
+        ]}
+      />
+    );
+
+    expect(screen.getByText('2025년 휴가 정보')).toBeInTheDocument();
+    expect(screen.getByText('2026년 휴가 정보')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', {name: '2025년 휴가 정보 조회 진행률'})).toHaveAttribute('aria-valuenow', '33');
+    expect(screen.getByRole('progressbar', {name: '2026년 휴가 정보 조회 진행률'})).toHaveAttribute('aria-valuenow', '8');
+  });
+
   test('renders every source row with review columns and the original reason', () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />

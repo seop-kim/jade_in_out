@@ -105,8 +105,6 @@ function CalendarPage({
     const loader: LeaveUsageLoader = async (year, signal, onProgress, includePreviousPeriod = false) => {
       const years = includePreviousPeriod ? [year - 1, year] : [year];
       const totals = years.map((targetYear) => new Date(targetYear, 1, 29).getMonth() === 1 ? 366 : 365);
-      const offsets = totals.map((_, index) => totals.slice(0, index).reduce((sum, total) => sum + total, 0));
-      const total = totals.reduce((sum, value) => sum + value, 0);
       const records = await Promise.all(years.map((targetYear, index) => fetchLeaveUsageForYear({
         cookie: credentials.cookie,
         parsedBody: credentials.parsedBody,
@@ -114,8 +112,9 @@ function CalendarPage({
         signal,
         transport,
         onProgress: (progress) => onProgress?.({
-          completed: (offsets[index] ?? 0) + progress.completed,
-          total,
+          year: targetYear,
+          completed: progress.completed,
+          total: totals[index] ?? progress.total,
         }),
       })));
       return records.flat();

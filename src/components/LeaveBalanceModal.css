@@ -139,9 +139,22 @@
   color: var(--color-text);
 }
 
+.leave-balance-progress-item + .leave-balance-progress-item {
+  margin-top: 12px;
+}
+
+.leave-balance-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
 .leave-balance-progress-track {
   height: 7px;
-  margin: 12px 0 6px;
+  margin: 5px 0 0;
   overflow: hidden;
   border-radius: 999px;
   background: var(--color-border);

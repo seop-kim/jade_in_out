@@ -85,7 +85,7 @@ function App() {
   const [leaveBalanceResult, setLeaveBalanceResult] = useState<LeaveBalanceResult | null>(null);
   const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
   const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
-  const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress | null>(null);
+  const [leaveBalanceProgress, setLeaveBalanceProgress] = useState<LeaveBalanceProgress[] | null>(null);
   const leaveBalanceRequestRef = useRef(0);
 
   useEffect(() => {
@@ -361,8 +361,16 @@ function App() {
       const [jadeRecords, insaData] = await Promise.all([
         jadeLoader(year, signal, (progress) => {
           if (!isCurrentRequest()) return;
-          setLeaveBalanceProgress(progress);
-          onProgress(progress);
+          const progressYear = progress.year ?? year;
+          setLeaveBalanceProgress((previous) => {
+            const next = [...(previous ?? [])];
+            const index = next.findIndex((entry) => (entry.year ?? year) === progressYear);
+            const normalized = {...progress, year: progressYear};
+            if (index >= 0) next[index] = normalized;
+            else next.push(normalized);
+            return next.sort((left, right) => (left.year ?? year) - (right.year ?? year));
+          });
+          onProgress({...progress, year: progressYear});
         }, includePreviousPeriod),
         insaLoader(year, signal, undefined, includePreviousPeriod),
       ]);

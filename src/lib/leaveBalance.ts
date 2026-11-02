@@ -82,7 +82,7 @@ export interface LeaveBalanceSummary {
 export type LeaveUsageLoader = (
   year: number,
   signal?: AbortSignal,
-  onProgress?: (progress: {completed: number; total: number}) => void,
+  onProgress?: (progress: {year?: number; completed: number; total: number}) => void,
   includePreviousPeriod?: boolean
 ) => Promise<AttendanceRecord[]>;
 
