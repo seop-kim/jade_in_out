@@ -597,7 +597,7 @@ function App() {
         errorDetails={leaveBalanceErrorDetails}
         loading={leaveBalanceLoading}
         progress={null}
-        canIncludePreviousPeriod={canIncludePreviousLeavePeriod(credentials)}
+        canIncludePreviousPeriod={canIncludePreviousLeavePeriod(activeJadeCredentials)}
       />
     </div>
   );

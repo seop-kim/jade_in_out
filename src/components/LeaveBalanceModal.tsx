@@ -272,7 +272,7 @@ function LeaveBalanceModal({
               disabled={isLoading || !canIncludePreviousPeriod}
               onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
             />
-            신입휴가 포함
+            신입휴가 포함 (전년도 포함)
           </label>
           <button type="button" className="leave-balance-load" onClick={() => void handleLoad()} disabled={isLoading}>
             {isLoading ? '조회 중...' : '조회'}

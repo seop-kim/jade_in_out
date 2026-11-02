@@ -198,7 +198,7 @@ describe('LeaveBalanceModal', () => {
       />
     );
 
-    const previousPeriodToggle = screen.getByRole('checkbox', {name: '신입휴가 포함'});
+    const previousPeriodToggle = screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'});
     expect(previousPeriodToggle).toBeDisabled();
 
     rerender(
@@ -214,7 +214,7 @@ describe('LeaveBalanceModal', () => {
       />
     );
 
-    expect(screen.getByRole('checkbox', {name: '신입휴가 포함'})).toBeEnabled();
+    expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeEnabled();
   });
 
   test('reveals sanitized request failure details on demand', async () => {
@@ -329,7 +329,7 @@ describe('LeaveBalanceModal', () => {
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={onLoad} result={initialResult} error={null} loading={false} progress={null} />
     );
 
-    const toggle = screen.getByRole('checkbox', {name: '신입휴가 포함'});
+    const toggle = screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'});
     await userEvent.click(toggle);
 
     expect(onLoad).not.toHaveBeenCalled();
