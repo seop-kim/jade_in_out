@@ -32,6 +32,7 @@ interface LeaveBalanceModalProps {
   loading: boolean;
   progress: LeaveBalanceProgress[] | null;
   canIncludePreviousPeriod?: boolean;
+  previousPeriodEligibleYear?: number | null;
 }
 
 function hoursLabel(hours: number | null): string {
@@ -60,6 +61,7 @@ function LeaveBalanceModal({
   loading,
   progress,
   canIncludePreviousPeriod = true,
+  previousPeriodEligibleYear = null,
 }: LeaveBalanceModalProps) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [requesting, setRequesting] = useState(false);
@@ -80,6 +82,8 @@ function LeaveBalanceModal({
     const currentYear = new Date().getFullYear();
     return Array.from({length: 7}, (_, index) => currentYear - 3 + index);
   }, []);
+  const canSelectPreviousPeriod = canIncludePreviousPeriod
+    && (previousPeriodEligibleYear === null || previousPeriodEligibleYear === year);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -102,8 +106,8 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
-    setIncludePreviousPeriod(displayResult.includePreviousPeriod);
-  }, [displayResult]);
+    setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
+  }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
     if (open) return;
@@ -206,7 +210,7 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
-    const includePrevious = canIncludePreviousPeriod && requestedIncludePreviousPeriod;
+    const includePrevious = canSelectPreviousPeriod && requestedIncludePreviousPeriod;
     setIncludePreviousPeriod(includePrevious);
     try {
       const handleProgress = (nextProgress: LeaveBalanceProgress): void => {
@@ -269,7 +273,7 @@ function LeaveBalanceModal({
             <input
               type="checkbox"
               checked={includePreviousPeriod}
-              disabled={isLoading || !canIncludePreviousPeriod}
+              disabled={isLoading || !canSelectPreviousPeriod}
               onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
             />
             신입휴가 포함 (전년도 포함)

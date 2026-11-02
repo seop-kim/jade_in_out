@@ -217,6 +217,41 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeEnabled();
   });
 
+  test('only enables 신입휴가 포함 for 입사년도 다음 연도', async () => {
+    const {rerender} = render(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading={false}
+        progress={null}
+        canIncludePreviousPeriod
+        previousPeriodEligibleYear={2026}
+      />
+    );
+
+    expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeEnabled();
+    await userEvent.selectOptions(screen.getByLabelText('조회 연도'), '2025');
+    expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeDisabled();
+
+    rerender(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading={false}
+        progress={null}
+        canIncludePreviousPeriod
+        previousPeriodEligibleYear={2027}
+      />
+    );
+    expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeDisabled();
+  });
+
   test('reveals sanitized request failure details on demand', async () => {
     render(
       <LeaveBalanceModal

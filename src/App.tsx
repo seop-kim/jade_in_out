@@ -68,10 +68,10 @@ function safeLeaveBalanceErrorMessage(reason: unknown): string | null {
   return message.length > 160 ? `${message.slice(0, 157)}...` : message;
 }
 
-function canIncludePreviousLeavePeriod(credentials: Credentials | null): boolean {
+function getPreviousLeavePeriodYear(credentials: Credentials | null): number | null {
   const employeeId = credentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const hireYear = Number(employeeId.slice(0, 4));
-  return Number.isInteger(hireYear) && hireYear === new Date().getFullYear() - 1;
+  return Number.isInteger(hireYear) && hireYear >= 1900 ? hireYear + 1 : null;
 }
 
 function ExportIcon() {
@@ -597,7 +597,8 @@ function App() {
         errorDetails={leaveBalanceErrorDetails}
         loading={leaveBalanceLoading}
         progress={null}
-        canIncludePreviousPeriod={canIncludePreviousLeavePeriod(activeJadeCredentials)}
+        canIncludePreviousPeriod={Boolean(getPreviousLeavePeriodYear(activeJadeCredentials))}
+        previousPeriodEligibleYear={getPreviousLeavePeriodYear(activeJadeCredentials)}
       />
     </div>
   );
