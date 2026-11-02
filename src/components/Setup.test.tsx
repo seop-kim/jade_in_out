@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Setup from './Setup';
 
@@ -36,6 +36,18 @@ describe('Jade setup', () => {
     expect(screen.queryByText('위 순서대로 Jade 연결을 설정해주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('Jade 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('setup-auto-card');
     expect(screen.queryByLabelText('cURL 명령어')).not.toBeInTheDocument();
+  });
+
+  test('opens the Jade authentication demo video in a modal', async () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+
+    await userEvent.click(screen.getByRole('button', {name: 'Jade 인증 시연 영상 보기'}));
+
+    expect(screen.getByRole('dialog', {name: 'Jade 인증 시연 영상'})).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', {name: 'Jade 인증 시연 영상'})).getByLabelText('Jade 인증 시연 영상')).toHaveAttribute('src', '/videos/jade-auth-demo.mp4');
+
+    await userEvent.click(screen.getByRole('button', {name: '영상 닫기'}));
+    expect(screen.queryByRole('dialog', {name: 'Jade 인증 시연 영상'})).not.toBeInTheDocument();
   });
 
   test('explains what to do when the bookmarklet link is clicked directly', async () => {

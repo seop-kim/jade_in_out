@@ -28,6 +28,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [inputMode, setInputMode] = useState<InputMode>('curl');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const [demoVideoOpen, setDemoVideoOpen] = useState(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -137,6 +138,9 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                 Jade 연결
               </a>
             </div>
+            <button type="button" className="setup-demo-video-button" onClick={() => setDemoVideoOpen(true)}>
+              Jade 인증 시연 영상 보기
+            </button>
             <ol className="setup-steps setup-connection-steps">
               <li>Jade 연결을 북마크에 끌어다 놓아 저장합니다.</li>
               <li>Jade 시스템 열기를 클릭하여 엽니다.</li>
@@ -156,6 +160,24 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             <ul className="setup-hint setup-connection-notes">
               <li>Jade 브라우저를 종료하지 말아주세요.</li>
             </ul>
+            {demoVideoOpen && (
+              <div className="setup-video-backdrop">
+                <div className="setup-video-dialog" role="dialog" aria-modal="true" aria-label="Jade 인증 시연 영상">
+                  <div className="setup-video-header">
+                    <h3>Jade 인증 시연 영상</h3>
+                    <button type="button" className="setup-video-close" aria-label="영상 닫기" onClick={() => setDemoVideoOpen(false)}>×</button>
+                  </div>
+                  <video
+                    className="setup-demo-video"
+                    aria-label="Jade 인증 시연 영상"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src="/videos/jade-auth-demo.mp4"
+                  />
+                </div>
+              </div>
+            )}
           </section>
         )}
       </div>
