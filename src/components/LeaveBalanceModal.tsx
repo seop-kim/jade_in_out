@@ -75,6 +75,7 @@ function LeaveBalanceModal({
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
   const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
   const [accrualSourceByPeriodId, setAccrualSourceByPeriodId] = useState<Record<string, AccrualSource>>({});
+  const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +112,7 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
     setAccrualSourceByPeriodId({});
+    setDeleteDismissedDialogOpen(false);
   }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
@@ -125,6 +127,7 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
     setAccrualSourceByPeriodId({});
+    setDeleteDismissedDialogOpen(false);
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -137,6 +140,7 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
     setAccrualSourceByPeriodId({});
+    setDeleteDismissedDialogOpen(false);
     onClose();
   }, [onClose]);
 
@@ -209,8 +213,12 @@ function LeaveBalanceModal({
       return effective === 'exclude' || effective === 'duplicate';
     })
     .map((row) => row.id);
-  const handleDeleteDismissedRows = (): void => {
+  const handleOpenDeleteDismissedDialog = (): void => {
+    setDeleteDismissedDialogOpen(true);
+  };
+  const handleConfirmDeleteDismissedRows = (): void => {
     setDeletedRowIds((current) => new Set([...current, ...dismissibleRowIds]));
+    setDeleteDismissedDialogOpen(false);
   };
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
@@ -398,11 +406,9 @@ function LeaveBalanceModal({
             <div className="leave-balance-records">
               <div className="leave-balance-records-heading">
                 <h3>사용 내역</h3>
-                {dismissibleRowIds.length > 0 && (
-                  <button type="button" className="leave-balance-delete-all" onClick={handleDeleteDismissedRows}>
-                    취소선 데이터 일괄 삭제 ({dismissibleRowIds.length})
-                  </button>
-                )}
+                <button type="button" className="leave-balance-delete-all" onClick={handleOpenDeleteDismissedDialog}>
+                  취소선 데이터 일괄 삭제{dismissibleRowIds.length > 0 ? ` (${dismissibleRowIds.length})` : ''}
+                </button>
               </div>
               {displayRows.length === 0 ? (
                 <p className="leave-balance-empty">사용 내역이 없습니다.</p>
@@ -485,6 +491,29 @@ function LeaveBalanceModal({
                 </div>
               )}
             </div>
+
+            {deleteDismissedDialogOpen && (
+              <div className="leave-balance-confirm-backdrop">
+                <div className="leave-balance-confirm-dialog" role="dialog" aria-modal="true" aria-label="취소선 데이터 삭제 확인">
+                  <h3>취소선 데이터 일괄 삭제</h3>
+                  {dismissibleRowIds.length > 0 ? (
+                    <p>취소선 데이터 {dismissibleRowIds.length}건을 삭제할까요?</p>
+                  ) : (
+                    <p>삭제할 취소선 데이터가 없습니다.</p>
+                  )}
+                  <div className="leave-balance-confirm-actions">
+                    {dismissibleRowIds.length > 0 ? (
+                      <>
+                        <button type="button" onClick={() => setDeleteDismissedDialogOpen(false)}>취소</button>
+                        <button type="button" className="leave-balance-confirm-danger" onClick={handleConfirmDeleteDismissedRows}>삭제</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setDeleteDismissedDialogOpen(false)}>확인</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

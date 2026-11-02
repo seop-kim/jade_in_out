@@ -345,9 +345,26 @@ describe('LeaveBalanceModal', () => {
     );
 
     await userEvent.click(screen.getByRole('button', {name: /취소선 데이터 일괄 삭제/}));
+    expect(screen.getByRole('dialog', {name: '취소선 데이터 삭제 확인'})).toHaveTextContent('취소선 데이터 1건을 삭제할까요?');
+    await userEvent.click(screen.getByRole('button', {name: '삭제'}));
 
     expect(screen.queryAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
-    expect(screen.queryByRole('button', {name: /취소선 데이터 일괄 삭제/})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /취소선 데이터 일괄 삭제/})).toBeInTheDocument();
+  });
+
+  test('shows an empty-state popup when no dismissed rows exist', async () => {
+    const cleanResult = {
+      ...result,
+      reviewRows: result.reviewRows.map((row) => ({...row, autoDecision: 'deduct' as const})),
+    };
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={cleanResult} error={null} loading={false} progress={null} />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: /취소선 데이터 일괄 삭제/}));
+    expect(screen.getByRole('dialog', {name: '취소선 데이터 삭제 확인'})).toHaveTextContent('삭제할 취소선 데이터가 없습니다.');
+    await userEvent.click(screen.getByRole('button', {name: '확인'}));
+    expect(screen.queryByRole('dialog', {name: '취소선 데이터 삭제 확인'})).not.toBeInTheDocument();
   });
 
   test('reloads with the previous new-hire period when the option is enabled', async () => {
