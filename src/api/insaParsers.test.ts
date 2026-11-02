@@ -319,6 +319,24 @@ describe('INSA HTML parsers', () => {
     });
   });
 
+  test('parses the live balance layout without a separate 구분 column', () => {
+    const html = `
+      <table class="tbltop"><tbody>
+        <tr><td>귀속년도</td><td>사용기간</td><td>발생연차</td><td>사용연차</td><td>잔여연차</td><td>사용내역</td></tr>
+        <tr><td>2026</td><td>2026-01-01 ~ 2026-12-31</td><td>126시간</td><td>85시간</td><td>41시간</td><td><a href="javascript:pop2('pop_leave.asp?accYY=2026')">보기</a></td></tr>
+      </tbody></table>
+      <table class="tbltop"><tbody>
+        <tr><td>번호</td><td>사용일</td><td>시간</td><td>휴가유형</td><td>사유</td><td>첨부</td><td>신청일</td><td>승인상태</td></tr>
+      </tbody></table>`;
+
+    expect(parseInsaLeaveHtml(html).balances[0]).toEqual(expect.objectContaining({
+      year: 2026,
+      accruedHours: 126,
+      usedHours: 85,
+      remainingHours: 41,
+    }));
+  });
+
   test('parses a historical leave detail popup and its balance link', () => {
     const balanceHtml = `
       <table class="tbltop"><tbody>

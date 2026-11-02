@@ -117,6 +117,30 @@ function popupPathFromCell(cell: HTMLTableCellElement): string | undefined {
   return path ? (path.startsWith('/') ? path : `/leave/${path}`) : undefined;
 }
 
+function balanceColumnIndexes(table: Element): {
+  accrued: number;
+  used: number;
+  remaining: number;
+  detail: number;
+} {
+  const headerCells = Array.from(table.querySelectorAll('tr'))
+    .map((row) => directCells(row))
+    .find((cells) => cells.some((cell) => /발생|사용|잔여/.test(cleanText(cell))));
+  const findHeaderIndex = (predicate: (text: string) => boolean, fallback: number): number => {
+    const index = headerCells?.findIndex((cell) => predicate(cleanText(cell))) ?? -1;
+    return index >= 0 ? index : fallback;
+  };
+
+  return {
+    // The live page uses 발생연차/사용연차/잔여연차, while older responses
+    // include a separate 구분 column before those three values.
+    accrued: findHeaderIndex((text) => text.includes('발생'), 3),
+    used: findHeaderIndex((text) => text.includes('사용') && !text.includes('내역') && !text.includes('기간'), 4),
+    remaining: findHeaderIndex((text) => text.includes('잔여'), 5),
+    detail: findHeaderIndex((text) => text.includes('사용내역'), 5),
+  };
+}
+
 function normalizeHolidayLabel(text: string): string {
   const compact = text.replace(/\s+/g, '').trim();
   if (compact === '대체공휴일') return '대체 공휴일';
@@ -261,18 +285,19 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   const records: InsaLeaveRecord[] = [];
 
   for (const table of tables) {
+    const columns = balanceColumnIndexes(table);
     for (const row of Array.from(table.querySelectorAll('tr'))) {
       const cells = directCells(row);
       if (cells.length === appConfig.insa.parser.balanceColumnCount) {
         const year = parseNumber(cleanText(cells[0]!));
         if (year === null) continue;
-        const detailPath = popupPathFromCell(cells[5]!);
+        const detailPath = popupPathFromCell(cells[columns.detail] ?? cells[cells.length - 1]!);
         balances.push({
           year,
           period: cleanText(cells[1]!),
-          accruedHours: numberFromSummaryCell(cells[3]!),
-          usedHours: numberFromSummaryCell(cells[4]!),
-          remainingHours: numberFromSummaryCell(cells[5]!),
+          accruedHours: numberFromSummaryCell(cells[columns.accrued]!),
+          usedHours: numberFromSummaryCell(cells[columns.used]!),
+          remainingHours: numberFromSummaryCell(cells[columns.remaining]!),
           ...(detailPath ? {detailPath} : {}),
         });
       }
