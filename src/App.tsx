@@ -47,6 +47,28 @@ interface JadeBridgeConnection {
   transport: JadeBridgeTransport;
 }
 
+type LeaveBalanceSource = 'Jade' | '신규';
+
+class LeaveBalanceSourceError extends Error {
+  readonly source: LeaveBalanceSource;
+  readonly causeError: unknown;
+
+  constructor(source: LeaveBalanceSource, causeError: unknown) {
+    super(`${source} leave balance request failed`);
+    this.name = 'LeaveBalanceSourceError';
+    this.source = source;
+    this.causeError = causeError;
+  }
+}
+
+function safeLeaveBalanceErrorMessage(reason: unknown): string | null {
+  const message = reason instanceof Error ? reason.message.trim() : '';
+  if (/^HTTP \d{3}$/.test(message) || message === 'Failed to fetch' || message === 'Network Error') {
+    return message;
+  }
+  return null;
+}
+
 function ExportIcon() {
   return (
     <svg className="export-header-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -361,8 +383,15 @@ function App() {
     setLeaveBalanceError(null);
     setLeaveBalanceProgress(null);
     try {
+      const loadSource = async <T,>(source: LeaveBalanceSource, loader: () => Promise<T>): Promise<T> => {
+        try {
+          return await loader();
+        } catch (reason) {
+          throw new LeaveBalanceSourceError(source, reason);
+        }
+      };
       const [jadeRecords, insaData] = await Promise.all([
-        jadeLoader(year, signal, (progress) => {
+        loadSource('Jade', () => jadeLoader(year, signal, (progress) => {
           if (!isCurrentRequest()) return;
           const progressYear = progress.year ?? year;
           setLeaveBalanceProgress((previous) => {
@@ -374,8 +403,8 @@ function App() {
             return next.sort((left, right) => (left.year ?? year) - (right.year ?? year));
           });
           onProgress({...progress, year: progressYear});
-        }, includePreviousPeriod),
-        insaLoader(year, signal, undefined, includePreviousPeriod),
+        }, includePreviousPeriod)),
+        loadSource('신규', () => insaLoader(year, signal, undefined, includePreviousPeriod)),
       ]);
       if (!isCurrentRequest()) throw createAbortError();
       const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData, includePreviousPeriod);
@@ -384,26 +413,35 @@ function App() {
       return nextResult;
     } catch (reason) {
       if (!isCurrentRequest()) throw reason;
-      if (reason instanceof Error && reason.name === 'JadeAuthenticationError') {
+      const sourceError = reason instanceof LeaveBalanceSourceError ? reason : null;
+      const rootReason = sourceError?.causeError ?? reason;
+      if (rootReason instanceof Error && rootReason.name === 'JadeAuthenticationError') {
         handleJadeAuthenticationExpired();
-      } else if (isInsaAuthenticationError(reason)) {
+      } else if (isInsaAuthenticationError(rootReason)) {
         handleInsaAuthenticationExpired();
       } else if (!signal.aborted) {
         setLeaveBalanceError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
-        const isJadeAnnualError = reason instanceof Error
-          && reason.name === 'JadeAnnualLeaveRequestError'
-          && Array.isArray((reason as {failures?: unknown}).failures);
+        const isJadeAnnualError = rootReason instanceof Error
+          && rootReason.name === 'JadeAnnualLeaveRequestError'
+          && Array.isArray((rootReason as {failures?: unknown}).failures);
         const jadeAnnualError = isJadeAnnualError
-          ? reason as unknown as {year: number; failures: Array<{ymd: string; error: string}>}
+          ? rootReason as unknown as {year: number; failures: Array<{ymd: string; error: string}>}
           : null;
         const failures = jadeAnnualError?.failures ?? [];
+        const sourceLabel = sourceError?.source ?? '알 수 없는 시스템';
         setLeaveBalanceErrorDetails(isJadeAnnualError
           ? [
-              `Jade ${String(jadeAnnualError?.year)}년 조회 실패 (${failures.length}건)`,
+              `${sourceLabel} ${String(jadeAnnualError?.year)}년 조회 실패 (${failures.length}건)`,
               ...failures.slice(0, 20).map(({ymd, error}) => `${ymd} · ${error}`),
               ...(failures.length > 20 ? [`외 ${failures.length - 20}건`] : []),
             ]
-          : [reason instanceof Error ? `오류 유형: ${reason.name}` : '원인을 확인할 수 없는 오류']);
+          : [
+              `${sourceLabel} 휴가 조회 실패`,
+              `오류 유형: ${rootReason instanceof Error ? rootReason.name : '알 수 없음'}`,
+              ...(safeLeaveBalanceErrorMessage(rootReason)
+                ? [`오류 내용: ${safeLeaveBalanceErrorMessage(rootReason)}`]
+                : []),
+            ]);
         showErrorToast('휴가 현황 조회에 실패했습니다.');
       }
       throw reason;

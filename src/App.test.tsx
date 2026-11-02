@@ -298,6 +298,32 @@ describe('App system tabs', () => {
     expect(mockedFetchInsaLeave).toHaveBeenCalledWith(expect.objectContaining({cookie: 'insa-session'}));
   });
 
+  test('identifies the source when an annual leave request fails', async () => {
+    saveCredentials({
+      cookie: 'jade-session',
+      body: 'S_STD_YMD=20260812',
+      parsedBody: {S_EMP_NM: '김태섭', S_EMP_ID: '20250304'},
+    });
+    saveInsaCookie('insa-session');
+    mockedFetchAttendanceForMonth.mockResolvedValue({});
+    mockedLoadInsaMonth.mockResolvedValue(monthResult(2026, 7));
+    mockedFetchLeaveUsageForYear.mockRejectedValue(new Error('HTTP 500'));
+    mockedFetchInsaLeave.mockResolvedValue({
+      balances: [{year: 2026, period: '2026', accruedHours: 160, usedHours: 0, remainingHours: 160}],
+      records: [],
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole('tab', {name: '신규'}));
+    await screen.findAllByText(/^최근 조회/);
+    await userEvent.click(screen.getByRole('button', {name: '설정'}));
+    await userEvent.click(screen.getByRole('button', {name: '휴가 현황'}));
+    await userEvent.click(screen.getByRole('button', {name: '조회'}));
+
+    expect(await screen.findByText('Jade 휴가 조회 실패')).toBeInTheDocument();
+    expect(screen.getByText('오류 내용: HTTP 500')).toBeInTheDocument();
+  });
+
   test('passes both source leave rows into the manual review grid', async () => {
     saveCredentials({
       cookie: 'jade-session',
