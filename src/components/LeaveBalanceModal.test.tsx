@@ -331,10 +331,23 @@ describe('LeaveBalanceModal', () => {
     await userEvent.selectOptions(finalDecisions[0]!, 'exclude');
     expect(finalDecisions[0]!.closest('tr')).toHaveClass('leave-balance-row-dismissed');
 
+    expect(screen.getByRole('button', {name: '취소선 데이터 일괄 삭제 (2)'})).toBeInTheDocument();
+
     await userEvent.click(screen.getByRole('button', {name: '행 삭제 2026-08-05 Jade'}));
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
     expect(screen.queryByRole('button', {name: '행 삭제 2026-08-05 Jade'})).not.toBeInTheDocument();
     expect(screen.getByText('Jade 사용').parentElement).toHaveTextContent('0시간');
+  });
+
+  test('deletes all dismissed rows at once', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: /취소선 데이터 일괄 삭제/}));
+
+    expect(screen.queryAllByRole('combobox', {name: /최종 판정/})).toHaveLength(1);
+    expect(screen.queryByRole('button', {name: /취소선 데이터 일괄 삭제/})).not.toBeInTheDocument();
   });
 
   test('reloads with the previous new-hire period when the option is enabled', async () => {

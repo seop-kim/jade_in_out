@@ -319,9 +319,35 @@
 }
 
 .leave-balance-records h3 {
-  justify-content: space-between;
   margin: 0 0 10px;
   font-size: 14px;
+}
+
+.leave-balance-records-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.leave-balance-records-heading h3 {
+  margin: 0;
+}
+
+.leave-balance-delete-all {
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-delete-all:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .leave-balance-table-wrap {

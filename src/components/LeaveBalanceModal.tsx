@@ -202,6 +202,16 @@ function LeaveBalanceModal({
   const displaySummary = summaryResult
     ? calculateLeaveBalanceSummary(summaryResult, decisionByRowId, hoursByRowId)
     : null;
+  const dismissibleRowIds = displayRows
+    .filter((row) => {
+      const selectedDecision = decisionByRowId[row.id] ?? 'auto';
+      const effective = selectedDecision === 'auto' ? row.autoDecision : selectedDecision;
+      return effective === 'exclude' || effective === 'duplicate';
+    })
+    .map((row) => row.id);
+  const handleDeleteDismissedRows = (): void => {
+    setDeletedRowIds((current) => new Set([...current, ...dismissibleRowIds]));
+  };
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -386,7 +396,14 @@ function LeaveBalanceModal({
             )}
 
             <div className="leave-balance-records">
-              <h3>사용 내역</h3>
+              <div className="leave-balance-records-heading">
+                <h3>사용 내역</h3>
+                {dismissibleRowIds.length > 0 && (
+                  <button type="button" className="leave-balance-delete-all" onClick={handleDeleteDismissedRows}>
+                    취소선 데이터 일괄 삭제 ({dismissibleRowIds.length})
+                  </button>
+                )}
+              </div>
               {displayRows.length === 0 ? (
                 <p className="leave-balance-empty">사용 내역이 없습니다.</p>
               ) : (
