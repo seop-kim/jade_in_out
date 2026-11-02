@@ -35,8 +35,6 @@ interface LeaveBalanceModalProps {
   previousPeriodEligibleYear?: number | null;
 }
 
-type AccrualSource = 'Jade' | 'KIMS';
-
 function hoursLabel(hours: number | null): string {
   return hours === null ? '확인 필요' : `${hours}시간`;
 }
@@ -74,7 +72,7 @@ function LeaveBalanceModal({
   const [hoursByRowId, setHoursByRowId] = useState<LeaveHoursByRowId>({});
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
   const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
-  const [accrualSourceByPeriodId, setAccrualSourceByPeriodId] = useState<Record<string, AccrualSource>>({});
+  const [accruedHoursByPeriodId, setAccruedHoursByPeriodId] = useState<Record<string, number | undefined>>({});
   const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
@@ -111,7 +109,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
-    setAccrualSourceByPeriodId({});
+    setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
   }, [canSelectPreviousPeriod, displayResult]);
 
@@ -126,7 +124,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
-    setAccrualSourceByPeriodId({});
+    setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
   }, [open, result]);
 
@@ -139,7 +137,7 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
-    setAccrualSourceByPeriodId({});
+    setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
     onClose();
   }, [onClose]);
@@ -202,13 +200,7 @@ function LeaveBalanceModal({
     : [];
   const selectedPeriods = displayResult
     ? displayResult.periods.map((period) => {
-      const defaultSource: AccrualSource = period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
-        ? (period.isNewHire ? 'KIMS' : 'Jade')
-        : 'KIMS';
-      const source = accrualSourceByPeriodId[period.id] ?? defaultSource;
-      const accruedHours = source === 'Jade' && period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
-        ? period.jadeAccruedHours
-        : period.accruedHours;
+      const accruedHours = accruedHoursByPeriodId[period.id] ?? period.accruedHours;
       return {
         ...period,
         accruedHours,
@@ -393,22 +385,19 @@ function LeaveBalanceModal({
                       <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
                       <div className="leave-balance-period-meta">
                         <label>
-                          발생 기준
-                          <select
-                            aria-label={`발생 기준 ${period.year}년`}
-                            value={accrualSourceByPeriodId[period.id] ?? (
-                              period.jadeAccruedHours !== null && period.jadeAccruedHours !== undefined
-                                ? (period.isNewHire ? 'KIMS' : 'Jade')
-                                : 'KIMS'
-                            )}
-                            onChange={(event) => setAccrualSourceByPeriodId((current) => ({
+                          발생시간
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            aria-label={`발생시간 ${period.year}년`}
+                            value={accruedHoursByPeriodId[period.id] ?? period.accruedHours}
+                            onChange={(event) => setAccruedHoursByPeriodId((current) => ({
                               ...current,
-                              [period.id]: event.target.value as AccrualSource,
+                              [period.id]: event.target.value === '' ? undefined : Number(event.target.value),
                             }))}
-                          >
-                            <option value="Jade">Jade</option>
-                            <option value="KIMS">KIMS</option>
-                          </select>
+                          />
+                          시간
                         </label>
                         {period.isNewHire && <span>입사 1년차</span>}
                       </div>
@@ -416,8 +405,6 @@ function LeaveBalanceModal({
                     <span>{period.period}</span>
                     <div className="leave-balance-period-values">
                       <span>발생 <strong>{hoursLabel(period.accruedHours)}</strong></span>
-                      <span>사용 <strong>{hoursLabel(period.usedHours)}</strong></span>
-                      <span>잔여 <strong>{hoursLabel(period.remainingHours)}</strong></span>
                     </div>
                   </div>
                 ))}

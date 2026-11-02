@@ -156,12 +156,12 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
-    const accrualSource = screen.getByRole('combobox', {name: '발생 기준 2026년'});
-    expect(accrualSource).toHaveValue('Jade');
+    const accruedHours = screen.getByRole('spinbutton', {name: '발생시간 2026년'});
+    expect(accruedHours).toHaveValue(160);
+    await userEvent.clear(accruedHours);
+    await userEvent.type(accruedHours, '96');
+    expect(accruedHours).toHaveValue(96);
     expect(screen.getAllByText('96시간').length).toBeGreaterThan(0);
-    await userEvent.selectOptions(accrualSource, 'KIMS');
-    expect(accrualSource).toHaveValue('KIMS');
-    expect(screen.getAllByText('160시간').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();

@@ -277,7 +277,8 @@
   font-size: 11px;
 }
 
-.leave-balance-period-meta select {
+.leave-balance-period-meta input {
+  width: 58px;
   min-height: 24px;
   padding: 2px 22px 2px 6px;
   border: 1px solid var(--color-border);
