@@ -105,13 +105,14 @@ function CalendarPage({
     const loader: LeaveUsageLoader = async (year, signal, onProgress, includePreviousPeriod = false) => {
       const years = includePreviousPeriod ? [year - 1, year] : [year];
       const totals = years.map((targetYear) => new Date(targetYear, 1, 29).getMonth() === 1 ? 366 : 365);
+      const currentYear = new Date().getFullYear();
       const records = await Promise.all(years.map((targetYear, index) => fetchLeaveUsageForYear({
         cookie: credentials.cookie,
         parsedBody: credentials.parsedBody,
         year: targetYear,
         signal,
         transport,
-        allowPartial: includePreviousPeriod && targetYear === year - 1,
+        allowPartial: targetYear < currentYear,
         onProgress: (progress) => onProgress?.({
           year: targetYear,
           completed: progress.completed,
