@@ -177,6 +177,23 @@ describe('reconcileLeaveBalance', () => {
     expect(result.records.map((leave) => leave.durationLabel)).toEqual(['4시간 (전4)', '4시간 (후4)']);
   });
 
+  test('does not mark two identical rows from the same source as duplicates', () => {
+    const record = {
+      ...jadeRecord('2026-08-07', '연차휴가', '4시간', '후4', 4),
+      workList: [
+        {type: '연차휴가', duration: '4시간', time: '후4'},
+        {type: '연차휴가', duration: '4시간', time: '후4'},
+      ],
+    };
+
+    const result = reconcileLeaveBalance(2026, [record], insaData([]));
+
+    expect(result.reviewRows).toHaveLength(2);
+    expect(result.reviewRows.every((row) => row.duplicateGroup === null && row.autoDecision === 'deduct')).toBe(true);
+    expect(result.usedHours).toBe(8);
+    expect(result.duplicateHours).toBe(0);
+  });
+
   test('deduplicates full-day labels with different system formatting', () => {
     const result = reconcileLeaveBalance(
       2026,
@@ -251,6 +268,21 @@ describe('reconcileLeaveBalance', () => {
     expect(result.records.filter((record) => record.deductible)).toHaveLength(1);
   });
 
+  test('does not automatically deduct an unknown leave label containing annual leave text', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([insaRecord('2026-08-01', '연차 외 휴가', '(후4)', '승인')])
+    );
+
+    expect(result.reviewRows[0]).toEqual(expect.objectContaining({
+      autoDecision: 'exclude',
+      canonicalType: '연차외휴가',
+      needsReview: true
+    }));
+    expect(result.usedHours).toBe(0);
+  });
+
   test('does not deduct pending, unapproved, or completed cancellation statuses', () => {
     const result = reconcileLeaveBalance(
       2026,
@@ -311,6 +343,19 @@ describe('reconcileLeaveBalance', () => {
     expect(result.records).toEqual([
       expect.objectContaining({ymd: '2026-08-07', hours: null, deductible: false}),
     ]);
+  });
+
+  test('clears an unknown-duration warning when the row is explicitly excluded', () => {
+    const result = reconcileLeaveBalance(
+      2026,
+      [],
+      insaData([insaRecord('2026-08-07', '연차휴가', '(미정)')])
+    );
+    const row = result.reviewRows[0]!;
+
+    const summary = calculateLeaveBalanceSummary(result, {[row.id]: 'exclude'}, {});
+
+    expect(summary.unresolved).toHaveLength(0);
   });
 
   test('keeps both source rows and assigns the default duplicate decisions', () => {

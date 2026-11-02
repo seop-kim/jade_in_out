@@ -153,6 +153,18 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
   });
 
+  test('shows a review-needed marker for rows requiring manual confirmation', () => {
+    const reviewNeededResult: LeaveBalanceResult = {
+      ...result,
+      reviewRows: [{...result.reviewRows[1]!, id: 'insa-pending', type: '연차 외 휴가', autoDecision: 'exclude', needsReview: true}],
+    };
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={reviewNeededResult} error={null} loading={false} progress={null} />
+    );
+
+    expect(screen.getByText('확인 필요')).toBeInTheDocument();
+  });
+
   test('updates the final usage immediately when a row decision changes', async () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
@@ -184,6 +196,23 @@ describe('LeaveBalanceModal', () => {
     await userEvent.type(screen.getByRole('spinbutton', {name: /반영시간/}), '4');
 
     expect(screen.getByText('4시간')).toBeInTheDocument();
+    expect(screen.queryByText('확인되지 않은 사용 내역이 있습니다.')).not.toBeInTheDocument();
+  });
+
+  test('clears the unresolved warning when an unknown-duration row is explicitly excluded', async () => {
+    const unknownResult: LeaveBalanceResult = {
+      ...result,
+      records: [{...result.records[0]!, hours: null, source: 'insa', duplicate: false}],
+      reviewRows: [{...result.reviewRows[1]!, id: 'insa-unknown-excluded', hours: null, autoDecision: 'exclude', needsReview: true}],
+      unresolved: [{...result.records[0]!, hours: null, source: 'insa', duplicate: false, reason: 'unknown-duration'}],
+    };
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={unknownResult} error={null} loading={false} progress={null} />
+    );
+
+    expect(screen.getByText('확인되지 않은 사용 내역이 있습니다.')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByRole('combobox', {name: /최종 판정/}), 'exclude');
+
     expect(screen.queryByText('확인되지 않은 사용 내역이 있습니다.')).not.toBeInTheDocument();
   });
 

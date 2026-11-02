@@ -295,7 +295,10 @@ function LeaveBalanceModal({
                           <td>{row.durationLabel || hoursLabel(row.hours)}</td>
                           <td>{sourceLabel(row.source)}</td>
                           <td>{row.status || '-'}</td>
-                          <td>{decisionLabel(row.autoDecision)}</td>
+                          <td>
+                            <span>{decisionLabel(row.autoDecision)}</span>
+                            {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
+                          </td>
                           <td>
                             <select
                               aria-label={`최종 판정 ${rowLabel}`}

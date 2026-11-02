@@ -98,7 +98,7 @@ function normalizeYmd(ymd: string): string | null {
 function canonicalType(type: string): string {
   const value = compact(type);
   if (value.includes('보건') || value.includes('생리')) return 'health';
-  if (value.includes('연차') || value.includes('시간차') || value === '휴가') return 'annual';
+  if (isAnnualLeaveType(type)) return 'annual';
   if (value.includes('병가')) return 'sick';
   if (value.includes('공가')) return 'official';
   return value.toLowerCase();
@@ -106,7 +106,8 @@ function canonicalType(type: string): string {
 
 function isAnnualLeaveType(type: string): boolean {
   const value = compact(type);
-  return value.includes('연차') || value.includes('시간차') || value === '휴가';
+  if (value === '휴가' || value === '연차' || value === '시간차' || value === '시간차휴가') return true;
+  return /^연차휴가(?:시간차|시간|종일|전일|반차)?$/.test(value);
 }
 
 function isKnownNonDeductibleLeaveType(type: string): boolean {
@@ -301,20 +302,26 @@ function buildReviewRows(
   insa: readonly NormalizedLeaveRecord[]
 ): LeaveReviewRow[] {
   const allRecords = [...jade, ...insa];
-  const grouped = new Map<string, NormalizedLeaveRecord[]>();
-  allRecords.forEach((record) => {
-    const key = matchKey(record);
-    if (!key) return;
-    const bucket = grouped.get(key) ?? [];
-    bucket.push(record);
-    grouped.set(key, bucket);
-  });
-
   const groupByRecord = new Map<NormalizedLeaveRecord, string>();
   const decisionByRecord = new Map<NormalizedLeaveRecord, Exclude<LeaveDecision, 'auto'>>();
+  const insaByKey = new Map<string, NormalizedLeaveRecord[]>();
+  insa.forEach((record) => {
+    const key = matchKey(record);
+    if (!key) return;
+    const bucket = insaByKey.get(key) ?? [];
+    bucket.push(record);
+    insaByKey.set(key, bucket);
+  });
+  const matchedInsa = new Set<NormalizedLeaveRecord>();
   let groupNumber = 0;
-  grouped.forEach((bucket) => {
-    if (bucket.length < 2) return;
+  jade.forEach((jadeRecord) => {
+    const key = matchKey(jadeRecord);
+    const matchingInsa = key
+      ? insaByKey.get(key)?.find((record) => !matchedInsa.has(record))
+      : undefined;
+    if (!matchingInsa) return;
+    matchedInsa.add(matchingInsa);
+    const bucket = [jadeRecord, matchingInsa];
     const groupId = `duplicate-${groupNumber}`;
     groupNumber += 1;
     bucket.forEach((record) => groupByRecord.set(record, groupId));
@@ -361,7 +368,13 @@ export function calculateLeaveBalanceSummary(
   let usedHours = 0;
   let duplicateHours = 0;
   const unresolved = result.reviewRows
-    .filter((row) => row.hours === null && !(hoursByRowId[row.id] && (hoursByRowId[row.id] ?? 0) > 0))
+    .filter((row) => {
+      const selectedDecision = decisions[row.id] ?? 'auto';
+      const acknowledged = selectedDecision === 'exclude' || selectedDecision === 'duplicate';
+      return row.hours === null
+        && !acknowledged
+        && !(hoursByRowId[row.id] && (hoursByRowId[row.id] ?? 0) > 0);
+    })
     .map(reviewRowToPublicRecord)
     .map((record) => ({...record, reason: 'unknown-duration' as const}));
 
