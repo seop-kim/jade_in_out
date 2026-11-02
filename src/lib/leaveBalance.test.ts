@@ -177,6 +177,23 @@ describe('reconcileLeaveBalance', () => {
     expect(result.records.map((leave) => leave.durationLabel)).toEqual(['4시간 (전4)', '4시간 (후4)']);
   });
 
+  test('keeps only leave-related Jade rows out of mixed attendance details', () => {
+    const record = {
+      ...jadeRecord('20260807', '연차', '4시간', '전4', 4),
+      workList: [
+        {type: '휴일', duration: '', time: ''},
+        {type: '연장', duration: '2시간', time: '18:00~20:00'},
+        {type: '현지출근신청', duration: '', time: ''},
+        {type: '연차', duration: '4시간', time: '전4'},
+        {type: '보건휴가', duration: '1일', time: ''},
+      ],
+    };
+
+    const result = reconcileLeaveBalance(2026, [record], insaData([]));
+
+    expect(result.reviewRows.map((row) => row.type)).toEqual(['연차', '보건휴가']);
+  });
+
   test('does not mark two identical rows from the same source as duplicates', () => {
     const record = {
       ...jadeRecord('2026-08-07', '연차휴가', '4시간', '후4', 4),

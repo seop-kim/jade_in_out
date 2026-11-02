@@ -120,7 +120,8 @@ function isKnownNonDeductibleLeaveType(type: string): boolean {
 
 function isReviewLeaveType(type: string): boolean {
   const value = compact(type);
-  return !['연장', '휴무일', '재택근무', '현지출근신청', '현지퇴근신청'].includes(value);
+  if (isAnnualLeaveType(type) || isKnownNonDeductibleLeaveType(type)) return true;
+  return /(휴가|휴직|병가|공가|경조|출산|육아|예비군|검진|보건|생리|비전리더|반차|반일)/.test(value);
 }
 
 function parseDurationHours(durationLabel: string, type: string): number | null {
