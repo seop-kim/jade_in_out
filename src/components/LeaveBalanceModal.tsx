@@ -269,15 +269,17 @@ function LeaveBalanceModal({
           <select id="leave-balance-year" value={year} onChange={(event) => handleYearChange(Number(event.target.value))} disabled={isLoading}>
             {years.map((option) => <option key={option} value={option}>{option}년</option>)}
           </select>
-          <label className="leave-balance-previous-toggle">
-            <input
-              type="checkbox"
-              checked={includePreviousPeriod}
-              disabled={isLoading || !canSelectPreviousPeriod}
-              onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
-            />
-            신입휴가 포함 (전년도 포함)
-          </label>
+          {canSelectPreviousPeriod && (
+            <label className="leave-balance-previous-toggle">
+              <input
+                type="checkbox"
+                checked={includePreviousPeriod}
+                disabled={isLoading}
+                onChange={(event) => setIncludePreviousPeriod(event.target.checked)}
+              />
+              신입휴가 포함 (전년도 포함)
+            </label>
+          )}
           <button type="button" className="leave-balance-load" onClick={() => void handleLoad()} disabled={isLoading}>
             {isLoading ? '조회 중...' : '조회'}
           </button>
