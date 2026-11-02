@@ -31,6 +31,18 @@ export interface LeaveBalanceResult {
   unresolved: UnresolvedLeaveRecord[];
 }
 
+export type LeaveUsageLoader = (
+  year: number,
+  signal?: AbortSignal,
+  onProgress?: (progress: {completed: number; total: number}) => void
+) => Promise<AttendanceRecord[]>;
+
+export type InsaLeaveLoader = (
+  year: number,
+  signal?: AbortSignal,
+  onProgress?: (progress: {completed: number; total: number}) => void
+) => Promise<InsaLeavePageData>;
+
 interface NormalizedLeaveRecord {
   ymd: string;
   type: string;

@@ -15,6 +15,8 @@ import {ConnectionStatus} from '../lib/connectionStatus';
 import {isMonthCacheFresh} from '../lib/monthCache';
 import {JADE_EXPORT_COLUMNS, buildJadeExportRows} from '../lib/exportRows';
 import {CsvRow, filterRowsByDateRange} from '../lib/csvExport';
+import {fetchLeaveUsageForYear} from '../api/jadeApi';
+import {LeaveUsageLoader} from '../lib/leaveBalance';
 
 const EXPORT_MIN_DATE = '2000-01-01';
 const EXPORT_MAX_DATE = '2099-12-31';
@@ -27,6 +29,7 @@ interface CalendarPageProps {
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onLastFetchedChange?: (value: Date | null) => void;
   onExportReady?: (opener: (() => void) | null) => void;
+  onLeaveUsageReady?: (loader: LeaveUsageLoader | null) => void;
 }
 
 interface CachedMonth {
@@ -85,6 +88,7 @@ function CalendarPage({
   onConnectionStatusChange,
   onLastFetchedChange,
   onExportReady,
+  onLeaveUsageReady,
 }: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
@@ -96,6 +100,19 @@ function CalendarPage({
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+
+  useEffect(() => {
+    const loader: LeaveUsageLoader = (year, signal, onProgress) => fetchLeaveUsageForYear({
+      cookie: credentials.cookie,
+      parsedBody: credentials.parsedBody,
+      year,
+      signal,
+      transport,
+      onProgress,
+    });
+    onLeaveUsageReady?.(loader);
+    return () => onLeaveUsageReady?.(null);
+  }, [credentials, onLeaveUsageReady, transport]);
   const monthCache = useRef(new Map<string, CachedMonth>());
 
   useEffect(() => {

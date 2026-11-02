@@ -363,6 +363,17 @@ export interface ProgressInfo {
   total: number;
 }
 
+export interface FetchLeaveUsageYearOptions {
+  cookie?: string;
+  parsedBody: Record<string, string>;
+  year: number;
+  signal?: AbortSignal;
+  retryCount?: number;
+  retryDelayMs?: number;
+  transport?: JadeBridgeTransport;
+  onProgress?: (info: ProgressInfo) => void;
+}
+
 export interface FetchMonthOptions {
   cookie?: string;
   parsedBody: Record<string, string>;
@@ -441,4 +452,60 @@ export async function fetchAttendanceForMonth({
   );
 
   return result;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+export async function fetchLeaveUsageForYear({
+  cookie,
+  parsedBody,
+  year,
+  signal,
+  retryCount = 2,
+  retryDelayMs = 250,
+  transport,
+  onProgress,
+}: FetchLeaveUsageYearOptions): Promise<AttendanceRecord[]> {
+  const total = Array.from({length: 12}, (_, month) => daysInMonth(year, month))
+    .reduce((sum, days) => sum + days, 0);
+  const records: AttendanceRecord[] = [];
+  let completedBeforeMonth = 0;
+
+  for (let month = 0; month < 12; month += 1) {
+    const monthOffset = completedBeforeMonth;
+    const monthController = new AbortController();
+    const forwardAbort = (): void => monthController.abort();
+    if (signal?.aborted) monthController.abort();
+    signal?.addEventListener('abort', forwardAbort, {once: true});
+    const monthResults = await fetchAttendanceForMonth({
+      cookie,
+      parsedBody,
+      year,
+      month,
+      retryCount,
+      retryDelayMs,
+      signal: monthController.signal,
+      transport,
+      onDayResult: (_ymd, result) => {
+        if ('error' in result && 'authError' in result && result.authError) monthController.abort();
+      },
+      onProgress: (progress) => onProgress?.({
+        completed: monthOffset + progress.completed,
+        total,
+      }),
+    });
+    signal?.removeEventListener('abort', forwardAbort);
+    const errors = Object.values(monthResults).filter((result): result is AttendanceError => 'error' in result);
+    const authError = errors.find((error) => error.authError);
+    if (authError) throw new JadeAuthenticationError();
+    if (errors.length > 0) throw new Error('Jade annual leave request failed');
+    records.push(...Object.values(monthResults).filter(
+      (result): result is AttendanceRecord => !('error' in result)
+    ));
+    completedBeforeMonth += daysInMonth(year, month);
+  }
+
+  return records;
 }

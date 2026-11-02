@@ -1,4 +1,4 @@
-import {fetchAttendanceForDate} from './jadeApi';
+import {fetchAttendanceForDate, fetchLeaveUsageForYear} from './jadeApi';
 
 describe('Jade API', () => {
   test('uses a browser transport when Jade credentials stay in the logged-in tab', async () => {
@@ -62,5 +62,49 @@ describe('Jade API', () => {
       ymd: '2026-08-12',
       transport: {post},
     })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
+  });
+
+  test('loads a year month-by-month and reports bounded day progress', async () => {
+    const dates: string[] = [];
+    const progress: Array<{completed: number; total: number}> = [];
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        dates.push(new URLSearchParams(body).get('S_STD_YMD') ?? '');
+        return Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2026,
+      retryCount: 0,
+      transport,
+      onProgress: (value) => progress.push(value),
+    });
+
+    expect(records).toHaveLength(365);
+    expect(dates.filter((date) => date.endsWith('01'))).toEqual([
+      '20260101', '20260201', '20260301', '20260401', '20260501', '20260601',
+      '20260701', '20260801', '20260901', '20261001', '20261101', '20261201',
+    ]);
+    expect(progress[progress.length - 1]).toEqual({completed: 365, total: 365});
+  });
+
+  test('stops the annual loader immediately when Jade authentication expires', async () => {
+    const post = jest.fn().mockResolvedValue(`
+      <SHEET>
+        <MESSAGE><![CDATA[LOGIN_CHECK_FAIL:LOGOUT]]></MESSAGE>
+      </SHEET>
+    `);
+
+    await expect(fetchLeaveUsageForYear({
+      cookie: 'expired-cookie',
+      parsedBody: {},
+      year: 2026,
+      transport: {post},
+    })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
+    expect(post).toHaveBeenCalledTimes(4);
+    expect(post.mock.calls.every((call) => call[1].includes('202601'))).toBe(true);
   });
 });

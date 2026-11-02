@@ -2,6 +2,7 @@ import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   fetchInsaDayDetails,
+  fetchInsaLeave,
   InsaMonthLoadResult,
   loadInsaMonth,
 } from '../../api/insaApi';
@@ -12,12 +13,14 @@ import InsaPage from './InsaPage';
 
 jest.mock('../../api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  fetchInsaLeave: jest.fn(),
   isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 
 const mockedLoadInsaMonth = loadInsaMonth as jest.MockedFunction<typeof loadInsaMonth>;
 const mockedFetchInsaDayDetails = fetchInsaDayDetails as jest.MockedFunction<typeof fetchInsaDayDetails>;
+const mockedFetchInsaLeave = fetchInsaLeave as jest.MockedFunction<typeof fetchInsaLeave>;
 
 const monthResult: InsaMonthLoadResult = {
   home: {
@@ -56,6 +59,7 @@ describe('InsaPage', () => {
     jest.setSystemTime(new Date(2026, 7, 12, 9));
     mockedLoadInsaMonth.mockResolvedValue(monthResult);
     mockedFetchInsaDayDetails.mockResolvedValue([]);
+    mockedFetchInsaLeave.mockResolvedValue(monthResult.leave!);
   });
 
   afterEach(() => {
@@ -81,6 +85,16 @@ describe('InsaPage', () => {
     expect(screen.getByRole('tab', {name: '수동인증'})).toHaveAttribute('aria-selected', 'false');
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
+  });
+
+  test('registers an INSA leave loader while the cookie connection is available', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const onLeaveDataReady = jest.fn();
+    const {unmount} = render(<InsaPage onLeaveDataReady={onLeaveDataReady} />);
+
+    await waitFor(() => expect(onLeaveDataReady).toHaveBeenCalledWith(expect.any(Function)));
+    unmount();
+    expect(onLeaveDataReady).toHaveBeenLastCalledWith(null);
   });
 
   test('shows only the manual Cookie setup after selecting manual authentication', async () => {

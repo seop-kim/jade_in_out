@@ -37,6 +37,8 @@ function monthResult(year: number, month: number): InsaMonthLoadResult {
 
 describe('App system tabs', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 7, 12, 9));
     clearCredentials();
     clearInsaCookie();
     localStorage.removeItem('jade_in_out_theme_v1');
@@ -52,6 +54,7 @@ describe('App system tabs', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     clearCredentials();
     clearInsaCookie();
     localStorage.removeItem('jade_in_out_theme_v1');

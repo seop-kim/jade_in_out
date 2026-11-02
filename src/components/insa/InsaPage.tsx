@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   fetchInsaDayDetails,
+  fetchInsaLeave,
   isInsaAuthenticationError,
   InsaMonthLoadResult,
   InsaMonthSource,
@@ -24,6 +25,7 @@ import InsaCalendar from './InsaCalendar';
 import InsaSetup from './InsaSetup';
 import './Insa.css';
 import {INSA_EXPORT_COLUMNS, buildInsaExportRows} from '../../lib/exportRows';
+import {InsaLeaveLoader} from '../../lib/leaveBalance';
 
 const EXPORT_MIN_DATE = '2000-01-01';
 const EXPORT_MAX_DATE = '2099-12-31';
@@ -87,6 +89,7 @@ export interface InsaPageProps {
   onApiRequestChange?: (request: InsaApiRequest, active: boolean) => void;
   onError?: (message: string) => void;
   onExportReady?: (opener: (() => void) | null) => void;
+  onLeaveDataReady?: (loader: InsaLeaveLoader | null) => void;
 }
 
 interface CachedMonth {
@@ -121,6 +124,7 @@ function InsaPage({
   onApiRequestChange,
   onError,
   onExportReady,
+  onLeaveDataReady,
 }: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
@@ -183,6 +187,21 @@ function InsaPage({
     if (!client) return Promise.reject(new Error('인사시스템 연결이 준비되지 않았습니다.'));
     return client.request(path, init, signal);
   }, []);
+
+  useEffect(() => {
+    if (!cookie && !bridgeReady) {
+      onLeaveDataReady?.(null);
+      return undefined;
+    }
+
+    const loader: InsaLeaveLoader = (_year, signal) => fetchInsaLeave({
+      cookie: cookie ?? undefined,
+      signal,
+      requestHtml: cookie ? undefined : requestHtmlViaBridge,
+    });
+    onLeaveDataReady?.(loader);
+    return () => onLeaveDataReady?.(null);
+  }, [bridgeReady, cookie, onLeaveDataReady, requestHtmlViaBridge]);
 
   const invalidateDayDetails = useCallback((): void => {
     detailControllers.current.forEach((controller) => controller.abort());
