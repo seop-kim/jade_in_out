@@ -158,8 +158,10 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
     const accrualSource = screen.getByRole('combobox', {name: '발생 기준 2026년'});
     expect(accrualSource).toHaveValue('Jade');
+    expect(screen.getAllByText('96시간').length).toBeGreaterThan(0);
     await userEvent.selectOptions(accrualSource, 'KIMS');
     expect(accrualSource).toHaveValue('KIMS');
+    expect(screen.getAllByText('160시간').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();
