@@ -45,8 +45,21 @@
   margin: 22px 0 4px;
 }
 
+.setup-guide-viewport {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.setup-guide-track {
+  display: flex;
+  transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
 .setup-guide-step {
   position: relative;
+  flex: 0 0 100%;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(230px, 1fr);
   align-items: center;
