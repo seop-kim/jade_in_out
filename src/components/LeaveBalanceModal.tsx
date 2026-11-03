@@ -141,7 +141,7 @@ function LeaveBalanceModal({
   const previousOverflowRef = useRef('');
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({length: 7}, (_, index) => currentYear - 3 + index);
+    return Array.from({length: 3}, (_, index) => currentYear - index);
   }, []);
   const canSelectPreviousPeriod = canIncludePreviousPeriod
     && (previousPeriodEligibleYear === null || previousPeriodEligibleYear === year);

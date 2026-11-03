@@ -224,6 +224,26 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('checkbox', {name: '신입휴가 포함 (전년도 포함)'})).toBeEnabled();
   });
 
+  test('shows only the current year and the two previous years in the year selector', () => {
+    render(
+      <LeaveBalanceModal
+        open
+        onClose={jest.fn()}
+        onLoad={jest.fn()}
+        result={null}
+        error={null}
+        loading={false}
+        progress={null}
+      />
+    );
+
+    expect(screen.getByLabelText('조회 연도').querySelectorAll('option')).toHaveLength(3);
+    expect(screen.getByLabelText('조회 연도')).toHaveDisplayValue('2026년');
+    expect(screen.getByRole('option', {name: '2025년'})).toBeInTheDocument();
+    expect(screen.getByRole('option', {name: '2024년'})).toBeInTheDocument();
+    expect(screen.queryByRole('option', {name: '2023년'})).not.toBeInTheDocument();
+  });
+
   test('only shows 신입휴가 포함 for 입사년도 다음 연도', async () => {
     const {rerender} = render(
       <LeaveBalanceModal
