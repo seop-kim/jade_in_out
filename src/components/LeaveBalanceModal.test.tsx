@@ -376,7 +376,7 @@ describe('LeaveBalanceModal', () => {
     fireEvent.mouseDown(decisionResizer, {clientX: 100});
     fireEvent.mouseMove(window, {clientX: -1000});
     fireEvent.mouseUp(window);
-    expect(decisionHeader).toHaveStyle({width: '170px'});
+    expect(decisionHeader).toHaveStyle({width: '100px'});
 
     const appliedHoursHeader = screen.getByRole('columnheader', {name: '반영시간'});
     const appliedHoursResizer = screen.getByRole('separator', {name: '반영시간 열 너비 조절'});

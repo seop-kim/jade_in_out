@@ -85,7 +85,7 @@ const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
   source: 90,
   status: 100,
   autoDecision: 110,
-  finalDecision: 170,
+  finalDecision: 100,
   appliedHours: 90,
   manage: 90,
 };
