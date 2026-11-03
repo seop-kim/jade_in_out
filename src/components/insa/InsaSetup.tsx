@@ -1,5 +1,6 @@
-import {FormEvent, useEffect, useRef, useState} from 'react';
+import {FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState} from 'react';
 import {appConfig} from '../../config';
+import '../Setup.css';
 
 interface InsaSetupProps {
   onSubmit: (cookie: string) => void;
@@ -10,16 +11,101 @@ interface InsaSetupProps {
 
 type AuthMethod = 'automatic' | 'manual';
 
+const insaGuideSteps = [
+  {
+    image: '/images/insa-guide/01-bookmark.png',
+    alt: '1단계 인사 연결 북마크 저장',
+    text: '인사 연결을 북마크에 끌어다 놓아 저장합니다.',
+  },
+  {
+    image: '/images/insa-guide/02-open-system.png',
+    alt: '2단계 인사시스템 열기',
+    text: '인사시스템 열기를 클릭하여 엽니다.',
+  },
+  {
+    image: '/images/insa-guide/03-login.png',
+    alt: '3단계 인사시스템 로그인',
+    text: '인사시스템 로그인을 합니다.',
+  },
+  {
+    image: '/images/insa-guide/04-bookmark-connect.png',
+    alt: '4단계 인사 연결 실행',
+    text: '북마크에 인사 연결을 눌러줍니다.',
+  },
+  {
+    image: '/images/insa-guide/05-calendar.png',
+    alt: '5단계 연결 완료 확인',
+    text: '달력에 출퇴근 정보가 표시되면 연결이 완료됩니다.',
+  },
+];
+
 function InsaSetup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: InsaSetupProps) {
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [cookie, setCookie] = useState('');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
+  const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
+  const [isGuideClosing, setIsGuideClosing] = useState(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
+  const guideDragStartX = useRef<number | null>(null);
+  const guideModalDragStartX = useRef<number | null>(null);
   const normalizedCookie = cookie.trim();
+
+  const selectedGuide = selectedGuideStep === null ? null : insaGuideSteps[selectedGuideStep];
+  const selectedGuideIndex = selectedGuideStep ?? 0;
 
   useEffect(() => {
     bookmarkletRef.current?.setAttribute('href', bookmarkletHref);
   }, [bookmarkletHref]);
+
+  useEffect(() => {
+    if (selectedGuideStep === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setIsGuideClosing(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGuideStep]);
+
+  useEffect(() => {
+    if (!isGuideClosing) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSelectedGuideStep(null);
+      setIsGuideClosing(false);
+    }, 180);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isGuideClosing]);
+
+  const openGuide = (index: number): void => {
+    setIsGuideClosing(false);
+    setSelectedGuideStep(index);
+  };
+
+  const completeGuideDrag = (clientX: number): void => {
+    if (guideDragStartX.current === null) return;
+    const distance = clientX - guideDragStartX.current;
+    guideDragStartX.current = null;
+    if (!Number.isFinite(distance) || Math.abs(distance) < 50) return;
+    setGuideStepIndex((index) => distance < 0
+      ? Math.min(insaGuideSteps.length - 1, index + 1)
+      : Math.max(0, index - 1));
+  };
+
+  const completeGuideModalDrag = (clientX: number): void => {
+    if (guideModalDragStartX.current === null) return;
+    const distance = clientX - guideModalDragStartX.current;
+    guideModalDragStartX.current = null;
+    if (!Number.isFinite(distance) || Math.abs(distance) < 50) return;
+    const nextIndex = distance < 0
+      ? Math.min(insaGuideSteps.length - 1, selectedGuideIndex + 1)
+      : Math.max(0, selectedGuideIndex - 1);
+    setSelectedGuideStep(nextIndex);
+    setGuideStepIndex(nextIndex);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -83,20 +169,72 @@ function InsaSetup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: I
                 인사 연결
               </a>
             </div>
-            <ol className="insa-setup-steps">
-              <li>인사 연결을 북마크에 끌어다 놓아 저장합니다.</li>
-              <li>인사시스템 열기를 클릭하여 엽니다.</li>
-              <li>인사시스템 로그인 후 북마크에 인사 연결을 눌러줍니다.</li>
-              <li>인사시스템 화면에서 연결이 진행될 때까지 기다립니다.</li>
-              <li>달력에 휴가·출퇴근 정보가 표시되면 연결이 완료됩니다.</li>
-            </ol>
-            <p className="insa-bridge-help" role={bridgeStatus === 'waiting' || bookmarkletClicked ? 'status' : undefined}>
-              {bridgeStatus === 'waiting'
-                ? '새 탭에서 로그인한 뒤 인사 연결을 눌러 주세요.'
-                : bookmarkletClicked
-                  ? '이 링크를 즐겨찾기 바에 저장한 뒤, 인사시스템 창에서 눌러 주세요.'
-                  : '위 순서대로 인사 연결을 설정해 주세요.'}
-            </p>
+            <div className="setup-guide-inline insa-guide-inline" aria-label="인사 연결 순서">
+              <div className="setup-guide-heading"><h3>연결 가이드</h3></div>
+              <div
+                className="setup-guide-viewport"
+                data-testid="insa-guide-viewport"
+                onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
+                  if (event.pointerType === 'mouse' && event.button !== 0) return;
+                  guideDragStartX.current = event.clientX;
+                }}
+                onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => completeGuideDrag(event.clientX)}
+                onPointerCancel={() => { guideDragStartX.current = null; }}
+                onMouseDown={(event: ReactMouseEvent<HTMLDivElement>) => {
+                  if (event.button === 0) guideDragStartX.current = event.clientX;
+                }}
+                onMouseUp={(event: ReactMouseEvent<HTMLDivElement>) => completeGuideDrag(event.clientX)}
+              >
+                <div className="setup-guide-track" style={{transform: `translateX(-${guideStepIndex * 100}%)`}}>
+                  {insaGuideSteps.map((step, index) => (
+                    <figure className="setup-guide-step" key={step.image}>
+                      <button type="button" className="setup-guide-slide-zoom" aria-label={`${step.alt} 확대 보기`} onClick={() => openGuide(index)}>
+                        <span className="setup-guide-zoom-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" focusable="false"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></svg>
+                        </span>
+                      </button>
+                      <div className="setup-guide-media"><img className="setup-guide-image" src={step.image} alt={step.alt} draggable={false} /></div>
+                      <figcaption>{index + 1}. {step.text}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+              <div className="setup-guide-controls">
+                <button type="button" className="setup-guide-arrow" aria-label="이전 단계" onClick={() => setGuideStepIndex((index) => Math.max(0, index - 1))} disabled={guideStepIndex === 0}>‹</button>
+                <span className="setup-guide-counter" aria-live="polite">{guideStepIndex + 1} / {insaGuideSteps.length}</span>
+                <button type="button" className="setup-guide-arrow" aria-label="다음 단계" onClick={() => setGuideStepIndex((index) => Math.min(insaGuideSteps.length - 1, index + 1))} disabled={guideStepIndex === insaGuideSteps.length - 1}>›</button>
+              </div>
+            </div>
+            {selectedGuide && (
+              <div className={`setup-image-backdrop ${isGuideClosing ? 'is-closing' : ''}`} role="dialog" aria-modal="true" aria-label={`${selectedGuide.alt} 확대 보기`} onClick={(event) => { if (event.target === event.currentTarget) setIsGuideClosing(true); }}>
+                <div className="setup-image-dialog">
+                  <button type="button" className="setup-image-close" aria-label="확대 이미지 닫기" onClick={() => setIsGuideClosing(true)}>×</button>
+                  <div className="setup-image-stage">
+                    <button type="button" className="setup-image-side-arrow" aria-label="확대 보기 이전 단계" onClick={() => { const nextIndex = Math.max(0, selectedGuideIndex - 1); setSelectedGuideStep(nextIndex); setGuideStepIndex(nextIndex); }} disabled={selectedGuideIndex === 0}>‹</button>
+                    <div
+                      className="setup-image-pan-area"
+                      onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => { if (event.pointerType !== 'mouse' || event.button === 0) guideModalDragStartX.current = event.clientX; }}
+                      onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => completeGuideModalDrag(event.clientX)}
+                      onPointerCancel={() => { guideModalDragStartX.current = null; }}
+                      onMouseDown={(event: ReactMouseEvent<HTMLDivElement>) => { if (event.button === 0) guideModalDragStartX.current = event.clientX; }}
+                      onMouseUp={(event: ReactMouseEvent<HTMLDivElement>) => completeGuideModalDrag(event.clientX)}
+                    >
+                      <img key={selectedGuide.image} className="setup-image-expanded" src={selectedGuide.image} alt={`${selectedGuide.alt} 확대`} draggable={false} />
+                    </div>
+                    <button type="button" className="setup-image-side-arrow" aria-label="확대 보기 다음 단계" onClick={() => { const nextIndex = Math.min(insaGuideSteps.length - 1, selectedGuideIndex + 1); setSelectedGuideStep(nextIndex); setGuideStepIndex(nextIndex); }} disabled={selectedGuideIndex === insaGuideSteps.length - 1}>›</button>
+                  </div>
+                  <p className="setup-image-caption">{selectedGuideIndex + 1}. {selectedGuide.text}</p>
+                  <div className="setup-image-pagination" aria-label="확대 보기 페이지">
+                    {insaGuideSteps.map((step, index) => <button type="button" className={`setup-image-dot ${selectedGuideIndex === index ? 'active' : ''}`} key={step.image} aria-label={`확대 보기 ${index + 1}페이지`} aria-current={selectedGuideIndex === index ? 'true' : 'false'} onClick={() => { setSelectedGuideStep(index); setGuideStepIndex(index); }} />)}
+                  </div>
+                </div>
+              </div>
+            )}
+            {(bridgeStatus === 'waiting' || bookmarkletClicked) && (
+              <p className="insa-bridge-help" role="status">
+                {bridgeStatus === 'waiting' ? '새 탭에서 로그인한 뒤 인사 연결을 눌러 주세요.' : '이 링크를 즐겨찾기 바에 저장한 뒤, 인사시스템 창에서 눌러 주세요.'}
+              </p>
+            )}
             <ul className="insa-setup-notes">
               <li>인사시스템 브라우저를 종료하지 말아주세요.</li>
             </ul>

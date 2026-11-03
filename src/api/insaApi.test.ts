@@ -3,6 +3,7 @@ import {TextDecoder, TextEncoder} from 'util';
 import {
   fetchInsaDayDetails,
   fetchInsaHomeMonth,
+  fetchInsaLeavePeriod,
   fetchInsaWorktime,
   getWorktimeRange,
   loadInsaMonth,
@@ -94,6 +95,27 @@ describe('INSA API', () => {
         'X-Insa-Cookie': 'test-session',
       },
       body: 'sType=0&sdt=2026-08-01&edt=2026-08-11',
+      signal: undefined,
+      credentials: 'omit',
+      cache: 'no-store',
+    });
+  });
+
+  test('fetches a historical leave period detail path through the INSA proxy', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(encodedHtmlResponse(`
+      <table class="tbltop"><tbody>
+        <tr><td>번호</td><td>사용일</td><td>시간</td><td>휴가유형</td><td>사유</td><td>첨부</td><td>신청일</td><td>승인상태</td></tr>
+        <tr><td>1</td><td>2025-04-01</td><td>(후4)</td><td>연차휴가</td><td>개인 사유</td><td></td><td>2025-04-01</td><td>승인</td></tr>
+      </tbody></table>`));
+
+    await expect(fetchInsaLeavePeriod(
+      '/leave/pop_leave.asp?UWF=A&ipsaYY=2025&accYY=2026&selYY=2025-03-04',
+      {cookie: 'test-session'}
+    )).resolves.toEqual([expect.objectContaining({ymd: '2025-04-01'})]);
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/insa/leave/pop_leave.asp?UWF=A&ipsaYY=2025&accYY=2026&selYY=2025-03-04', {
+      method: 'GET',
+      headers: {'X-Insa-Cookie': 'test-session'},
       signal: undefined,
       credentials: 'omit',
       cache: 'no-store',

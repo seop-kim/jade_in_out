@@ -2,6 +2,7 @@ import {
   parseInsaDayDetails,
   parseInsaHomeHtml,
   parseInsaLeaveHtml,
+  parseInsaLeaveRecordsHtml,
   parseInsaWorktimeHtml,
 } from './insaParsers';
 
@@ -316,6 +317,46 @@ describe('INSA HTML parsers', () => {
         },
       ],
     });
+  });
+
+  test('parses the live balance layout without a separate 구분 column', () => {
+    const html = `
+      <table class="tbltop"><tbody>
+        <tr><td>귀속년도</td><td>사용기간</td><td>발생연차</td><td>사용연차</td><td>잔여연차</td><td>사용내역</td></tr>
+        <tr><td>2026</td><td>2026-01-01 ~ 2026-12-31</td><td>126시간</td><td>85시간</td><td>41시간</td><td><a href="javascript:pop2('pop_leave.asp?accYY=2026')">보기</a></td></tr>
+      </tbody></table>
+      <table class="tbltop"><tbody>
+        <tr><td>번호</td><td>사용일</td><td>시간</td><td>휴가유형</td><td>사유</td><td>첨부</td><td>신청일</td><td>승인상태</td></tr>
+      </tbody></table>`;
+
+    expect(parseInsaLeaveHtml(html).balances[0]).toEqual(expect.objectContaining({
+      year: 2026,
+      accruedHours: 126,
+      usedHours: 85,
+      remainingHours: 41,
+    }));
+  });
+
+  test('parses a historical leave detail popup and its balance link', () => {
+    const balanceHtml = `
+      <table class="tbltop"><tbody>
+        <tr><td>연도</td><td>기간</td><td>구분</td><td>발생</td><td>사용</td><td>잔여</td></tr>
+        <tr><td>2025</td><td>2025-03-04 ~ 2026-03-03</td><td>연차</td><td><b>88</b>시간</td><td><b>66</b>시간</td><td><b>22</b>시간 <a href="javascript:pop2('pop_leave.asp?UWF=A&amp;ipsaYY=2025&amp;accYY=2026&amp;selYY=2025-03-04','pl',784,450);">보기</a></td></tr>
+      </tbody></table>
+      <table class="tbltop"><tbody><tr><td>번호</td><td>사용일</td><td>시간</td><td>휴가유형</td><td>사유</td><td>첨부</td><td>신청일</td><td>승인상태</td></tr></tbody></table>`;
+    const periodHtml = `
+      <table class="tbltop"><tbody>
+        <tr><td>번호</td><td>사용일</td><td>시간</td><td>휴가유형</td><td>사유</td><td>첨부</td><td>신청일</td><td>승인상태</td></tr>
+        <tr><td>1</td><td>2025-04-01</td><td>(후4)</td><td>연차휴가</td><td>개인 사유</td><td></td><td>2025-04-01</td><td>승인</td></tr>
+      </tbody></table>`;
+
+    expect(parseInsaLeaveHtml(balanceHtml).balances[0]?.detailPath).toBe(
+      '/leave/pop_leave.asp?UWF=A&ipsaYY=2025&accYY=2026&selYY=2025-03-04'
+    );
+    expect(parseInsaLeaveRecordsHtml(periodHtml)).toEqual([expect.objectContaining({
+      ymd: '2025-04-01',
+      type: '연차휴가',
+    })]);
   });
 
   test('returns empty collections for present but empty result tables', () => {

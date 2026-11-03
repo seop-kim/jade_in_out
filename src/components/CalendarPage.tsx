@@ -15,6 +15,8 @@ import {ConnectionStatus} from '../lib/connectionStatus';
 import {isMonthCacheFresh} from '../lib/monthCache';
 import {JADE_EXPORT_COLUMNS, buildJadeExportRows} from '../lib/exportRows';
 import {CsvRow, filterRowsByDateRange} from '../lib/csvExport';
+import {fetchLeaveUsageForYear} from '../api/jadeApi';
+import {LeaveUsageLoader} from '../lib/leaveBalance';
 
 const EXPORT_MIN_DATE = '2000-01-01';
 const EXPORT_MAX_DATE = '2099-12-31';
@@ -27,6 +29,7 @@ interface CalendarPageProps {
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onLastFetchedChange?: (value: Date | null) => void;
   onExportReady?: (opener: (() => void) | null) => void;
+  onLeaveUsageReady?: (loader: LeaveUsageLoader | null) => void;
 }
 
 interface CachedMonth {
@@ -85,6 +88,7 @@ function CalendarPage({
   onConnectionStatusChange,
   onLastFetchedChange,
   onExportReady,
+  onLeaveUsageReady,
 }: CalendarPageProps) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState<number>(today.getFullYear());
@@ -96,6 +100,30 @@ function CalendarPage({
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+
+  useEffect(() => {
+    const loader: LeaveUsageLoader = async (year, signal, onProgress, includePreviousPeriod = false) => {
+      const years = includePreviousPeriod ? [year - 1, year] : [year];
+      const totals = years.map((targetYear) => new Date(targetYear, 1, 29).getMonth() === 1 ? 366 : 365);
+      const currentYear = new Date().getFullYear();
+      const records = await Promise.all(years.map((targetYear, index) => fetchLeaveUsageForYear({
+        cookie: credentials.cookie,
+        parsedBody: credentials.parsedBody,
+        year: targetYear,
+        signal,
+        transport,
+        allowPartial: targetYear < currentYear,
+        onProgress: (progress) => onProgress?.({
+          year: targetYear,
+          completed: progress.completed,
+          total: totals[index] ?? progress.total,
+        }),
+      })));
+      return records.flat();
+    };
+    onLeaveUsageReady?.(loader);
+    return () => onLeaveUsageReady?.(null);
+  }, [credentials, onLeaveUsageReady, transport]);
   const monthCache = useRef(new Map<string, CachedMonth>());
 
   useEffect(() => {

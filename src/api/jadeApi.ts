@@ -65,10 +65,42 @@ export interface AttendanceError {
 
 export type AttendanceResult = AttendanceRecord | AttendanceError;
 
+export interface JadeLeaveBalance {
+  period: string;
+  accruedHours: number;
+  usedHours: number;
+  remainingHours: number;
+  isNewHire: boolean;
+}
+
 export class JadeAuthenticationError extends Error {
   constructor(message = '로그인 정보 만료') {
     super(message);
     this.name = 'JadeAuthenticationError';
+  }
+}
+
+export interface JadeAnnualLeaveFailure {
+  ymd: string;
+  error: string;
+}
+
+export class JadeAnnualLeaveRequestError extends Error {
+  readonly year: number;
+  readonly failures: JadeAnnualLeaveFailure[];
+
+  constructor(year: number, failures: readonly JadeAnnualLeaveFailure[]) {
+    super('Jade annual leave request failed');
+    this.name = 'JadeAnnualLeaveRequestError';
+    this.year = year;
+    this.failures = failures.map(({ymd, error}) => ({ymd, error}));
+  }
+}
+
+class JadeNoAttendanceDataError extends Error {
+  constructor(message = '근태 데이터 없음') {
+    super(message);
+    this.name = 'JadeNoAttendanceDataError';
   }
 }
 
@@ -180,7 +212,7 @@ function parseAttendanceXml(xmlText: string): RawEtc {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   text = text.trim();
   if (!text) {
-    throw new Error('빈 응답');
+    throw new JadeNoAttendanceDataError('빈 응답');
   }
   text = text.replace(/^<\?xml[\s\S]*?\?>/, (m) => m.replace(/\s+/g, ' '));
 
@@ -204,11 +236,39 @@ function parseAttendanceXml(xmlText: string): RawEtc {
     throw new JadeAuthenticationError();
   }
   if (Object.keys(result).length === 0) {
-    throw new Error('오류');
+    throw new JadeNoAttendanceDataError();
   }
 
   if (messageText) result.__message = messageText;
   return result;
+}
+
+function parseJadeLeaveBalanceXml(xmlText: string): JadeLeaveBalance[] {
+  const doc = new DOMParser().parseFromString(String(xmlText ?? ''), 'application/xml');
+  const data = doc.querySelector('DATA[KEY="default"]') ?? doc.querySelector('DATA');
+  if (!data) throw new Error('Jade leave balance response format is invalid');
+  const headerRow = Array.from(data.children).find((child) => child.tagName === 'HTR');
+  const headers = headerRow
+    ? Array.from(headerRow.children).map((cell) => (cell.textContent ?? '').trim())
+    : [];
+  const indexOf = (key: string): number => headers.indexOf(key);
+  const rows = Array.from(data.children).filter((child) => child.tagName === 'TR');
+  return rows.flatMap((row) => {
+    const cells = Array.from(row.children).map((cell) => (cell.textContent ?? '').trim());
+    const period = cells[indexOf('USE_YMD')] ?? '';
+    const type = cells[indexOf('HOLI_CLASS_NM')] ?? '';
+    const startYear = Number(period.match(/^(\d{4})/)?.[1] ?? 0);
+    const normalizedPeriod = period.replace(/\./g, '-');
+    const accruedHours = Number(cells[indexOf('CRT_D_CNT')] ?? 0);
+    if (!period || !Number.isFinite(accruedHours) || accruedHours <= 0 || !startYear) return [];
+    return [{
+      period,
+      accruedHours,
+      usedHours: Number(cells[indexOf('USED_CNT')] ?? 0) || 0,
+      remainingHours: Number(cells[indexOf('BLN_CNT')] ?? 0) || 0,
+      isNewHire: /1년미만/.test(type) || !normalizedPeriod.startsWith(`${startYear}-01-01`),
+    }];
+  });
 }
 
 export interface FetchDateOptions {
@@ -219,6 +279,43 @@ export interface FetchDateOptions {
   retryCount?: number;
   retryDelayMs?: number;
   transport?: JadeBridgeTransport;
+}
+
+export interface FetchJadeLeaveBalanceOptions {
+  body: string;
+  cookie?: string;
+  year: number;
+  signal?: AbortSignal;
+  transport?: JadeBridgeTransport;
+}
+
+function buildJadeLeaveBalanceBody(body: string, year: number): string {
+  const params = new URLSearchParams(body);
+  params.set('F_STD_YY', String(year));
+  params.set('S_STD_YY', String(year));
+  return params.toString();
+}
+
+export async function fetchJadeLeaveBalances({
+  body,
+  cookie,
+  year,
+  signal,
+  transport,
+}: FetchJadeLeaveBalanceOptions): Promise<JadeLeaveBalance[]> {
+  const requestBody = buildJadeLeaveBalanceBody(body, year);
+  if (transport) {
+    return parseJadeLeaveBalanceXml(await transport.post(appConfig.jade.requestPath, requestBody, signal));
+  }
+  if (!cookie) throw new Error('Jade authentication is not configured');
+  const res = await client.post(`${appConfig.jade.apiBasePath}${appConfig.jade.requestPath}`, requestBody, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Jade-Cookie': cookie,
+    },
+    signal,
+  });
+  return parseJadeLeaveBalanceXml(res.data);
 }
 
 export function isJadeAuthenticationError(error: unknown): boolean {
@@ -363,6 +460,19 @@ export interface ProgressInfo {
   total: number;
 }
 
+export interface FetchLeaveUsageYearOptions {
+  cookie?: string;
+  parsedBody: Record<string, string>;
+  year: number;
+  signal?: AbortSignal;
+  retryCount?: number;
+  retryDelayMs?: number;
+  ignoreMissing?: boolean;
+  allowPartial?: boolean;
+  transport?: JadeBridgeTransport;
+  onProgress?: (info: ProgressInfo) => void;
+}
+
 export interface FetchMonthOptions {
   cookie?: string;
   parsedBody: Record<string, string>;
@@ -374,6 +484,8 @@ export interface FetchMonthOptions {
   signal?: AbortSignal;
   onProgress?: (info: ProgressInfo) => void;
   onDayResult?: (ymd: string, result: AttendanceResult) => void;
+  ignoreMissing?: boolean;
+  allowPartial?: boolean;
   transport?: JadeBridgeTransport;
 }
 
@@ -388,6 +500,8 @@ export async function fetchAttendanceForMonth({
   signal,
   onProgress,
   onDayResult,
+  ignoreMissing = false,
+  allowPartial = false,
   transport,
 }: FetchMonthOptions): Promise<Record<string, AttendanceResult>> {
   const lastDay = new Date(year, month + 1, 0).getDate();
@@ -417,12 +531,19 @@ export async function fetchAttendanceForMonth({
         });
         dayResult = buildRecord(ymd, etc);
       } catch (err) {
+        if (ignoreMissing && err instanceof JadeNoAttendanceDataError) {
+          dayResult = buildRecord(ymd, {});
+          result[ymd] = dayResult;
+          onDayResult?.(ymd, dayResult);
+          completed += 1;
+          onProgress?.({completed, total});
+          continue;
+        }
         const error = err as {name?: string; message?: string; response?: {status?: number}};
         if (error.name === 'CanceledError' || error.name === 'AbortError') return;
         const message = error.response?.status
           ? `HTTP ${error.response.status}`
           : error.message ?? String(err);
-        console.error('[jade] fetch failed', ymd, message, err);
         dayResult = {
           ymd,
           error: message,
@@ -441,4 +562,75 @@ export async function fetchAttendanceForMonth({
   );
 
   return result;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+export async function fetchLeaveUsageForYear({
+  cookie,
+  parsedBody,
+  year,
+  signal,
+  retryCount = 2,
+  retryDelayMs = 250,
+  ignoreMissing = true,
+  allowPartial = false,
+  transport,
+  onProgress,
+}: FetchLeaveUsageYearOptions): Promise<AttendanceRecord[]> {
+  const total = Array.from({length: 12}, (_, month) => daysInMonth(year, month))
+    .reduce((sum, days) => sum + days, 0);
+  const records: AttendanceRecord[] = [];
+  let completedBeforeMonth = 0;
+
+  for (let month = 0; month < 12; month += 1) {
+    const monthOffset = completedBeforeMonth;
+    const monthController = new AbortController();
+    const forwardAbort = (): void => monthController.abort();
+    if (signal?.aborted) monthController.abort();
+    signal?.addEventListener('abort', forwardAbort, {once: true});
+    const monthResults = await fetchAttendanceForMonth({
+      cookie,
+      parsedBody,
+      year,
+      month,
+      retryCount,
+      retryDelayMs,
+      signal: monthController.signal,
+      ignoreMissing,
+      allowPartial,
+      transport,
+      onDayResult: (_ymd, result) => {
+        if ('error' in result && 'authError' in result && result.authError) monthController.abort();
+      },
+      onProgress: (progress) => onProgress?.({
+        completed: monthOffset + progress.completed,
+        total,
+      }),
+    });
+    signal?.removeEventListener('abort', forwardAbort);
+    const errors = Object.values(monthResults).filter((result): result is AttendanceError => 'error' in result);
+    const authError = errors.find((error) => error.authError);
+    if (authError) throw new JadeAuthenticationError();
+    if (errors.length > 0) {
+      const failures = errors.map(({ymd, error}) => ({ymd, error}));
+      console.warn('[jade] annual leave request diagnostics', {
+        year,
+        month: month + 1,
+        failedCount: failures.length,
+        failures: failures.slice(0, 20),
+        truncated: failures.length > 20,
+        partial: allowPartial,
+      });
+      if (!allowPartial) throw new JadeAnnualLeaveRequestError(year, failures);
+    }
+    records.push(...Object.values(monthResults).filter(
+      (result): result is AttendanceRecord => !('error' in result)
+    ));
+    completedBeforeMonth += daysInMonth(year, month);
+  }
+
+  return records;
 }

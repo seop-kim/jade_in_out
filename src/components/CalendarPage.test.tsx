@@ -1,18 +1,60 @@
 import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CalendarPage from './CalendarPage';
-import {fetchAttendanceForMonth} from '../api/jadeApi';
+import {fetchAttendanceForMonth, fetchLeaveUsageForYear} from '../api/jadeApi';
 import {ConnectionStatus} from '../lib/connectionStatus';
 
 jest.mock('../api/jadeApi', () => ({
   fetchAttendanceForMonth: jest.fn(),
+  fetchLeaveUsageForYear: jest.fn(),
 }));
 
 const mockedFetchAttendanceForMonth = fetchAttendanceForMonth as jest.MockedFunction<
   typeof fetchAttendanceForMonth
 >;
+const mockedFetchLeaveUsageForYear = fetchLeaveUsageForYear as jest.MockedFunction<
+  typeof fetchLeaveUsageForYear
+>;
 
 describe('CalendarPage layout', () => {
+  it('registers a Jade leave usage loader while credentials are available', async () => {
+    mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
+    mockedFetchLeaveUsageForYear.mockResolvedValue([]);
+    const onLeaveUsageReady = jest.fn();
+    const {unmount} = render(
+      <CalendarPage
+        credentials={{cookie: 'test-cookie', body: 'test-body', parsedBody: {}}}
+        onLeaveUsageReady={onLeaveUsageReady}
+      />,
+    );
+
+    await waitFor(() => expect(onLeaveUsageReady).toHaveBeenCalledWith(expect.any(Function)));
+    unmount();
+    expect(onLeaveUsageReady).toHaveBeenLastCalledWith(null);
+  });
+
+  it('allows partial Jade data when a past year is queried directly', async () => {
+    mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
+    mockedFetchLeaveUsageForYear.mockResolvedValue([]);
+    const onLeaveUsageReady = jest.fn();
+    render(
+      <CalendarPage
+        credentials={{cookie: 'test-cookie', body: 'test-body', parsedBody: {}}}
+        onLeaveUsageReady={onLeaveUsageReady}
+      />,
+    );
+
+    await waitFor(() => expect(onLeaveUsageReady).toHaveBeenCalledWith(expect.any(Function)));
+    const loader = onLeaveUsageReady.mock.calls.find(([value]) => typeof value === 'function')?.[0];
+    expect(loader).toEqual(expect.any(Function));
+    await loader!(new Date().getFullYear() - 1, new AbortController().signal, undefined, false);
+
+    expect(mockedFetchLeaveUsageForYear).toHaveBeenCalledWith(expect.objectContaining({
+      year: new Date().getFullYear() - 1,
+      allowPartial: true,
+    }));
+  });
+
   it('wraps the Jade toolbar and calendar in the spaced page layout', () => {
     mockedFetchAttendanceForMonth.mockReturnValue(new Promise(() => undefined));
 

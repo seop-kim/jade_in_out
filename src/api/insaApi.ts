@@ -1,11 +1,13 @@
 import {
   InsaHomeMonthData,
+  InsaLeaveRecord,
   InsaLeavePageData,
   InsaTeamDetail,
   InsaWorktimeRecord,
   parseInsaDayDetails,
   parseInsaHomeHtml,
   parseInsaLeaveHtml,
+  parseInsaLeaveRecordsHtml,
   parseInsaWorktimeHtml,
 } from './insaParsers';
 import {appConfig} from '../config';
@@ -171,6 +173,14 @@ export async function fetchInsaWorktime(options: FetchInsaWorktimeOptions): Prom
 export async function fetchInsaLeave(options: InsaRequestOptions): Promise<InsaLeavePageData> {
   const html = await requestHtml(appConfig.insa.paths.leave, options, {method: 'GET'});
   return parseInsaLeaveHtml(html);
+}
+
+export async function fetchInsaLeavePeriod(
+  path: string,
+  options: InsaRequestOptions
+): Promise<InsaLeaveRecord[]> {
+  const html = await requestHtml(path, options, {method: 'GET'});
+  return parseInsaLeaveRecordsHtml(html);
 }
 
 function errorMessage(reason: unknown, cookie?: string): string {

@@ -10,6 +10,9 @@ interface SettingsMenuProps {
   insaStatus: ConnectionStatus;
   canResetCredentials: boolean;
   onResetCredentials: () => void;
+  canViewLeaveBalance: boolean;
+  onOpenLeaveBalance: () => void;
+  onShowNotice: (message: string) => void;
 }
 
 function SettingsIcon() {
@@ -28,6 +31,9 @@ function SettingsMenu({
   insaStatus,
   canResetCredentials,
   onResetCredentials,
+  canViewLeaveBalance,
+  onOpenLeaveBalance,
+  onShowNotice,
 }: SettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +99,21 @@ function SettingsMenu({
             />
             <span className="settings-switch" aria-hidden="true" />
           </label>
+          <button
+            type="button"
+            className="settings-leave-balance"
+            aria-disabled={!canViewLeaveBalance}
+            onClick={() => {
+              if (!canViewLeaveBalance) {
+                onShowNotice('모든 시스템에 연결해 주세요.');
+                return;
+              }
+              onOpenLeaveBalance();
+              setOpen(false);
+            }}
+          >
+            휴가 현황
+          </button>
           <button
             type="button"
             className="settings-reset"

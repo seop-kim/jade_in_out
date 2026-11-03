@@ -41,6 +41,7 @@ export interface InsaLeaveRecord {
   reason: string;
   appliedAt: string;
   approvalStatus: string;
+  periodId?: string;
 }
 
 export interface InsaLeaveBalance {
@@ -49,6 +50,7 @@ export interface InsaLeaveBalance {
   accruedHours: number;
   usedHours: number;
   remainingHours: number;
+  detailPath?: string;
 }
 
 export interface InsaLeavePageData {
@@ -106,6 +108,37 @@ function parseQueryNumber(onclick: string, parameter: string): number | null {
 function numberFromSummaryCell(cell: HTMLTableCellElement): number {
   const emphasizedNumber = cell.querySelector('b, strong');
   return parseNumber(emphasizedNumber ? cleanText(emphasizedNumber) : cleanText(cell)) ?? 0;
+}
+
+function popupPathFromCell(cell: HTMLTableCellElement): string | undefined {
+  const href = cell.querySelector('a')?.getAttribute('href') ?? '';
+  const match = href.match(/pop2\(\s*['"]([^'"]+)['"]/i);
+  const path = match?.[1]?.replace(/&amp;/g, '&');
+  return path ? (path.startsWith('/') ? path : `/leave/${path}`) : undefined;
+}
+
+function balanceColumnIndexes(table: Element): {
+  accrued: number;
+  used: number;
+  remaining: number;
+  detail: number;
+} {
+  const headerCells = Array.from(table.querySelectorAll('tr'))
+    .map((row) => directCells(row))
+    .find((cells) => cells.some((cell) => /발생|사용|잔여/.test(cleanText(cell))));
+  const findHeaderIndex = (predicate: (text: string) => boolean, fallback: number): number => {
+    const index = headerCells?.findIndex((cell) => predicate(cleanText(cell))) ?? -1;
+    return index >= 0 ? index : fallback;
+  };
+
+  return {
+    // The live page uses 발생연차/사용연차/잔여연차, while older responses
+    // include a separate 구분 column before those three values.
+    accrued: findHeaderIndex((text) => text.includes('발생'), 3),
+    used: findHeaderIndex((text) => text.includes('사용') && !text.includes('내역') && !text.includes('기간'), 4),
+    remaining: findHeaderIndex((text) => text.includes('잔여'), 5),
+    detail: findHeaderIndex((text) => text.includes('사용내역'), 5),
+  };
 }
 
 function normalizeHolidayLabel(text: string): string {
@@ -252,17 +285,20 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   const records: InsaLeaveRecord[] = [];
 
   for (const table of tables) {
+    const columns = balanceColumnIndexes(table);
     for (const row of Array.from(table.querySelectorAll('tr'))) {
       const cells = directCells(row);
       if (cells.length === appConfig.insa.parser.balanceColumnCount) {
         const year = parseNumber(cleanText(cells[0]!));
         if (year === null) continue;
+        const detailPath = popupPathFromCell(cells[columns.detail] ?? cells[cells.length - 1]!);
         balances.push({
           year,
           period: cleanText(cells[1]!),
-          accruedHours: numberFromSummaryCell(cells[3]!),
-          usedHours: numberFromSummaryCell(cells[4]!),
-          remainingHours: numberFromSummaryCell(cells[5]!),
+          accruedHours: numberFromSummaryCell(cells[columns.accrued]!),
+          usedHours: numberFromSummaryCell(cells[columns.used]!),
+          remainingHours: numberFromSummaryCell(cells[columns.remaining]!),
+          ...(detailPath ? {detailPath} : {}),
         });
       }
       if (cells.length === appConfig.insa.parser.leaveRecordColumnCount) {
@@ -281,4 +317,26 @@ export function parseInsaLeaveHtml(html: string): InsaLeavePageData {
   }
 
   return {balances, records};
+}
+
+export function parseInsaLeaveRecordsHtml(html: string): InsaLeaveRecord[] {
+  const doc = parseDocument(html);
+  const records: InsaLeaveRecord[] = [];
+  for (const table of Array.from(doc.querySelectorAll(appConfig.insa.parser.tableSelector))) {
+    for (const row of Array.from(table.querySelectorAll('tr'))) {
+      const cells = directCells(row);
+      if (cells.length !== appConfig.insa.parser.leaveRecordColumnCount) continue;
+      const ymd = parseYmd(cleanText(cells[1]!));
+      if (!ymd) continue;
+      records.push({
+        ymd,
+        durationLabel: cleanText(cells[2]!),
+        type: cleanText(cells[3]!),
+        reason: cleanText(cells[4]!),
+        appliedAt: cleanText(cells[6]!),
+        approvalStatus: cleanText(cells[7]!),
+      });
+    }
+  }
+  return records;
 }

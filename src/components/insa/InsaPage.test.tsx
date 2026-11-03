@@ -2,6 +2,7 @@ import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   fetchInsaDayDetails,
+  fetchInsaLeave,
   InsaMonthLoadResult,
   loadInsaMonth,
 } from '../../api/insaApi';
@@ -12,12 +13,14 @@ import InsaPage from './InsaPage';
 
 jest.mock('../../api/insaApi', () => ({
   fetchInsaDayDetails: jest.fn(),
+  fetchInsaLeave: jest.fn(),
   isInsaAuthenticationError: jest.fn(() => false),
   loadInsaMonth: jest.fn(),
 }));
 
 const mockedLoadInsaMonth = loadInsaMonth as jest.MockedFunction<typeof loadInsaMonth>;
 const mockedFetchInsaDayDetails = fetchInsaDayDetails as jest.MockedFunction<typeof fetchInsaDayDetails>;
+const mockedFetchInsaLeave = fetchInsaLeave as jest.MockedFunction<typeof fetchInsaLeave>;
 
 const monthResult: InsaMonthLoadResult = {
   home: {
@@ -56,6 +59,7 @@ describe('InsaPage', () => {
     jest.setSystemTime(new Date(2026, 7, 12, 9));
     mockedLoadInsaMonth.mockResolvedValue(monthResult);
     mockedFetchInsaDayDetails.mockResolvedValue([]);
+    mockedFetchInsaLeave.mockResolvedValue(monthResult.leave!);
   });
 
   afterEach(() => {
@@ -71,9 +75,12 @@ describe('InsaPage', () => {
     const bookmarkletLink = screen.getByRole('link', {name: '인사 연결'});
     expect(bookmarkletLink).toHaveAttribute('href', expect.stringMatching(/^javascript:/));
     expect(bookmarkletLink).not.toHaveAttribute('href', expect.stringContaining('React has blocked'));
-    expect(screen.getByText('인사 연결을 북마크에 끌어다 놓아 저장합니다.')).toBeInTheDocument();
-    expect(screen.getByText('인사시스템 열기를 클릭하여 엽니다.')).toBeInTheDocument();
-    expect(screen.getByText('달력에 휴가·출퇴근 정보가 표시되면 연결이 완료됩니다.')).toBeInTheDocument();
+    expect(screen.getByText(/인사 연결을 북마크에 끌어다 놓아 저장합니다\./)).toBeInTheDocument();
+    expect(screen.getByText(/인사시스템 열기를 클릭하여 엽니다\./)).toBeInTheDocument();
+    expect(screen.getByText(/달력에 출퇴근 정보가 표시되면 연결이 완료됩니다\./)).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: '연결 가이드'})).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: '1단계 인사 연결 북마크 저장'})).toHaveAttribute('src', '/images/insa-guide/01-bookmark.png');
+    expect(screen.getByText('1 / 5')).toBeInTheDocument();
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
     expect(screen.queryByText('위 순서대로 인사 연결을 설정해주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('insa-auto-connect-card');
@@ -81,6 +88,16 @@ describe('InsaPage', () => {
     expect(screen.getByRole('tab', {name: '수동인증'})).toHaveAttribute('aria-selected', 'false');
     expect(screen.queryByLabelText('INSA Cookie')).not.toBeInTheDocument();
     expect(mockedLoadInsaMonth).not.toHaveBeenCalled();
+  });
+
+  test('registers an INSA leave loader while the cookie connection is available', async () => {
+    sessionStorage.setItem(INSA_COOKIE_STORAGE_KEY, 'private-session');
+    const onLeaveDataReady = jest.fn();
+    const {unmount} = render(<InsaPage onLeaveDataReady={onLeaveDataReady} />);
+
+    await waitFor(() => expect(onLeaveDataReady).toHaveBeenCalledWith(expect.any(Function)));
+    unmount();
+    expect(onLeaveDataReady).toHaveBeenLastCalledWith(null);
   });
 
   test('shows only the manual Cookie setup after selecting manual authentication', async () => {
@@ -116,7 +133,7 @@ describe('InsaPage', () => {
     render(<InsaPage />);
     await userEvent.click(screen.getByRole('button', {name: '인사시스템 열기'}));
 
-    expect(openSpy).toHaveBeenCalledWith('https://insa.kwe.co.kr/', 'insa-system-window');
+    expect(openSpy).toHaveBeenCalledWith('https://insa.kwe.co.kr/', '_blank');
 
     await act(async () => {
       window.dispatchEvent(new MessageEvent('message', {

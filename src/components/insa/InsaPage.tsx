@@ -1,6 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   fetchInsaDayDetails,
+  fetchInsaLeave,
+  fetchInsaLeavePeriod,
   isInsaAuthenticationError,
   InsaMonthLoadResult,
   InsaMonthSource,
@@ -24,6 +26,7 @@ import InsaCalendar from './InsaCalendar';
 import InsaSetup from './InsaSetup';
 import './Insa.css';
 import {INSA_EXPORT_COLUMNS, buildInsaExportRows} from '../../lib/exportRows';
+import {InsaLeaveLoader} from '../../lib/leaveBalance';
 
 const EXPORT_MIN_DATE = '2000-01-01';
 const EXPORT_MAX_DATE = '2099-12-31';
@@ -87,6 +90,7 @@ export interface InsaPageProps {
   onApiRequestChange?: (request: InsaApiRequest, active: boolean) => void;
   onError?: (message: string) => void;
   onExportReady?: (opener: (() => void) | null) => void;
+  onLeaveDataReady?: (loader: InsaLeaveLoader | null) => void;
 }
 
 interface CachedMonth {
@@ -121,6 +125,7 @@ function InsaPage({
   onApiRequestChange,
   onError,
   onExportReady,
+  onLeaveDataReady,
 }: InsaPageProps) {
   const [today, setToday] = useState(() => new Date());
   const [cookie, setCookie] = useState<string | null>(() => loadInsaCookie());
@@ -162,7 +167,7 @@ function InsaPage({
 
   const handleOpenAutomatic = useCallback((): void => {
     monthCache.current.clear();
-    const insaWindow = window.open(INSA_POPUP_URL, 'insa-system-window');
+    const insaWindow = window.open(INSA_POPUP_URL, '_blank');
     if (!insaWindow) {
       onError?.('인사시스템 창을 열지 못했습니다');
       return;
@@ -183,6 +188,53 @@ function InsaPage({
     if (!client) return Promise.reject(new Error('인사시스템 연결이 준비되지 않았습니다.'));
     return client.request(path, init, signal);
   }, []);
+
+  useEffect(() => {
+    if (!cookie && !bridgeReady) {
+      onLeaveDataReady?.(null);
+      return undefined;
+    }
+
+    const loader: InsaLeaveLoader = async (_year, signal, _onProgress, includePreviousPeriod = false) => {
+      const requestOptions = {
+        cookie: cookie ?? undefined,
+        signal,
+        requestHtml: cookie ? undefined : requestHtmlViaBridge,
+      };
+      const page = await fetchInsaLeave(requestOptions);
+      const isNewHirePeriod = (period: string, year: number): boolean => {
+        const start = period.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+        return Boolean(start && start !== `${year}-01-01`);
+      };
+      const targetBalances = page.balances.filter((balance) => (
+        balance.year === _year
+        || (includePreviousPeriod && balance.year === _year - 1 && isNewHirePeriod(balance.period, balance.year))
+      ));
+      const pageHasSelectedYearRecords = page.records.some((record) => Number(record.ymd.slice(0, 4)) === _year);
+      const detailResults = await Promise.all(targetBalances
+        .filter((balance) => balance.detailPath && (balance.year !== _year || !pageHasSelectedYearRecords))
+        .map(async (balance) => ({
+          periodId: `${balance.year}|${balance.period}`,
+          records: await fetchInsaLeavePeriod(balance.detailPath!, requestOptions),
+        })));
+      const fetchedPeriodIds = new Set(detailResults.map((result) => result.periodId));
+      const fallbackRecords = page.records
+        .filter((record) => Number(record.ymd.slice(0, 4)) === _year && !fetchedPeriodIds.has(`${_year}|${page.balances.find((balance) => balance.year === _year)?.period ?? ''}`))
+        .map((record) => ({
+          ...record,
+          periodId: `${_year}|${page.balances.find((balance) => balance.year === _year)?.period ?? ''}`,
+        }));
+      return {
+        ...page,
+        records: [
+          ...fallbackRecords,
+          ...detailResults.flatMap((result) => result.records.map((record) => ({...record, periodId: result.periodId}))),
+        ],
+      };
+    };
+    onLeaveDataReady?.(loader);
+    return () => onLeaveDataReady?.(null);
+  }, [bridgeReady, cookie, onLeaveDataReady, requestHtmlViaBridge]);
 
   const invalidateDayDetails = useCallback((): void => {
     detailControllers.current.forEach((controller) => controller.abort());

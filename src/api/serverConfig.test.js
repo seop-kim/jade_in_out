@@ -5,4 +5,5 @@ test('loads upstream hosts and allowed INSA routes from environment variables', 
   expect(serverConfig.insa.origin).toBe(process.env.INSA_TARGET_ORIGIN);
   expect(serverConfig.insa.routes.get('/main.asp')).toBe('GET');
   expect(serverConfig.insa.routes.get('/worktime/01_list.asp')).toBe('POST');
+  expect(serverConfig.insa.routes.get('/leave/pop_leave.asp')).toBe('GET');
 });

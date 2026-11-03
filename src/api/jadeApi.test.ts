@@ -1,6 +1,31 @@
-import {fetchAttendanceForDate} from './jadeApi';
+import {fetchAttendanceForDate, fetchJadeLeaveBalances, fetchLeaveUsageForYear, JadeAnnualLeaveRequestError} from './jadeApi';
 
 describe('Jade API', () => {
+  test('loads Jade accrual hours from the leave balance response', async () => {
+    const post = jest.fn().mockResolvedValue(`
+      <SHEET><DATA KEY="default">
+        <HTR><TD>C_CD</TD><TD>EMP_ID</TD><TD>HOLI_CLASS_NM</TD><TD>USE_YMD</TD><TD>CRT_D_CNT</TD><TD>USED_CNT</TD><TD>BLN_CNT</TD></HTR>
+        <TR><TD>2001010</TD><TD>20250304</TD><TD>연차휴가</TD><TD>2026.01.01 ~ 2026.12.31</TD><TD>96</TD><TD>36</TD><TD>60</TD></TR>
+      </DATA></SHEET>
+    `);
+
+    await expect(fetchJadeLeaveBalances({
+      body: 'F_STD_YY=2026&S_STD_YY=2026',
+      year: 2026,
+      transport: {post},
+    })).resolves.toEqual([expect.objectContaining({
+      accruedHours: 96,
+      usedHours: 36,
+      remainingHours: 60,
+      isNewHire: false,
+    })]);
+    expect(post).toHaveBeenCalledWith(
+      '/commonAction.do',
+      'F_STD_YY=2026&S_STD_YY=2026',
+      undefined,
+    );
+  });
+
   test('uses a browser transport when Jade credentials stay in the logged-in tab', async () => {
     const controller = new AbortController();
     const post = jest.fn().mockResolvedValue(`
@@ -62,5 +87,124 @@ describe('Jade API', () => {
       ymd: '2026-08-12',
       transport: {post},
     })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
+  });
+
+  test('loads a year month-by-month and reports bounded day progress', async () => {
+    const dates: string[] = [];
+    const progress: Array<{completed: number; total: number}> = [];
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        dates.push(new URLSearchParams(body).get('S_STD_YMD') ?? '');
+        return Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2026,
+      retryCount: 0,
+      transport,
+      onProgress: (value) => progress.push(value),
+    });
+
+    expect(records).toHaveLength(365);
+    expect(dates.filter((date) => date.endsWith('01'))).toEqual([
+      '20260101', '20260201', '20260301', '20260401', '20260501', '20260601',
+      '20260701', '20260801', '20260901', '20261001', '20261101', '20261201',
+    ]);
+    expect(progress[progress.length - 1]).toEqual({completed: 365, total: 365});
+  });
+
+  test('treats empty pre-employment dates as unused days during annual loading', async () => {
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        const ymd = new URLSearchParams(body).get('S_STD_YMD') ?? '';
+        return ymd < '20250304'
+          ? Promise.resolve('')
+          : Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+    });
+
+    expect(records).toHaveLength(365);
+    expect(records.find((record) => record.ymd === '20250101')).toEqual(expect.objectContaining({
+      ymd: '20250101',
+      clockIn: '',
+      workList: [],
+    }));
+    expect(records.find((record) => record.ymd === '20250304')).toEqual(expect.objectContaining({
+      ymd: '20250304',
+      clockIn: '08:50',
+    }));
+  });
+
+  test('keeps successful records when a historical year has isolated request errors', async () => {
+    let failed = false;
+    const transport = {
+      post: jest.fn((_path: string, body: string) => {
+        if (!failed) {
+          failed = true;
+          return Promise.reject(new Error('historical date unavailable'));
+        }
+        return Promise.resolve('<ROOT><ETC KEY="I_IN_HM">08:50</ETC></ROOT>');
+      }),
+    };
+
+    const records = await fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+      allowPartial: true,
+    });
+
+    expect(records.length).toBeGreaterThan(0);
+    expect(transport.post).toHaveBeenCalled();
+  });
+
+  test('stops the annual loader immediately when Jade authentication expires', async () => {
+    const post = jest.fn().mockResolvedValue(`
+      <SHEET>
+        <MESSAGE><![CDATA[LOGIN_CHECK_FAIL:LOGOUT]]></MESSAGE>
+      </SHEET>
+    `);
+
+    await expect(fetchLeaveUsageForYear({
+      cookie: 'expired-cookie',
+      parsedBody: {},
+      year: 2026,
+      transport: {post},
+    })).rejects.toMatchObject({name: 'JadeAuthenticationError'});
+    expect(post).toHaveBeenCalledTimes(4);
+    expect(post.mock.calls.every((call) => call[1].includes('202601'))).toBe(true);
+  });
+
+  test('exposes failed dates when a non-partial annual request fails', async () => {
+    const transport = {
+      post: jest.fn().mockRejectedValue(new Error('HTTP 500')),
+    };
+
+    await expect(fetchLeaveUsageForYear({
+      cookie: '',
+      parsedBody: {},
+      year: 2025,
+      retryCount: 0,
+      transport,
+    })).rejects.toMatchObject({
+      name: 'JadeAnnualLeaveRequestError',
+      year: 2025,
+      failures: expect.arrayContaining([
+        expect.objectContaining({ymd: '20250101', error: 'HTTP 500'}),
+      ]),
+    } satisfies Partial<JadeAnnualLeaveRequestError>);
   });
 });

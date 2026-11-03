@@ -1,0 +1,781 @@
+.leave-balance-backdrop {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.leave-balance-dialog {
+  width: min(1280px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text);
+}
+
+.leave-balance-header,
+.leave-balance-controls,
+.leave-balance-summary,
+.leave-balance-records h3 {
+  display: flex;
+  align-items: center;
+}
+
+.leave-balance-header {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.leave-balance-eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.leave-balance-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.leave-balance-subtitle {
+  margin: 6px 0 0;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.leave-balance-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted-strong);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.leave-balance-close:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.leave-balance-controls {
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.leave-balance-controls label {
+  color: var(--color-muted-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.leave-balance-controls select,
+.leave-balance-load {
+  min-height: 34px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.leave-balance-controls select {
+  padding: 0 10px;
+}
+
+.leave-balance-previous-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.leave-balance-previous-toggle input {
+  accent-color: var(--color-accent);
+}
+
+.leave-balance-load {
+  margin-left: auto;
+  padding: 0 16px;
+  background: var(--color-accent);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.leave-balance-load:disabled,
+.leave-balance-controls select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.leave-balance-loading,
+.leave-balance-error,
+.leave-balance-warning,
+.leave-balance-empty {
+  margin: 18px 0 0;
+  padding: 14px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.leave-balance-loading {
+  background: var(--color-surface-muted);
+  color: var(--color-muted-strong);
+}
+
+.leave-balance-loading strong {
+  display: block;
+  color: var(--color-text);
+}
+
+.leave-balance-progress-item + .leave-balance-progress-item {
+  margin-top: 12px;
+}
+
+.leave-balance-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--color-muted-strong);
+  font-size: 12px;
+}
+
+.leave-balance-progress-track {
+  height: 7px;
+  margin: 5px 0 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.leave-balance-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.leave-balance-error {
+  background: color-mix(in srgb, #dc2626 10%, var(--color-surface));
+  color: #b91c1c;
+}
+
+.leave-balance-error p {
+  margin: 0;
+}
+
+.leave-balance-error-details {
+  margin-top: 10px;
+}
+
+.leave-balance-error-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.leave-balance-error-details ul {
+  max-height: 180px;
+  margin: 8px 0 0;
+  overflow-y: auto;
+  padding-left: 18px;
+}
+
+.leave-balance-warning {
+  background: color-mix(in srgb, #d97706 12%, var(--color-surface));
+  color: #92400e;
+}
+
+.leave-balance-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.leave-balance-summary > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-muted);
+}
+
+.leave-balance-summary span,
+.leave-balance-summary strong {
+  display: block;
+}
+
+.leave-balance-summary span {
+  color: var(--color-muted-strong);
+  font-size: 11px;
+}
+
+.leave-balance-summary strong {
+  margin-top: 6px;
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.leave-balance-summary-primary {
+  border-color: var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)) !important;
+}
+
+.leave-balance-summary-primary strong {
+  color: var(--color-accent);
+}
+
+.leave-balance-periods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.leave-balance-period {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-muted);
+}
+
+.leave-balance-period-heading,
+.leave-balance-period-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-balance-period-heading {
+  justify-content: space-between;
+}
+
+.leave-balance-period-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.leave-balance-period-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-balance-period-edit {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.leave-balance-period-edit:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.leave-balance-accrued-hours-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--color-muted-strong);
+  font-size: 13px;
+}
+
+.leave-balance-accrued-hours-editor input {
+  width: 100px;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.leave-balance-period-meta label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-muted-strong);
+  font-size: 11px;
+}
+
+.leave-balance-period-meta input {
+  width: 58px;
+  min-height: 24px;
+  padding: 2px 22px 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.leave-balance-period-meta input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.leave-balance-period-meta input[type='number']::-webkit-inner-spin-button,
+.leave-balance-period-meta input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.leave-balance-period-heading strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.leave-balance-period-heading span,
+.leave-balance-period-range span,
+.leave-balance-period > span,
+.leave-balance-period-values span {
+  color: var(--color-muted-strong);
+  font-size: 11px;
+}
+
+.leave-balance-period > span {
+  display: block;
+  margin-top: 4px;
+}
+
+.leave-balance-period-values {
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.leave-balance-period-values strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.leave-balance-records {
+  margin-top: 22px;
+}
+
+.leave-balance-records h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.leave-balance-records-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.leave-balance-records-heading h3 {
+  margin: 0;
+}
+
+.leave-balance-records-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-balance-column-reset {
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-column-reset:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.leave-balance-export {
+  padding: 5px 9px;
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leave-balance-delete-all {
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-delete-all:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.leave-balance-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--color-backdrop) 45%, transparent);
+}
+
+.leave-balance-confirm-dialog {
+  width: min(360px, 100%);
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 16px 40px rgb(15 23 42 / 18%);
+}
+
+.leave-balance-confirm-dialog h3,
+.leave-balance-confirm-dialog p {
+  margin: 0;
+}
+
+.leave-balance-confirm-dialog p {
+  margin-top: 10px;
+  color: var(--color-muted-strong);
+  font-size: 13px;
+}
+
+.leave-balance-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.leave-balance-confirm-actions button {
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.leave-balance-confirm-actions .leave-balance-confirm-danger {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.leave-balance-confirm-actions .leave-balance-confirm-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.leave-balance-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+
+.leave-balance-table-wrap table {
+  width: max(100%, 1180px);
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+  table-layout: fixed;
+}
+
+.leave-balance-table-wrap th,
+.leave-balance-table-wrap td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.leave-balance-table-wrap th {
+  position: relative;
+  background: var(--color-surface-muted);
+  color: var(--color-muted-strong);
+  font-weight: 700;
+  cursor: grab;
+  user-select: none;
+}
+
+.leave-balance-column-tooltip {
+  position: fixed;
+  z-index: 150;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #111827;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+  color: #f9fafb;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  pointer-events: none;
+  text-align: left;
+  white-space: normal;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.leave-balance-column-tooltip.above {
+  transform: translateY(-100%);
+}
+
+.leave-balance-column-label {
+  display: inline-block;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.leave-balance-column-heading {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.leave-balance-table-wrap th:active {
+  cursor: grabbing;
+}
+
+.leave-balance-column-dragging {
+  opacity: 0.45;
+}
+
+.leave-balance-column-drop-before,
+.leave-balance-column-drop-after {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-muted)) !important;
+}
+
+.leave-balance-column-drop-before::before,
+.leave-balance-column-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.leave-balance-column-drop-before::before {
+  left: -2px;
+}
+
+.leave-balance-column-drop-after::after {
+  right: -2px;
+}
+
+.leave-balance-column-drag-handle {
+  display: inline-block;
+  color: var(--color-muted-strong);
+  font-size: 16px;
+  line-height: 0;
+  vertical-align: -1px;
+}
+
+.leave-balance-column-remove {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  line-height: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.leave-balance-table-wrap th:hover .leave-balance-column-remove,
+.leave-balance-column-remove:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.leave-balance-column-remove:hover {
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+  color: #dc2626;
+}
+
+.leave-balance-column-remove:disabled {
+  display: none;
+}
+
+.leave-balance-column-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 1;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.leave-balance-column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 38%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+.leave-balance-column-resizer:hover,
+.leave-balance-column-resizer:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  outline: none;
+}
+
+.leave-balance-column-resizer:hover::after,
+.leave-balance-column-resizer:focus-visible::after {
+  height: 30px;
+  background: var(--color-accent);
+}
+
+.leave-balance-table-wrap select,
+.leave-balance-table-wrap input {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 30px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.leave-balance-table-wrap select {
+  width: 100%;
+  padding: 0 8px;
+}
+
+.leave-balance-table-wrap input {
+  width: 100%;
+  padding: 0 8px;
+}
+
+.leave-balance-table-wrap select:focus,
+.leave-balance-table-wrap input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.leave-balance-review-needed {
+  display: block;
+  margin-top: 4px;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.leave-balance-table-wrap tr:last-child td {
+  border-bottom: 0;
+}
+
+.leave-balance-row-dismissed td {
+  opacity: 0.46;
+  text-decoration: line-through;
+}
+
+.leave-balance-row-duplicate td {
+  background: color-mix(in srgb, #fecaca 32%, var(--color-surface));
+}
+
+.leave-balance-row-dismissed select,
+.leave-balance-row-dismissed input,
+.leave-balance-row-dismissed button {
+  text-decoration: none;
+}
+
+.leave-balance-delete {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.leave-balance-delete:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+@media (max-width: 720px) {
+  .leave-balance-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leave-balance-controls {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .leave-balance-controls select,
+  .leave-balance-load {
+    flex: 1 1 120px;
+  }
+}

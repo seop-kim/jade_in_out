@@ -18,6 +18,8 @@ describe('INSA browser bridge', () => {
     expect(bookmarklet).toMatch(/^javascript:/);
     expect(bookmarklet).toContain(INSA_BRIDGE_ORIGIN);
     expect(bookmarklet).toContain('credentials');
+    expect(bookmarklet).toContain('__insaBridgeInstalled_v2__');
+    expect(bookmarklet).toContain('/leave/pop_leave.asp');
     expect(bookmarklet).not.toContain('document.cookie');
   });
 

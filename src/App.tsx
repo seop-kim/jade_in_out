@@ -5,6 +5,7 @@ import CalendarPage from './components/CalendarPage';
 import {ToastMessage, ToastViewport} from './components/Toast';
 import InsaPage, {InsaApiRequest} from './components/insa/InsaPage';
 import SettingsMenu from './components/SettingsMenu';
+import LeaveBalanceModal, {LeaveBalanceLoad} from './components/LeaveBalanceModal';
 import {appConfig} from './config';
 import {
   JADE_APP_WINDOW_NAME,
@@ -17,9 +18,23 @@ import {parseBody} from './lib/parseCurl';
 import {clearCredentials, Credentials, loadCredentials, saveCredentials} from './lib/storage';
 import {loadThemePreference, saveThemePreference, Theme} from './lib/theme';
 import {ConnectionStatus} from './lib/connectionStatus';
+import {
+  InsaLeaveLoader,
+  LeaveBalanceResult,
+  LeaveUsageLoader,
+  reconcileLeaveBalance,
+} from './lib/leaveBalance';
+import {isInsaAuthenticationError} from './api/insaApi';
+import {fetchJadeLeaveBalances} from './api/jadeApi';
 
 type SystemTab = 'jade' | 'insa';
 const MIN_INSA_STATUS_TOAST_MS = 300;
+
+function createAbortError(): Error {
+  const error = new Error('Request was cancelled');
+  error.name = 'AbortError';
+  return error;
+}
 
 interface InsaRequestToastState {
   id: number;
@@ -31,6 +46,34 @@ interface InsaRequestToastState {
 interface JadeBridgeConnection {
   credentials: Credentials;
   transport: JadeBridgeTransport;
+  leaveBalanceBody?: string;
+}
+
+type LeaveBalanceSource = 'Jade' | '신규';
+
+class LeaveBalanceSourceError extends Error {
+  readonly source: LeaveBalanceSource;
+  readonly causeError: unknown;
+
+  constructor(source: LeaveBalanceSource, causeError: unknown) {
+    super(`${source} leave balance request failed`);
+    this.name = 'LeaveBalanceSourceError';
+    this.source = source;
+    this.causeError = causeError;
+  }
+}
+
+function safeLeaveBalanceErrorMessage(reason: unknown): string | null {
+  const message = reason instanceof Error ? reason.message.trim() : '';
+  if (!message || message === (reason instanceof Error ? reason.name : '')) return null;
+  if (/(?:cookie|authorization|password|passwd|sessionid|asp_session|\bS_[A-Z0-9_]+\s*=)/i.test(message)) return null;
+  return message.length > 160 ? `${message.slice(0, 157)}...` : message;
+}
+
+function getPreviousLeavePeriodYear(credentials: Credentials | null): number | null {
+  const employeeId = credentials?.parsedBody[appConfig.jade.fields.employeeId] ?? '';
+  const hireYear = Number(employeeId.slice(0, 4));
+  return Number.isInteger(hireYear) && hireYear >= 1900 ? hireYear + 1 : null;
 }
 
 function ExportIcon() {
@@ -46,6 +89,7 @@ function App() {
   const [jadeBridgeConnection, setJadeBridgeConnection] = useState<JadeBridgeConnection | null>(null);
   const [jadeBridgeStatus, setJadeBridgeStatus] = useState<'idle' | 'waiting' | 'ready'>('idle');
   const [jadeBridgeWindow, setJadeBridgeWindow] = useState<Window | null>(null);
+  const pendingJadeLeaveBodyRef = useRef<string | null>(null);
   const [systemTab, setSystemTab] = useState<SystemTab>('jade');
   const [theme, setTheme] = useState<Theme>(() => loadThemePreference() ?? 'light');
   const [jadeConnectionStatus, setJadeConnectionStatus] = useState<ConnectionStatus>(
@@ -65,6 +109,14 @@ function App() {
   const insaExportOpenerRef = useRef<(() => void) | null>(null);
   const [jadeExportReady, setJadeExportReady] = useState(false);
   const [insaExportReady, setInsaExportReady] = useState(false);
+  const jadeLeaveLoaderRef = useRef<LeaveUsageLoader | null>(null);
+  const insaLeaveLoaderRef = useRef<InsaLeaveLoader | null>(null);
+  const [leaveBalanceOpen, setLeaveBalanceOpen] = useState(false);
+  const [leaveBalanceResult, setLeaveBalanceResult] = useState<LeaveBalanceResult | null>(null);
+  const [leaveBalanceError, setLeaveBalanceError] = useState<string | null>(null);
+  const [leaveBalanceErrorDetails, setLeaveBalanceErrorDetails] = useState<string[] | null>(null);
+  const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
+  const leaveBalanceRequestRef = useRef(0);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -115,13 +167,23 @@ function App() {
     setCredentials(creds);
   };
 
+  const clearLeaveBalance = useCallback((): void => {
+    leaveBalanceRequestRef.current += 1;
+    setLeaveBalanceOpen(false);
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    setLeaveBalanceErrorDetails(null);
+    setLeaveBalanceLoading(false);
+  }, []);
+
   const handleResetCredentials = useCallback((): void => {
     closeJadeBridge(true);
     clearCredentials();
     setCredentials(null);
     setJadeConnectionStatus('not-configured');
     setJadeExportReady(false);
-  }, [closeJadeBridge]);
+    clearLeaveBalance();
+  }, [clearLeaveBalance, closeJadeBridge]);
 
   const handleThemeChange = useCallback((nextTheme: Theme): void => {
     saveThemePreference(nextTheme);
@@ -133,8 +195,9 @@ function App() {
     if (!connected) {
       setInsaConnectionStatus('not-configured');
       setInsaExportReady(false);
+      clearLeaveBalance();
     }
-  }, []);
+  }, [clearLeaveBalance]);
 
   const showErrorToast = useCallback((message: string): void => {
     const id = nextToastId.current + 1;
@@ -171,7 +234,16 @@ function App() {
         console.info('[jade-bridge] app-ready');
         setJadeBridgeStatus('ready');
       },
-      undefined,
+      (body) => {
+        const parsedBody = parseBody(body);
+        const programId = parsedBody.S_PAGE_PGM_ID ?? '';
+        const isLeaveBalanceRequest = programId.includes('ess_tam4_010_m01')
+          || parsedBody.S_PAGE_MENU_ID === 'essme41'
+          || (parsedBody.S_FORWARD === 'xsheetResultXML' && Boolean(parsedBody.S_STD_YY));
+        if (!isLeaveBalanceRequest) return;
+        pendingJadeLeaveBodyRef.current = body;
+        setJadeBridgeConnection((current) => current ? {...current, leaveBalanceBody: body} : current);
+      },
       (body, response) => {
         console.info('[jade-bridge] app-attendance-candidate', {
           bodyLength: body.length,
@@ -183,6 +255,7 @@ function App() {
         setJadeBridgeConnection((current) => current ?? {
           credentials: {cookie: '', body, parsedBody},
           transport: jadeBridgeClientRef.current!,
+          leaveBalanceBody: pendingJadeLeaveBodyRef.current ?? undefined,
         });
       },
     );
@@ -291,6 +364,117 @@ function App() {
   const canExport = systemTab === 'jade'
     ? Boolean(activeJadeCredentials && jadeExportReady)
     : Boolean(insaConnected && insaExportReady);
+  const canViewLeaveBalance = Boolean(
+    activeJadeCredentials
+    && jadeConnectionStatus === 'connected'
+    && insaConnected
+    && insaConnectionStatus === 'connected'
+    && jadeLeaveLoaderRef.current
+    && insaLeaveLoaderRef.current
+  );
+  const registerJadeLeaveLoader = useCallback((loader: LeaveUsageLoader | null): void => {
+    jadeLeaveLoaderRef.current = loader;
+  }, []);
+  const registerInsaLeaveLoader = useCallback((loader: InsaLeaveLoader | null): void => {
+    insaLeaveLoaderRef.current = loader;
+  }, []);
+  const handleOpenLeaveBalance = useCallback((): void => {
+    if (!canViewLeaveBalance) return;
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    setLeaveBalanceErrorDetails(null);
+    setLeaveBalanceOpen(true);
+  }, [canViewLeaveBalance]);
+  const loadLeaveBalance: LeaveBalanceLoad = useCallback(async (year, signal, onProgress, includePreviousPeriod = false) => {
+    const jadeLoader = jadeLeaveLoaderRef.current;
+    const insaLoader = insaLeaveLoaderRef.current;
+    if (!jadeLoader || !insaLoader) throw new Error('Leave balance requires both systems');
+
+    const requestId = leaveBalanceRequestRef.current + 1;
+    leaveBalanceRequestRef.current = requestId;
+    const isCurrentRequest = (): boolean => requestId === leaveBalanceRequestRef.current && !signal.aborted;
+    setLeaveBalanceLoading(true);
+    setLeaveBalanceResult(null);
+    setLeaveBalanceError(null);
+    try {
+      const loadSource = async <T,>(source: LeaveBalanceSource, loader: () => Promise<T>): Promise<T> => {
+        try {
+          return await loader();
+        } catch (reason) {
+          throw new LeaveBalanceSourceError(source, reason);
+        }
+      };
+      const jadeLeaveBalanceBody = jadeBridgeConnection?.leaveBalanceBody
+        ?? (credentials?.body.includes('ess_tam4_010_m01') ? credentials.body : null);
+      const [jadeRecords, insaData, jadeBalances] = await Promise.all([
+        loadSource('Jade', () => jadeLoader(year, signal, (progress) => {
+          if (!isCurrentRequest()) return;
+          const progressYear = progress.year ?? year;
+          onProgress({...progress, year: progressYear});
+        }, includePreviousPeriod)),
+        loadSource('신규', () => insaLoader(year, signal, undefined, includePreviousPeriod)),
+        jadeLeaveBalanceBody
+          ? loadSource('Jade', () => fetchJadeLeaveBalances({
+            body: jadeLeaveBalanceBody,
+            cookie: credentials?.cookie,
+            year,
+            signal,
+            transport: activeJadeTransport,
+          }))
+          : Promise.resolve([]),
+      ]);
+      if (!isCurrentRequest()) throw createAbortError();
+      const nextResult = reconcileLeaveBalance(year, jadeRecords, insaData, includePreviousPeriod, jadeBalances);
+      if (!isCurrentRequest()) throw createAbortError();
+      setLeaveBalanceResult(nextResult);
+      return nextResult;
+    } catch (reason) {
+      if (!isCurrentRequest()) throw reason;
+      const sourceError = reason instanceof LeaveBalanceSourceError ? reason : null;
+      const rootReason = sourceError?.causeError ?? reason;
+      if (rootReason instanceof Error && rootReason.name === 'JadeAuthenticationError') {
+        handleJadeAuthenticationExpired();
+      } else if (isInsaAuthenticationError(rootReason)) {
+        handleInsaAuthenticationExpired();
+      } else if (!signal.aborted) {
+        setLeaveBalanceError('휴가 현황을 불러오지 못했습니다. 다시 연결을 확인해주세요.');
+        const isJadeAnnualError = rootReason instanceof Error
+          && rootReason.name === 'JadeAnnualLeaveRequestError'
+          && Array.isArray((rootReason as {failures?: unknown}).failures);
+        const jadeAnnualError = isJadeAnnualError
+          ? rootReason as unknown as {year: number; failures: Array<{ymd: string; error: string}>}
+          : null;
+        const failures = jadeAnnualError?.failures ?? [];
+        const sourceLabel = sourceError?.source ?? '알 수 없는 시스템';
+        const safeMessage = safeLeaveBalanceErrorMessage(rootReason);
+        console.warn('[leave-balance] request failed', {
+          source: sourceLabel,
+          errorType: rootReason instanceof Error ? rootReason.name : 'UnknownError',
+          errorMessage: safeMessage ?? '메시지 없음',
+        });
+        setLeaveBalanceErrorDetails(isJadeAnnualError
+          ? [
+              `${sourceLabel} ${String(jadeAnnualError?.year)}년 조회 실패 (${failures.length}건)`,
+              ...failures.slice(0, 20).map(({ymd, error}) => `${ymd} · ${error}`),
+              ...(failures.length > 20 ? [`외 ${failures.length - 20}건`] : []),
+            ]
+          : [
+              `${sourceLabel} 휴가 조회 실패`,
+              `오류 유형: ${rootReason instanceof Error ? rootReason.name : '알 수 없음'}`,
+              ...(safeMessage
+                ? [`오류 내용: ${safeMessage}`]
+                : []),
+            ]);
+        showErrorToast('휴가 현황 조회에 실패했습니다.');
+      }
+      throw reason;
+    } finally {
+      if (isCurrentRequest()) setLeaveBalanceLoading(false);
+    }
+  }, [activeJadeTransport, credentials, handleInsaAuthenticationExpired, handleJadeAuthenticationExpired, jadeBridgeConnection, showErrorToast]);
+  const handleCloseLeaveBalance = useCallback((): void => {
+    clearLeaveBalance();
+  }, [clearLeaveBalance]);
   const handleOpenExport = (): void => {
     if (!canExport) return;
     if (systemTab === 'jade') jadeExportOpenerRef.current?.();
@@ -374,6 +558,9 @@ function App() {
               insaStatus={insaConnectionStatus}
               canResetCredentials={canResetCredentials}
               onResetCredentials={handleResetCurrentCredentials}
+              canViewLeaveBalance={canViewLeaveBalance}
+              onOpenLeaveBalance={handleOpenLeaveBalance}
+              onShowNotice={showErrorToast}
             />
           </div>
         </div>
@@ -394,6 +581,7 @@ function App() {
                 onAuthenticationExpired={handleJadeAuthenticationExpired}
                 onConnectionStatusChange={setJadeConnectionStatus}
                 onExportReady={registerJadeExportOpener}
+                onLeaveUsageReady={registerJadeLeaveLoader}
               />
             ) : (
               <Setup
@@ -419,11 +607,24 @@ function App() {
               onApiRequestChange={handleInsaApiRequestChange}
               onError={showErrorToast}
               onExportReady={registerInsaExportOpener}
+              onLeaveDataReady={registerInsaLeaveLoader}
             />
           )}
         </div>
       </main>
       <ToastViewport toasts={toasts} onDismiss={dismissToast}/>
+      <LeaveBalanceModal
+        open={leaveBalanceOpen}
+        onClose={handleCloseLeaveBalance}
+        onLoad={loadLeaveBalance}
+        result={leaveBalanceResult}
+        error={leaveBalanceError}
+        errorDetails={leaveBalanceErrorDetails}
+        loading={leaveBalanceLoading}
+        progress={null}
+        canIncludePreviousPeriod={Boolean(getPreviousLeavePeriodYear(activeJadeCredentials))}
+        previousPeriodEligibleYear={getPreviousLeavePeriodYear(activeJadeCredentials)}
+      />
     </div>
   );
 }

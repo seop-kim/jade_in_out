@@ -26,7 +26,7 @@ describe('Jade browser bridge', () => {
     expect(bookmarklet).toContain('XMLHttpRequest');
     expect(bookmarklet).toContain('commonAction.do');
     expect(bookmarklet).toContain(JADE_APP_WINDOW_NAME);
-    expect(bookmarklet).toContain('__jadeBridgeInstalled_v4__');
+    expect(bookmarklet).toContain('__jadeBridgeInstalled_v5__');
     expect(bookmarklet).toContain('window.frames');
     expect(bookmarklet).not.toContain('e.origin!==A||e.source!==P');
     expect(bookmarklet).not.toContain('document.cookie');
