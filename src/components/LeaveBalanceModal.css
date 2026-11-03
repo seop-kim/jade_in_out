@@ -483,6 +483,18 @@
   user-select: none;
 }
 
+.leave-balance-table-wrap th.leave-balance-column-menu-open {
+  overflow: visible;
+}
+
+.leave-balance-column-label {
+  display: inline-block;
+  max-width: calc(100% - 28px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 .leave-balance-table-wrap th:active {
   cursor: grabbing;
 }
@@ -525,29 +537,41 @@
   vertical-align: -1px;
 }
 
-.leave-balance-column-remove {
-  float: right;
-  width: 18px;
-  height: 18px;
-  margin: -2px -4px -2px 5px;
-  padding: 0;
+.leave-balance-column-menu {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 8px;
+  z-index: 5;
+  min-width: 104px;
+  padding: 4px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+}
+
+.leave-balance-column-menu button {
+  width: 100%;
+  padding: 6px 8px;
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: var(--color-muted);
+  color: var(--color-text);
   cursor: pointer;
   font: inherit;
-  font-size: 15px;
-  line-height: 16px;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
 }
 
-.leave-balance-column-remove:hover {
-  background: color-mix(in srgb, #ef4444 14%, transparent);
+.leave-balance-column-menu button:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
   color: #dc2626;
 }
 
-.leave-balance-column-remove:disabled {
-  visibility: hidden;
+.leave-balance-column-menu button:disabled {
+  color: var(--color-muted);
+  cursor: not-allowed;
 }
 
 .leave-balance-column-resizer {

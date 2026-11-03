@@ -348,7 +348,7 @@ describe('LeaveBalanceModal', () => {
     expect(dateHeader).toHaveClass('leave-balance-column-drop-before');
     fireEvent.drop(dateHeader, {dataTransfer, clientX: 0});
 
-    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.replace('⠿', '').replace('×', ''));
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.replace('⠿', ''));
     expect(headers.slice(0, 3)).toEqual(['발생기간', '휴가 유형', '날짜']);
     expect(screen.getAllByRole('row')[1]?.textContent).toContain('2026-08-05');
   });
@@ -358,7 +358,9 @@ describe('LeaveBalanceModal', () => {
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
     );
 
-    await userEvent.click(screen.getByRole('button', {name: '컬럼 삭제 사유'}));
+    await userEvent.click(screen.getByRole('columnheader', {name: '사유'}));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', {name: '컬럼 삭제 사유'}));
     expect(screen.queryByRole('columnheader', {name: '사유'})).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', {name: '컬럼 초기화'}));
