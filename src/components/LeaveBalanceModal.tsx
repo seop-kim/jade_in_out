@@ -77,13 +77,13 @@ const NON_REMOVABLE_LEAVE_COLUMN_KEYS = new Set<LeaveTableColumn['key']>(['date'
 
 const MAX_LEAVE_COLUMN_WIDTH = 600;
 const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
-  period: 100,
+  period: 118,
   date: 72,
-  type: 112,
-  reason: 86,
+  type: 122,
+  reason: 78,
   hours: 92,
   source: 72,
-  status: 86,
+  status: 94,
   finalDecision: 100,
   appliedHours: 90,
   manage: 72,

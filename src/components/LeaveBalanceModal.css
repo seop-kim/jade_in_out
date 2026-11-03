@@ -485,9 +485,10 @@
 
 .leave-balance-column-label {
   display: inline-block;
-  max-width: calc(100% - 28px);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
   vertical-align: middle;
 }
 
