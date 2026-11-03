@@ -167,7 +167,7 @@ function InsaPage({
 
   const handleOpenAutomatic = useCallback((): void => {
     monthCache.current.clear();
-    const insaWindow = window.open(INSA_POPUP_URL, 'insa-system-window');
+    const insaWindow = window.open(INSA_POPUP_URL, '_blank');
     if (!insaWindow) {
       onError?.('인사시스템 창을 열지 못했습니다');
       return;

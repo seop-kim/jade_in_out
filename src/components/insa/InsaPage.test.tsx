@@ -133,7 +133,7 @@ describe('InsaPage', () => {
     render(<InsaPage />);
     await userEvent.click(screen.getByRole('button', {name: '인사시스템 열기'}));
 
-    expect(openSpy).toHaveBeenCalledWith('https://insa.kwe.co.kr/', 'insa-system-window');
+    expect(openSpy).toHaveBeenCalledWith('https://insa.kwe.co.kr/', '_blank');
 
     await act(async () => {
       window.dispatchEvent(new MessageEvent('message', {
