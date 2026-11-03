@@ -60,6 +60,12 @@ interface LeaveTableColumn {
 }
 
 type LeaveColumnDropPosition = 'before' | 'after';
+interface LeaveColumnTooltipPosition {
+  text: string;
+  left: number;
+  top: number;
+  above: boolean;
+}
 
 const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'period', label: '발생기간', title: '이 휴가가 차감되는 발생 연차 기간입니다.'},
@@ -132,6 +138,7 @@ function LeaveBalanceModal({
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<LeaveColumnDropPosition>('before');
+  const [columnTooltip, setColumnTooltip] = useState<LeaveColumnTooltipPosition | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({...DEFAULT_LEAVE_COLUMN_WIDTHS}));
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -381,6 +388,14 @@ function LeaveBalanceModal({
     setDragOverColumnKey(null);
     setDropPosition('before');
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
+  };
+  const handleColumnTooltipShow = (element: HTMLElement, text: string): void => {
+    const bounds = element.getBoundingClientRect();
+    const tooltipWidth = 260;
+    const gap = 8;
+    const left = Math.max(8, Math.min(bounds.left + (bounds.width / 2) - (tooltipWidth / 2), window.innerWidth - tooltipWidth - 8));
+    const above = bounds.bottom + 80 > window.innerHeight;
+    setColumnTooltip({text, left, top: above ? bounds.top - gap : bounds.bottom + gap, above});
   };
   const handleColumnResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
     event.preventDefault();
@@ -639,6 +654,10 @@ function LeaveBalanceModal({
                             aria-label={column.label}
                             style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable
+                            onMouseEnter={(event) => handleColumnTooltipShow(event.currentTarget, column.title)}
+                            onMouseLeave={() => setColumnTooltip(null)}
+                            onFocus={(event) => handleColumnTooltipShow(event.currentTarget, column.title)}
+                            onBlur={() => setColumnTooltip(null)}
                             className={[
                               draggedColumnKey === column.key && 'leave-balance-column-dragging',
                               dragOverColumnKey === column.key && draggedColumnKey !== column.key && `leave-balance-column-drop-${dropPosition}`,
@@ -861,6 +880,15 @@ function LeaveBalanceModal({
           </div>
         )}
       </div>
+      {columnTooltip && (
+        <div
+          className={`leave-balance-column-tooltip${columnTooltip.above ? ' above' : ''}`}
+          role="tooltip"
+          style={{left: columnTooltip.left, top: columnTooltip.top}}
+        >
+          {columnTooltip.text}
+        </div>
+      )}
     </div>
   );
 }
