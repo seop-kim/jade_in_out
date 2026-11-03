@@ -60,6 +60,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
   const [isGuideClosing, setIsGuideClosing] = useState(false);
   const guideDragStartX = useRef<number | null>(null);
+  const guideModalDragStartX = useRef<number | null>(null);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -173,6 +174,42 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
 
   const handleGuidePointerCancel = (): void => {
     guideDragStartX.current = null;
+  };
+
+  const handleGuideModalPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    guideModalDragStartX.current = event.clientX;
+  };
+
+  const completeGuideModalDrag = (clientX: number): void => {
+    if (guideModalDragStartX.current === null) return;
+
+    const distance = clientX - guideModalDragStartX.current;
+    guideModalDragStartX.current = null;
+    if (!Number.isFinite(distance) || Math.abs(distance) < 50) return;
+
+    const nextIndex = distance < 0
+      ? Math.min(jadeGuideSteps.length - 1, selectedGuideIndex + 1)
+      : Math.max(0, selectedGuideIndex - 1);
+    setSelectedGuideStep(nextIndex);
+    setGuideStepIndex(nextIndex);
+  };
+
+  const handleGuideModalPointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    completeGuideModalDrag(event.clientX);
+  };
+
+  const handleGuideModalMouseDown = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return;
+    guideModalDragStartX.current = event.clientX;
+  };
+
+  const handleGuideModalMouseUp = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    completeGuideModalDrag(event.clientX);
+  };
+
+  const handleGuideModalPointerCancel = (): void => {
+    guideModalDragStartX.current = null;
   };
 
   return (
@@ -320,12 +357,22 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     >
                       ‹
                     </button>
-                    <img
-                      className="setup-image-expanded"
-                      src={selectedGuide.image}
-                      alt={`${selectedGuide.alt} 확대`}
-                      draggable={false}
-                    />
+                    <div
+                      className="setup-image-pan-area"
+                      onPointerDown={handleGuideModalPointerDown}
+                      onPointerUp={handleGuideModalPointerUp}
+                      onPointerCancel={handleGuideModalPointerCancel}
+                      onMouseDown={handleGuideModalMouseDown}
+                      onMouseUp={handleGuideModalMouseUp}
+                    >
+                      <img
+                        key={selectedGuide.image}
+                        className="setup-image-expanded"
+                        src={selectedGuide.image}
+                        alt={`${selectedGuide.alt} 확대`}
+                        draggable={false}
+                      />
+                    </div>
                     <button
                       type="button"
                       className="setup-image-side-arrow"

@@ -67,6 +67,17 @@ describe('Jade setup', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).not.toBeInTheDocument());
   });
 
+  test('moves through the enlarged guide when dragged horizontally', async () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+
+    await userEvent.click(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 확대 보기'}));
+    const image = screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장 확대'});
+    fireEvent.mouseDown(image, {button: 0, clientX: 300});
+    fireEvent.mouseUp(image, {clientX: 220});
+
+    expect(screen.getByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).toBeInTheDocument();
+  });
+
   test('moves through the Jade guide as a slider', async () => {
     render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
 

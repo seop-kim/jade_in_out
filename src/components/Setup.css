@@ -222,6 +222,23 @@
   object-fit: contain;
   border-radius: 6px;
   -webkit-user-drag: none;
+  animation: setup-image-slide-in 0.22s ease-out both;
+}
+
+@keyframes setup-image-slide-in {
+  from { opacity: 0.35; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.setup-image-pan-area {
+  min-width: 0;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.setup-image-pan-area:active {
+  cursor: grabbing;
 }
 
 .setup-image-stage {
