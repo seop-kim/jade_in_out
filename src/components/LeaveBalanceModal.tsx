@@ -341,6 +341,17 @@ function LeaveBalanceModal({
       return next;
     });
   };
+  const handleColumnRemove = (columnKey: string): void => {
+    setOrderedColumnKeys((current) => current.length <= 1 ? current : current.filter((key) => key !== columnKey));
+    setDragOverColumnKey(null);
+  };
+  const handleColumnReset = (): void => {
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
+    setDropPosition('before');
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
+  };
   const handleColumnResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
     event.preventDefault();
     event.stopPropagation();
@@ -578,6 +589,9 @@ function LeaveBalanceModal({
               <div className="leave-balance-records-heading">
                 <h3>사용 내역</h3>
                 <div className="leave-balance-records-actions">
+                  <button type="button" className="leave-balance-column-reset" onClick={handleColumnReset}>
+                    컬럼 초기화
+                  </button>
                   <button type="button" className="leave-balance-export" onClick={handleDownloadExcel} disabled={displayRows.length === 0}>
                     엑셀 다운로드
                   </button>
@@ -643,6 +657,19 @@ function LeaveBalanceModal({
                           >
                             <span className="leave-balance-column-drag-handle" role="img" aria-label={`${column.label} 열 이동 핸들`}>⠿</span>
                             {column.label}
+                            <button
+                              type="button"
+                              className="leave-balance-column-remove"
+                              aria-label={`컬럼 삭제 ${column.label}`}
+                              disabled={orderedColumns.length <= 1}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                handleColumnRemove(column.key);
+                              }}
+                            >
+                              ×
+                            </button>
                             <span
                               className="leave-balance-column-resizer"
                               role="separator"

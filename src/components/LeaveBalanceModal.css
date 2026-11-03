@@ -353,6 +353,21 @@
   gap: 8px;
 }
 
+.leave-balance-column-reset {
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted-strong);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-column-reset:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .leave-balance-export {
   padding: 5px 9px;
   border: 1px solid var(--color-accent);
@@ -508,6 +523,31 @@
   font-size: 16px;
   line-height: 0;
   vertical-align: -1px;
+}
+
+.leave-balance-column-remove {
+  float: right;
+  width: 18px;
+  height: 18px;
+  margin: -2px -4px -2px 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  line-height: 16px;
+}
+
+.leave-balance-column-remove:hover {
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+  color: #dc2626;
+}
+
+.leave-balance-column-remove:disabled {
+  visibility: hidden;
 }
 
 .leave-balance-column-resizer {
