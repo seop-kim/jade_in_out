@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LeaveBalanceModal from './LeaveBalanceModal';
 import {LeaveBalanceResult, UnresolvedLeaveRecord} from '../lib/leaveBalance';
@@ -299,6 +299,27 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
     expect(screen.getByRole('button', {name: '엑셀 다운로드'})).toBeEnabled();
+  });
+
+  test('reorders the leave grid columns by dragging a header onto another header', () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    const dateHeader = screen.getByRole('columnheader', {name: '날짜'});
+    const typeHeader = screen.getByRole('columnheader', {name: '휴가 유형'});
+    const dataTransfer = {
+      effectAllowed: '',
+      setData: jest.fn(),
+      getData: jest.fn(() => 'date'),
+    };
+    fireEvent.dragStart(dateHeader, {dataTransfer});
+    fireEvent.dragOver(typeHeader);
+    fireEvent.drop(typeHeader, {dataTransfer});
+
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent);
+    expect(headers.slice(0, 3)).toEqual(['발생기간', '휴가 유형', '날짜']);
+    expect(screen.getAllByRole('row')[1]?.textContent).toContain('2026-08-05');
   });
 
   test('shows a review-needed marker for rows requiring manual confirmation', () => {

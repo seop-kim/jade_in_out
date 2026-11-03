@@ -53,6 +53,26 @@ function decisionLabel(decision: LeaveDecision): string {
   return '차감 제외';
 }
 
+interface LeaveTableColumn {
+  key: 'period' | 'date' | 'type' | 'reason' | 'hours' | 'source' | 'status' | 'autoDecision' | 'finalDecision' | 'appliedHours' | 'manage';
+  label: string;
+  title: string;
+}
+
+const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
+  {key: 'period', label: '발생기간', title: '이 휴가가 차감되는 발생 연차 기간입니다.'},
+  {key: 'date', label: '날짜', title: '휴가를 사용한 날짜입니다.'},
+  {key: 'type', label: '휴가 유형', title: '원 시스템에서 조회된 휴가 종류입니다.'},
+  {key: 'reason', label: '사유', title: '휴가 신청 시 입력된 사유입니다.'},
+  {key: 'hours', label: '시간', title: '사용한 휴가 시간 또는 시간차 정보입니다.'},
+  {key: 'source', label: '출처', title: '해당 기록을 가져온 시스템입니다.'},
+  {key: 'status', label: '승인상태', title: '원 시스템에서 표시한 승인 상태입니다.'},
+  {key: 'autoDecision', label: '자동 판정', title: '중복·비차감 휴가 여부를 자동으로 판정한 결과입니다.'},
+  {key: 'finalDecision', label: '최종 판정', title: '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.'},
+  {key: 'appliedHours', label: '반영시간', title: '최종 잔여시간 계산에 반영할 시간입니다.'},
+  {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
+];
+
 function LeaveBalanceModal({
   open,
   onClose,
@@ -77,6 +97,8 @@ function LeaveBalanceModal({
   const [accruedHoursByPeriodId, setAccruedHoursByPeriodId] = useState<Record<string, number | undefined>>({});
   const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
   const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
+  const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
+  const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -115,6 +137,8 @@ function LeaveBalanceModal({
     setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
   }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
@@ -131,6 +155,8 @@ function LeaveBalanceModal({
     setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -144,6 +170,8 @@ function LeaveBalanceModal({
     setIncludePreviousPeriod(false);
     setAccruedHoursByPeriodId({});
     setDeleteDismissedDialogOpen(false);
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
     onClose();
   }, [onClose]);
 
@@ -198,6 +226,9 @@ function LeaveBalanceModal({
   if (!open) return null;
 
   const isLoading = loading || requesting;
+  const orderedColumns = orderedColumnKeys
+    .map((key) => LEAVE_TABLE_COLUMNS.find((column) => column.key === key))
+    .filter((column): column is LeaveTableColumn => Boolean(column));
   const displayError = localError ?? error;
   const displayProgress = localProgress ?? progress;
   const displayRows = displayResult
@@ -257,11 +288,25 @@ function LeaveBalanceModal({
     if (deleteRowId) setDeletedRowIds((current) => new Set([...current, deleteRowId]));
     setDeleteRowId(null);
   };
+  const handleColumnDrop = (sourceKey: string, targetKey: string): void => {
+    setOrderedColumnKeys((current) => {
+      const sourceIndex = current.indexOf(sourceKey);
+      const targetIndex = current.indexOf(targetKey);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      if (moved !== undefined) next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  };
   const handleDownloadExcel = (): void => {
     if (displayRows.length === 0) return;
     downloadExcel(
       buildExportFileName('휴가현황', `${year}-01-01`, `${year}-12-31`),
-      LEAVE_BALANCE_EXPORT_COLUMNS,
+      orderedColumns
+        .filter((column) => column.key !== 'manage')
+        .map((column) => LEAVE_BALANCE_EXPORT_COLUMNS.find((exportColumn) => exportColumn.key === column.key)!)
+        .filter(Boolean),
       buildLeaveBalanceExportRows(displayRows, decisionByRowId, hoursByRowId),
     );
   };
@@ -466,17 +511,31 @@ function LeaveBalanceModal({
                   <table>
                     <thead>
                       <tr>
-                        <th title="이 휴가가 차감되는 발생 연차 기간입니다.">발생기간</th>
-                        <th title="휴가를 사용한 날짜입니다.">날짜</th>
-                        <th title="원 시스템에서 조회된 휴가 종류입니다.">휴가 유형</th>
-                        <th title="휴가 신청 시 입력된 사유입니다.">사유</th>
-                        <th title="사용한 휴가 시간 또는 시간차 정보입니다.">시간</th>
-                        <th title="해당 기록을 가져온 시스템입니다.">출처</th>
-                        <th title="원 시스템에서 표시한 승인 상태입니다.">승인상태</th>
-                        <th title="중복·비차감 휴가 여부를 자동으로 판정한 결과입니다.">자동 판정</th>
-                        <th title="자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.">최종 판정</th>
-                        <th title="최종 잔여시간 계산에 반영할 시간입니다.">반영시간</th>
-                        <th title="사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.">관리</th>
+                        {orderedColumns.map((column) => (
+                          <th
+                            key={column.key}
+                            title={column.title}
+                            draggable
+                            className={draggedColumnKey === column.key ? 'leave-balance-column-dragging' : undefined}
+                            onDragStart={(event) => {
+                              if (event.dataTransfer) {
+                                event.dataTransfer.effectAllowed = 'move';
+                                event.dataTransfer.setData('text/plain', column.key);
+                              }
+                              setDraggedColumnKey(column.key);
+                            }}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              const sourceKey = draggedColumnKey || event.dataTransfer?.getData('text/plain') || '';
+                              if (sourceKey) handleColumnDrop(sourceKey, column.key);
+                              setDraggedColumnKey(null);
+                            }}
+                            onDragEnd={() => setDraggedColumnKey(null)}
+                          >
+                            {column.label}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -491,63 +550,73 @@ function LeaveBalanceModal({
                         const rowIsDismissed = effective === 'exclude' || effective === 'duplicate';
                         const rowIsDuplicate = !rowIsDismissed && (activeDateCounts.get(row.ymd) ?? 0) > 1;
                         return (
-                        <tr key={row.id} className={[rowIsDismissed && 'leave-balance-row-dismissed', rowIsDuplicate && 'leave-balance-row-duplicate'].filter(Boolean).join(' ') || undefined}>
-                          <td>{row.periodLabel || '-'}</td>
-                          <td>{row.ymd}</td>
-                          <td>{row.type}</td>
-                          <td>{row.reason || '-'}</td>
-                          <td>{row.durationLabel || hoursLabel(row.hours)}</td>
-                          <td>{sourceLabel(row.source)}</td>
-                          <td>{row.status || '-'}</td>
-                          <td>
-                            <span>{decisionLabel(row.autoDecision)}</span>
-                            {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
-                          </td>
-                          <td>
-                            <select
-                              aria-label={`최종 판정 ${rowLabel}`}
-                              value={selectedDecision}
-                              onChange={(event) => {
-                                const nextDecision = event.target.value as LeaveDecision;
-                                setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
-                              }}
-                            >
-                              <option value="auto">자동</option>
-                              <option value="deduct">차감</option>
-                              <option value="exclude">차감 제외</option>
-                              <option value="duplicate">중복 제외</option>
-                            </select>
-                          </td>
-                          <td>
-                            {row.hours === null ? (
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.5"
-                                aria-label={`반영시간 ${rowLabel}`}
-                                value={enteredHours ?? ''}
-                                onChange={(event) => {
-                                  const nextValue = event.target.value;
-                                  setHoursByRowId((current) => ({
-                                    ...current,
-                                    [row.id]: nextValue === '' ? undefined : Number(nextValue),
-                                  }));
-                                }}
-                              />
-                            ) : hoursLabel(effectiveHours)}
-                            {effective === 'deduct' && effectiveHours === null && <span className="leave-balance-review-needed">확인 필요</span>}
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="leave-balance-delete"
-                              aria-label={`행 삭제 ${rowLabel}`}
-                              onClick={() => handleRequestRowDelete(row.id, rowIsDismissed)}
-                            >
-                              삭제
-                            </button>
-                          </td>
-                        </tr>
+                          <tr key={row.id} className={[rowIsDismissed && 'leave-balance-row-dismissed', rowIsDuplicate && 'leave-balance-row-duplicate'].filter(Boolean).join(' ') || undefined}>
+                            {orderedColumns.map((column) => {
+                              if (column.key === 'period') return <td key={column.key}>{row.periodLabel || '-'}</td>;
+                              if (column.key === 'date') return <td key={column.key}>{row.ymd}</td>;
+                              if (column.key === 'type') return <td key={column.key}>{row.type}</td>;
+                              if (column.key === 'reason') return <td key={column.key}>{row.reason || '-'}</td>;
+                              if (column.key === 'hours') return <td key={column.key}>{row.durationLabel || hoursLabel(row.hours)}</td>;
+                              if (column.key === 'source') return <td key={column.key}>{sourceLabel(row.source)}</td>;
+                              if (column.key === 'status') return <td key={column.key}>{row.status || '-'}</td>;
+                              if (column.key === 'autoDecision') return (
+                                <td key={column.key}>
+                                  <span>{decisionLabel(row.autoDecision)}</span>
+                                  {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
+                                </td>
+                              );
+                              if (column.key === 'finalDecision') return (
+                                <td key={column.key}>
+                                  <select
+                                    aria-label={`최종 판정 ${rowLabel}`}
+                                    value={selectedDecision}
+                                    onChange={(event) => {
+                                      const nextDecision = event.target.value as LeaveDecision;
+                                      setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
+                                    }}
+                                  >
+                                    <option value="auto">자동</option>
+                                    <option value="deduct">차감</option>
+                                    <option value="exclude">차감 제외</option>
+                                    <option value="duplicate">중복 제외</option>
+                                  </select>
+                                </td>
+                              );
+                              if (column.key === 'appliedHours') return (
+                                <td key={column.key}>
+                                  {row.hours === null ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.5"
+                                      aria-label={`반영시간 ${rowLabel}`}
+                                      value={enteredHours ?? ''}
+                                      onChange={(event) => {
+                                        const nextValue = event.target.value;
+                                        setHoursByRowId((current) => ({
+                                          ...current,
+                                          [row.id]: nextValue === '' ? undefined : Number(nextValue),
+                                        }));
+                                      }}
+                                    />
+                                  ) : hoursLabel(effectiveHours)}
+                                  {effective === 'deduct' && effectiveHours === null && <span className="leave-balance-review-needed">확인 필요</span>}
+                                </td>
+                              );
+                              return (
+                                <td key={column.key}>
+                                  <button
+                                    type="button"
+                                    className="leave-balance-delete"
+                                    aria-label={`행 삭제 ${rowLabel}`}
+                                    onClick={() => handleRequestRowDelete(row.id, rowIsDismissed)}
+                                  >
+                                    삭제
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
                         );
                       })}
                     </tbody>
