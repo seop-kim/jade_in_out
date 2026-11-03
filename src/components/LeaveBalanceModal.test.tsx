@@ -377,6 +377,13 @@ describe('LeaveBalanceModal', () => {
     fireEvent.mouseMove(window, {clientX: -1000});
     fireEvent.mouseUp(window);
     expect(decisionHeader).toHaveStyle({width: '170px'});
+
+    const appliedHoursHeader = screen.getByRole('columnheader', {name: '반영시간'});
+    const appliedHoursResizer = screen.getByRole('separator', {name: '반영시간 열 너비 조절'});
+    fireEvent.mouseDown(appliedHoursResizer, {clientX: 100});
+    fireEvent.mouseMove(window, {clientX: -1000});
+    fireEvent.mouseUp(window);
+    expect(appliedHoursHeader).toHaveStyle({width: '90px'});
   });
 
   test('shows a review-needed marker for rows requiring manual confirmation', () => {
