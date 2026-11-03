@@ -485,6 +485,12 @@
   color: #fff;
 }
 
+.leave-balance-confirm-actions .leave-balance-confirm-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
 .leave-balance-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--color-border);

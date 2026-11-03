@@ -830,7 +830,7 @@ function LeaveBalanceModal({
                   </label>
                   <div className="leave-balance-confirm-actions">
                     <button type="button" onClick={handleCloseAccruedHoursEditor}>취소</button>
-                    <button type="button" className="leave-balance-confirm-danger" onClick={handleSaveAccruedHours} disabled={!accruedHoursDraft || Number(accruedHoursDraft) < 0}>수정</button>
+                    <button type="button" className="leave-balance-confirm-primary" onClick={handleSaveAccruedHours} disabled={!accruedHoursDraft || Number(accruedHoursDraft) < 0}>수정</button>
                   </div>
                 </div>
               </div>
