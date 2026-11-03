@@ -110,7 +110,7 @@
   max-height: 250px;
   object-fit: contain;
   border-radius: 6px;
-  background: #ffffff;
+  background: transparent;
   -webkit-user-drag: none;
 }
 
@@ -754,7 +754,7 @@ html[data-theme='dark'] .setup-guide-heading h3 {
 }
 
 html[data-theme='dark'] .setup-guide-image {
-  background: #111827;
+  background: transparent;
 }
 
 html[data-theme='dark'] .setup-guide-media,
