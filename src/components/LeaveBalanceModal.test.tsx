@@ -298,6 +298,10 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toHaveAttribute('title', '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.');
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
+    expect(screen.getAllByRole('option', {name: '자동 - 자동 판정 적용'})).toHaveLength(2);
+    expect(screen.getAllByRole('option', {name: '차감 - 연차에서 차감'})).toHaveLength(2);
+    expect(screen.getAllByRole('option', {name: '차감 제외 - 연차에서 제외'})).toHaveLength(2);
+    expect(screen.getAllByRole('option', {name: '중복 제외 - 중복 기록에서 제외'})).toHaveLength(2);
     expect(screen.getByRole('button', {name: '엑셀 다운로드'})).toBeEnabled();
   });
 

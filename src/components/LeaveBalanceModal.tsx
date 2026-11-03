@@ -649,10 +649,10 @@ function LeaveBalanceModal({
                                       setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
                                     }}
                                   >
-                                    <option value="auto">자동</option>
-                                    <option value="deduct">차감</option>
-                                    <option value="exclude">차감 제외</option>
-                                    <option value="duplicate">중복 제외</option>
+                                    <option value="auto" title="자동 판정 결과를 적용합니다.">자동 - 자동 판정 적용</option>
+                                    <option value="deduct" title="해당 휴가 시간을 연차에서 차감합니다.">차감 - 연차에서 차감</option>
+                                    <option value="exclude" title="해당 휴가 시간을 연차 차감에서 제외합니다.">차감 제외 - 연차에서 제외</option>
+                                    <option value="duplicate" title="중복으로 판단된 기록을 차감에서 제외합니다.">중복 제외 - 중복 기록에서 제외</option>
                                   </select>
                                 </td>
                               );
