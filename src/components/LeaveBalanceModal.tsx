@@ -7,6 +7,8 @@ import {
   LeaveHoursByRowId,
   LeaveReviewRow,
 } from '../lib/leaveBalance';
+import {buildExportFileName, downloadExcel} from '../lib/csvExport';
+import {buildLeaveBalanceExportRows, LEAVE_BALANCE_EXPORT_COLUMNS} from '../lib/leaveBalanceExport';
 import './LeaveBalanceModal.css';
 
 export interface LeaveBalanceProgress {
@@ -255,6 +257,14 @@ function LeaveBalanceModal({
     if (deleteRowId) setDeletedRowIds((current) => new Set([...current, deleteRowId]));
     setDeleteRowId(null);
   };
+  const handleDownloadExcel = (): void => {
+    if (displayRows.length === 0) return;
+    downloadExcel(
+      buildExportFileName('휴가현황', `${year}-01-01`, `${year}-12-31`),
+      LEAVE_BALANCE_EXPORT_COLUMNS,
+      buildLeaveBalanceExportRows(displayRows, decisionByRowId, hoursByRowId),
+    );
+  };
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -440,9 +450,14 @@ function LeaveBalanceModal({
             <div className="leave-balance-records">
               <div className="leave-balance-records-heading">
                 <h3>사용 내역</h3>
-                <button type="button" className="leave-balance-delete-all" onClick={handleOpenDeleteDismissedDialog}>
-                  취소선 데이터 일괄 삭제{dismissibleRowIds.length > 0 ? ` (${dismissibleRowIds.length})` : ''}
-                </button>
+                <div className="leave-balance-records-actions">
+                  <button type="button" className="leave-balance-export" onClick={handleDownloadExcel} disabled={displayRows.length === 0}>
+                    엑셀 다운로드
+                  </button>
+                  <button type="button" className="leave-balance-delete-all" onClick={handleOpenDeleteDismissedDialog}>
+                    취소선 데이터 일괄 삭제{dismissibleRowIds.length > 0 ? ` (${dismissibleRowIds.length})` : ''}
+                  </button>
+                </div>
               </div>
               {displayRows.length === 0 ? (
                 <p className="leave-balance-empty">사용 내역이 없습니다.</p>

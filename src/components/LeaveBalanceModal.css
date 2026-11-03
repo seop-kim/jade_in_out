@@ -347,6 +347,27 @@
   margin: 0;
 }
 
+.leave-balance-records-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-balance-export {
+  padding: 5px 9px;
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.leave-balance-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .leave-balance-delete-all {
   padding: 5px 9px;
   border: 1px solid var(--color-border);

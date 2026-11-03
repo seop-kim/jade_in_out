@@ -298,6 +298,7 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toHaveAttribute('title', '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.');
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
+    expect(screen.getByRole('button', {name: '엑셀 다운로드'})).toBeEnabled();
   });
 
   test('shows a review-needed marker for rows requiring manual confirmation', () => {
