@@ -617,7 +617,7 @@ function LeaveBalanceModal({
                         const selectedDecision = decisionByRowId[row.id] ?? 'auto';
                         const effective = selectedDecision === 'auto' ? row.autoDecision : selectedDecision;
                         const enteredHours = hoursByRowId[row.id];
-                        const effectiveHours = typeof enteredHours === 'number' && enteredHours > 0
+                        const effectiveHours = typeof enteredHours === 'number' && enteredHours >= 0
                           ? enteredHours
                           : row.hours;
                         const rowLabel = `${row.ymd} ${sourceLabel(row.source)}`;
@@ -658,22 +658,20 @@ function LeaveBalanceModal({
                               );
                               if (column.key === 'appliedHours') return (
                                 <td key={column.key}>
-                                  {row.hours === null ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.5"
-                                      aria-label={`반영시간 ${rowLabel}`}
-                                      value={enteredHours ?? ''}
-                                      onChange={(event) => {
-                                        const nextValue = event.target.value;
-                                        setHoursByRowId((current) => ({
-                                          ...current,
-                                          [row.id]: nextValue === '' ? undefined : Number(nextValue),
-                                        }));
-                                      }}
-                                    />
-                                  ) : hoursLabel(effectiveHours)}
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    aria-label={`반영시간 ${rowLabel}`}
+                                    value={enteredHours ?? effectiveHours ?? ''}
+                                    onChange={(event) => {
+                                      const nextValue = event.target.value;
+                                      setHoursByRowId((current) => ({
+                                        ...current,
+                                        [row.id]: nextValue === '' ? undefined : Number(nextValue),
+                                      }));
+                                    }}
+                                  />
                                   {effective === 'deduct' && effectiveHours === null && <span className="leave-balance-review-needed">확인 필요</span>}
                                 </td>
                               );

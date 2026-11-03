@@ -35,7 +35,7 @@ export function effectiveLeaveDecision(row: LeaveReviewRow, decisions: LeaveDeci
 
 export function effectiveLeaveHours(row: LeaveReviewRow, hoursByRowId: LeaveHoursByRowId): number | null {
   const enteredHours = hoursByRowId[row.id];
-  return typeof enteredHours === 'number' && enteredHours > 0 ? enteredHours : row.hours;
+  return typeof enteredHours === 'number' && enteredHours >= 0 ? enteredHours : row.hours;
 }
 
 export function buildLeaveBalanceExportRows(

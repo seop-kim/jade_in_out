@@ -371,6 +371,20 @@ describe('LeaveBalanceModal', () => {
     expect(finalDecisions[1]).toHaveValue('deduct');
   });
 
+  test('allows editing applied hours for a known-duration row', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    const appliedHours = screen.getByRole('spinbutton', {name: '반영시간 2026-08-05 Jade'});
+    expect(appliedHours).toHaveValue(4);
+    await userEvent.clear(appliedHours);
+    await userEvent.type(appliedHours, '2');
+
+    expect(appliedHours).toHaveValue(2);
+    expect(screen.getByText('최종 사용').parentElement).toHaveTextContent('2시간');
+  });
+
   test('dims excluded rows and removes a row only for the current modal view', async () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
