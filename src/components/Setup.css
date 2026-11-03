@@ -159,6 +159,40 @@
   border-radius: 6px;
 }
 
+.setup-image-stage {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.setup-image-side-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.setup-image-side-arrow:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.setup-image-side-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .setup-image-caption {
   width: min(760px, 100%);
   margin: 14px auto 2px;
@@ -169,12 +203,34 @@
   text-align: center;
 }
 
-.setup-image-controls {
+.setup-image-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.setup-image-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition: width 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.setup-image-dot:hover {
+  background: #93c5fd;
+  transform: scale(1.15);
+}
+
+.setup-image-dot.active {
+  width: 10px;
+  height: 10px;
+  background: #2563eb;
 }
 
 .setup-image-close {
@@ -617,6 +673,24 @@ html[data-theme='dark'] .setup-image-close {
 
 html[data-theme='dark'] .setup-image-caption {
   color: var(--color-text);
+}
+
+html[data-theme='dark'] .setup-image-side-arrow {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-accent-hover);
+}
+
+html[data-theme='dark'] .setup-image-side-arrow:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+html[data-theme='dark'] .setup-image-dot {
+  background: var(--color-border-strong);
+}
+
+html[data-theme='dark'] .setup-image-dot.active {
+  background: var(--color-accent);
 }
 
 html[data-theme='dark'] .setup-guide-step figcaption {

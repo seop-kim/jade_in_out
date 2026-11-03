@@ -238,16 +238,10 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
               >
                 <div className="setup-image-dialog">
                   <button type="button" className="setup-image-close" aria-label="확대 이미지 닫기" onClick={() => setSelectedGuideStep(null)}>×</button>
-                  <img
-                    className="setup-image-expanded"
-                    src={selectedGuide.image}
-                    alt={`${selectedGuide.alt} 확대`}
-                  />
-                  <p className="setup-image-caption">{selectedGuideIndex + 1}. {selectedGuide.text}</p>
-                  <div className="setup-image-controls">
+                  <div className="setup-image-stage">
                     <button
                       type="button"
-                      className="setup-guide-arrow"
+                      className="setup-image-side-arrow"
                       aria-label="확대 보기 이전 단계"
                       onClick={() => {
                         const nextIndex = Math.max(0, selectedGuideIndex - 1);
@@ -258,10 +252,14 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     >
                       ‹
                     </button>
-                    <span className="setup-guide-counter" aria-live="polite">{selectedGuideIndex + 1} / {jadeGuideSteps.length}</span>
+                    <img
+                      className="setup-image-expanded"
+                      src={selectedGuide.image}
+                      alt={`${selectedGuide.alt} 확대`}
+                    />
                     <button
                       type="button"
-                      className="setup-guide-arrow"
+                      className="setup-image-side-arrow"
                       aria-label="확대 보기 다음 단계"
                       onClick={() => {
                         const nextIndex = Math.min(jadeGuideSteps.length - 1, selectedGuideIndex + 1);
@@ -272,6 +270,22 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     >
                       ›
                     </button>
+                  </div>
+                  <p className="setup-image-caption">{selectedGuideIndex + 1}. {selectedGuide.text}</p>
+                  <div className="setup-image-pagination" aria-label="확대 보기 페이지">
+                    {jadeGuideSteps.map((step, index) => (
+                      <button
+                        type="button"
+                        className={`setup-image-dot ${selectedGuideIndex === index ? 'active' : ''}`}
+                        key={step.image}
+                        aria-label={`확대 보기 ${index + 1}페이지`}
+                        aria-current={selectedGuideIndex === index ? 'true' : 'false'}
+                        onClick={() => {
+                          setSelectedGuideStep(index);
+                          setGuideStepIndex(index);
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
