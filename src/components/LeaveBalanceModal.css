@@ -457,6 +457,7 @@
 }
 
 .leave-balance-table-wrap th {
+  position: relative;
   background: var(--color-surface-muted);
   color: var(--color-muted-strong);
   font-weight: 700;
@@ -470,6 +471,22 @@
 
 .leave-balance-column-dragging {
   opacity: 0.45;
+}
+
+.leave-balance-column-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 1;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.leave-balance-column-resizer:hover,
+.leave-balance-column-resizer:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  outline: none;
 }
 
 .leave-balance-table-wrap select,

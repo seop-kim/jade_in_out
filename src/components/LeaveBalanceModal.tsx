@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   calculateLeaveBalanceSummary,
   LeaveBalanceResult,
@@ -73,6 +73,22 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
 ];
 
+const MIN_LEAVE_COLUMN_WIDTH = 90;
+const MAX_LEAVE_COLUMN_WIDTH = 600;
+const DEFAULT_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
+  period: 120,
+  date: 100,
+  type: 180,
+  reason: 150,
+  hours: 170,
+  source: 90,
+  status: 100,
+  autoDecision: 110,
+  finalDecision: 120,
+  appliedHours: 110,
+  manage: 90,
+};
+
 function LeaveBalanceModal({
   open,
   onClose,
@@ -99,6 +115,8 @@ function LeaveBalanceModal({
   const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
   const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({...DEFAULT_LEAVE_COLUMN_WIDTHS}));
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const requestSequenceRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -139,6 +157,7 @@ function LeaveBalanceModal({
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [canSelectPreviousPeriod, displayResult]);
 
   useEffect(() => {
@@ -157,6 +176,7 @@ function LeaveBalanceModal({
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [open, result]);
 
   const handleClose = useCallback((): void => {
@@ -172,8 +192,11 @@ function LeaveBalanceModal({
     setDeleteDismissedDialogOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     onClose();
   }, [onClose]);
+
+  useEffect(() => () => resizeCleanupRef.current?.(), []);
 
   useEffect(() => {
     if (!open) {
@@ -299,6 +322,37 @@ function LeaveBalanceModal({
       return next;
     });
   };
+  const handleColumnResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeCleanupRef.current?.();
+    const startWidth = columnWidths[key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[key];
+    const startX = event.clientX;
+    const handleMouseMove = (moveEvent: MouseEvent): void => {
+      const nextWidth = Math.min(
+        MAX_LEAVE_COLUMN_WIDTH,
+        Math.max(MIN_LEAVE_COLUMN_WIDTH, startWidth + moveEvent.clientX - startX),
+      );
+      setColumnWidths((current) => ({...current, [key]: nextWidth}));
+    };
+    const handleMouseUp = (): void => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      resizeCleanupRef.current = null;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    resizeCleanupRef.current = handleMouseUp;
+  };
+  const handleColumnResizeKeyDown = (event: ReactKeyboardEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const step = event.key === 'ArrowRight' ? 10 : -10;
+    setColumnWidths((current) => ({
+      ...current,
+      [key]: Math.min(MAX_LEAVE_COLUMN_WIDTH, Math.max(MIN_LEAVE_COLUMN_WIDTH, (current[key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[key]) + step)),
+    }));
+  };
   const handleDownloadExcel = (): void => {
     if (displayRows.length === 0) return;
     downloadExcel(
@@ -324,6 +378,9 @@ function LeaveBalanceModal({
     setDecisionByRowId({});
     setHoursByRowId({});
     setDeletedRowIds(new Set());
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     const includePrevious = canSelectPreviousPeriod && requestedIncludePreviousPeriod;
     setIncludePreviousPeriod(includePrevious);
     try {
@@ -365,6 +422,9 @@ function LeaveBalanceModal({
     setHoursByRowId({});
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
+    setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
+    setDraggedColumnKey(null);
+    setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   };
 
   return (
@@ -509,12 +569,17 @@ function LeaveBalanceModal({
               ) : (
                 <div className="leave-balance-table-wrap">
                   <table>
+                    <colgroup>
+                      {orderedColumns.map((column) => <col key={column.key} style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}} />)}
+                    </colgroup>
                     <thead>
                       <tr>
                         {orderedColumns.map((column) => (
                           <th
                             key={column.key}
                             title={column.title}
+                            aria-label={column.label}
+                            style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable
                             className={draggedColumnKey === column.key ? 'leave-balance-column-dragging' : undefined}
                             onDragStart={(event) => {
@@ -534,6 +599,14 @@ function LeaveBalanceModal({
                             onDragEnd={() => setDraggedColumnKey(null)}
                           >
                             {column.label}
+                            <span
+                              className="leave-balance-column-resizer"
+                              role="separator"
+                              aria-label={`${column.label} 열 너비 조절`}
+                              tabIndex={0}
+                              onMouseDown={(event) => handleColumnResizeStart(event, column.key)}
+                              onKeyDown={(event) => handleColumnResizeKeyDown(event, column.key)}
+                            />
                           </th>
                         ))}
                       </tr>

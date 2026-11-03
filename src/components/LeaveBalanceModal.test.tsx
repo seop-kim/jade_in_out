@@ -322,6 +322,26 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByRole('row')[1]?.textContent).toContain('2026-08-05');
   });
 
+  test('resizes a leave grid column within its minimum and maximum width', () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    const dateHeader = screen.getByRole('columnheader', {name: '날짜'});
+    const resizer = screen.getByRole('separator', {name: '날짜 열 너비 조절'});
+    expect(dateHeader).toHaveStyle({width: '100px'});
+
+    fireEvent.mouseDown(resizer, {clientX: 100});
+    fireEvent.mouseMove(window, {clientX: 180});
+    fireEvent.mouseUp(window);
+    expect(dateHeader).toHaveStyle({width: '180px'});
+
+    fireEvent.mouseDown(resizer, {clientX: 180});
+    fireEvent.mouseMove(window, {clientX: -1000});
+    fireEvent.mouseUp(window);
+    expect(dateHeader).toHaveStyle({width: '90px'});
+  });
+
   test('shows a review-needed marker for rows requiring manual confirmation', () => {
     const reviewNeededResult: LeaveBalanceResult = {
       ...result,
