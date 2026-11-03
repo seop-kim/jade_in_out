@@ -483,10 +483,6 @@
   user-select: none;
 }
 
-.leave-balance-table-wrap th.leave-balance-column-menu-open {
-  overflow: visible;
-}
-
 .leave-balance-column-label {
   display: inline-block;
   max-width: calc(100% - 28px);
@@ -544,41 +540,39 @@
   vertical-align: -1px;
 }
 
-.leave-balance-column-menu {
+.leave-balance-column-remove {
   position: absolute;
-  top: calc(100% - 1px);
-  left: 8px;
-  z-index: 5;
-  min-width: 104px;
-  padding: 4px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 7px;
-  background: var(--color-surface);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
-}
-
-.leave-balance-column-menu button {
-  width: 100%;
-  padding: 6px 8px;
+  top: 50%;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
-  text-align: left;
-  white-space: nowrap;
+  font-size: 15px;
+  line-height: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
-.leave-balance-column-menu button:hover:not(:disabled) {
-  background: color-mix(in srgb, #ef4444 12%, transparent);
+.leave-balance-table-wrap th:hover .leave-balance-column-remove,
+.leave-balance-column-remove:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.leave-balance-column-remove:hover {
+  background: color-mix(in srgb, #ef4444 14%, transparent);
   color: #dc2626;
 }
 
-.leave-balance-column-menu button:disabled {
-  color: var(--color-muted);
-  cursor: not-allowed;
+.leave-balance-column-remove:disabled {
+  display: none;
 }
 
 .leave-balance-column-resizer {

@@ -129,7 +129,6 @@ function LeaveBalanceModal({
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<LeaveColumnDropPosition>('before');
-  const [columnMenuKey, setColumnMenuKey] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({...DEFAULT_LEAVE_COLUMN_WIDTHS}));
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -173,7 +172,6 @@ function LeaveBalanceModal({
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [canSelectPreviousPeriod, displayResult]);
 
@@ -194,7 +192,6 @@ function LeaveBalanceModal({
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [open, result]);
 
@@ -212,7 +209,6 @@ function LeaveBalanceModal({
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     onClose();
   }, [onClose]);
@@ -347,13 +343,11 @@ function LeaveBalanceModal({
     if (NON_REMOVABLE_LEAVE_COLUMN_KEYS.has(columnKey as LeaveTableColumn['key'])) return;
     setOrderedColumnKeys((current) => current.length <= 1 ? current : current.filter((key) => key !== columnKey));
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
   };
   const handleColumnReset = (): void => {
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
     setDropPosition('before');
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   };
@@ -417,7 +411,6 @@ function LeaveBalanceModal({
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
-    setColumnMenuKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     const includePrevious = canSelectPreviousPeriod && requestedIncludePreviousPeriod;
     setIncludePreviousPeriod(includePrevious);
@@ -623,13 +616,9 @@ function LeaveBalanceModal({
                             aria-label={column.label}
                             style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable
-                            onClick={() => {
-                              if (draggedColumnKey === null) setColumnMenuKey((current) => current === column.key ? null : column.key);
-                            }}
                             className={[
                               draggedColumnKey === column.key && 'leave-balance-column-dragging',
                               dragOverColumnKey === column.key && draggedColumnKey !== column.key && `leave-balance-column-drop-${dropPosition}`,
-                              columnMenuKey === column.key && 'leave-balance-column-menu-open',
                             ].filter(Boolean).join(' ') || undefined}
                             onDragStart={(event) => {
                               if (event.dataTransfer) {
@@ -669,18 +658,20 @@ function LeaveBalanceModal({
                               <span className="leave-balance-column-drag-handle" role="img" aria-label={`${column.label} 열 이동 핸들`}>⠿</span>
                               <span className="leave-balance-column-label">{column.label}</span>
                             </span>
-                            {columnMenuKey === column.key && (
-                              <div className="leave-balance-column-menu" role="menu" onClick={(event) => event.stopPropagation()}>
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  aria-label={`컬럼 삭제 ${column.label}`}
-                                  disabled={orderedColumns.length <= 1 || NON_REMOVABLE_LEAVE_COLUMN_KEYS.has(column.key)}
-                                  onClick={() => handleColumnRemove(column.key)}
-                                >
-                                  컬럼 삭제
-                                </button>
-                              </div>
+                            {!NON_REMOVABLE_LEAVE_COLUMN_KEYS.has(column.key) && (
+                              <button
+                                type="button"
+                                className="leave-balance-column-remove"
+                                aria-label={`컬럼 삭제 ${column.label}`}
+                                disabled={orderedColumns.length <= 1}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  handleColumnRemove(column.key);
+                                }}
+                              >
+                                ×
+                              </button>
                             )}
                             <span
                               className="leave-balance-column-resizer"
