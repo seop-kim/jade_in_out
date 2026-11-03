@@ -56,6 +56,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [inputMode, setInputMode] = useState<InputMode>('curl');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
@@ -104,6 +105,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const empId = active.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const empName = active.parsedBody[appConfig.jade.fields.employeeName] ?? '';
   const canSubmit = hasCookie && hasBody && hasRequired;
+  const currentGuideStep = jadeGuideSteps[guideStepIndex] ?? jadeGuideSteps[0]!;
   const selectedGuide = selectedGuideStep === null ? null : jadeGuideSteps[selectedGuideStep];
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -179,19 +181,40 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
               </a>
             </div>
             <div className="setup-guide-inline" aria-label="Jade 연결 순서">
-              {jadeGuideSteps.map((step, index) => (
-                <figure className="setup-guide-step" key={step.image}>
+              <figure className="setup-guide-step" key={currentGuideStep.image}>
+                <div className="setup-guide-media">
                   <button
                     type="button"
                     className="setup-guide-image-button"
-                    aria-label={`${step.alt} 이미지 확대`}
-                    onClick={() => setSelectedGuideStep(index)}
+                    aria-label={`${currentGuideStep.alt} 이미지 확대`}
+                    onClick={() => setSelectedGuideStep(guideStepIndex)}
                   >
-                    <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                    <img className="setup-guide-image" src={currentGuideStep.image} alt={currentGuideStep.alt} />
                   </button>
-                  <figcaption>{index + 1}. {step.text}</figcaption>
-                </figure>
-              ))}
+                  <div className="setup-guide-controls">
+                    <button
+                      type="button"
+                      className="setup-guide-arrow"
+                      aria-label="이전 단계"
+                      onClick={() => setGuideStepIndex((index) => Math.max(0, index - 1))}
+                      disabled={guideStepIndex === 0}
+                    >
+                      ‹
+                    </button>
+                    <span className="setup-guide-counter" aria-live="polite">{guideStepIndex + 1} / {jadeGuideSteps.length}</span>
+                    <button
+                      type="button"
+                      className="setup-guide-arrow"
+                      aria-label="다음 단계"
+                      onClick={() => setGuideStepIndex((index) => Math.min(jadeGuideSteps.length - 1, index + 1))}
+                      disabled={guideStepIndex === jadeGuideSteps.length - 1}
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+                <figcaption>{guideStepIndex + 1}. {currentGuideStep.text}</figcaption>
+              </figure>
             </div>
             {selectedGuide && (
               <div
