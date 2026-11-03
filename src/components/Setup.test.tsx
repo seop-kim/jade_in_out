@@ -33,6 +33,7 @@ describe('Jade setup', () => {
     expect(screen.getByText(/Jade 연결을 북마크에 끌어다 놓아 저장합니다\./)).toBeInTheDocument();
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('draggable', 'false');
+    expect(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 이미지 확대'}).querySelector('.setup-guide-zoom-icon')).toBeInTheDocument();
     expect(screen.getAllByRole('img', {name: /단계/})).toHaveLength(5);
     expect(screen.getByText('1 / 5')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: '다음 단계'})).toBeInTheDocument();

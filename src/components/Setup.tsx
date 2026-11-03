@@ -250,6 +250,11 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                           }}
                         >
                           <img className="setup-guide-image" src={step.image} alt={step.alt} draggable={false} />
+                          <span className="setup-guide-zoom-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                              <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
+                            </svg>
+                          </span>
                         </button>
                       </div>
                       <figcaption>{index + 1}. {step.text}</figcaption>
