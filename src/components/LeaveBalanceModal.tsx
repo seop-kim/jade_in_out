@@ -665,8 +665,10 @@ function LeaveBalanceModal({
                               setDragOverColumnKey(null);
                             }}
                           >
-                            <span className="leave-balance-column-drag-handle" role="img" aria-label={`${column.label} 열 이동 핸들`}>⠿</span>
-                            <span className="leave-balance-column-label">{column.label}</span>
+                            <span className="leave-balance-column-heading">
+                              <span className="leave-balance-column-drag-handle" role="img" aria-label={`${column.label} 열 이동 핸들`}>⠿</span>
+                              <span className="leave-balance-column-label">{column.label}</span>
+                            </span>
                             {columnMenuKey === column.key && (
                               <div className="leave-balance-column-menu" role="menu" onClick={(event) => event.stopPropagation()}>
                                 <button
