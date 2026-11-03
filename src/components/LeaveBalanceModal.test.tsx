@@ -97,6 +97,7 @@ describe('LeaveBalanceModal', () => {
     );
 
     expect(document.body.style.overflow).toBe('hidden');
+    expect(screen.getByText('데이터 집계에 문제가 있을 수 있으니 확인 후 수정 및 검토해 주세요.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', {name: '닫기'}));
     rerender(
       <LeaveBalanceModal open={false} onClose={onClose} onLoad={jest.fn()} result={null} error={null} loading={false} progress={null} />

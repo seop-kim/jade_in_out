@@ -497,6 +497,7 @@ function LeaveBalanceModal({
           <div>
             <p className="leave-balance-eyebrow">연차 조회</p>
             <h2>휴가 현황</h2>
+            <p className="leave-balance-subtitle">데이터 집계에 문제가 있을 수 있으니 확인 후 수정 및 검토해 주세요.</p>
           </div>
           <button type="button" className="leave-balance-close" aria-label="닫기" onClick={handleClose}>×</button>
         </div>
