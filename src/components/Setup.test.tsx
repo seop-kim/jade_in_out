@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Setup from './Setup';
 
@@ -48,10 +48,16 @@ describe('Jade setup', () => {
     await userEvent.click(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 이미지 확대'}));
 
     expect(screen.getByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'})).toBeInTheDocument();
-    expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장 확대'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
+    const dialog = screen.getByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'});
+    expect(within(dialog).getByRole('img', {name: '1단계 Jade 연결 북마크 저장 확대'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
+    expect(within(dialog).getByText(/Jade 연결을 북마크에 끌어다 놓아 저장합니다\./)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole('button', {name: '확대 보기 다음 단계'}));
+    expect(screen.getByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).getByRole('img', {name: '2단계 Jade 시스템 열기 확대'})).toHaveAttribute('src', '/images/jade-guide/02-open-system.png');
 
     await userEvent.click(screen.getByRole('button', {name: '확대 이미지 닫기'}));
-    expect(screen.queryByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).not.toBeInTheDocument();
   });
 
   test('moves through the Jade guide as a slider', async () => {

@@ -139,8 +139,9 @@
 
 .setup-image-dialog {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: min(1200px, 100%);
   max-height: 92vh;
   padding: 12px;
@@ -151,10 +152,29 @@
 
 .setup-image-expanded {
   display: block;
+  width: 100%;
   max-width: 100%;
-  max-height: calc(92vh - 24px);
+  max-height: min(68vh, 620px);
   object-fit: contain;
   border-radius: 6px;
+}
+
+.setup-image-caption {
+  width: min(760px, 100%);
+  margin: 14px auto 2px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.setup-image-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .setup-image-close {
@@ -592,6 +612,10 @@ html[data-theme='dark'] .setup-image-dialog {
 html[data-theme='dark'] .setup-image-close {
   border-color: var(--color-border-strong);
   background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .setup-image-caption {
   color: var(--color-text);
 }
 

@@ -106,6 +106,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const empName = active.parsedBody[appConfig.jade.fields.employeeName] ?? '';
   const canSubmit = hasCookie && hasBody && hasRequired;
   const selectedGuide = selectedGuideStep === null ? null : jadeGuideSteps[selectedGuideStep];
+  const selectedGuideIndex = selectedGuideStep ?? 0;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -242,6 +243,36 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                     src={selectedGuide.image}
                     alt={`${selectedGuide.alt} 확대`}
                   />
+                  <p className="setup-image-caption">{selectedGuideIndex + 1}. {selectedGuide.text}</p>
+                  <div className="setup-image-controls">
+                    <button
+                      type="button"
+                      className="setup-guide-arrow"
+                      aria-label="확대 보기 이전 단계"
+                      onClick={() => {
+                        const nextIndex = Math.max(0, selectedGuideIndex - 1);
+                        setSelectedGuideStep(nextIndex);
+                        setGuideStepIndex(nextIndex);
+                      }}
+                      disabled={selectedGuideIndex === 0}
+                    >
+                      ‹
+                    </button>
+                    <span className="setup-guide-counter" aria-live="polite">{selectedGuideIndex + 1} / {jadeGuideSteps.length}</span>
+                    <button
+                      type="button"
+                      className="setup-guide-arrow"
+                      aria-label="확대 보기 다음 단계"
+                      onClick={() => {
+                        const nextIndex = Math.min(jadeGuideSteps.length - 1, selectedGuideIndex + 1);
+                        setSelectedGuideStep(nextIndex);
+                        setGuideStepIndex(nextIndex);
+                      }}
+                      disabled={selectedGuideIndex === jadeGuideSteps.length - 1}
+                    >
+                      ›
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
