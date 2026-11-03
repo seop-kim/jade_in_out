@@ -73,8 +73,20 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
 ];
 
-const MIN_LEAVE_COLUMN_WIDTH = 90;
 const MAX_LEAVE_COLUMN_WIDTH = 600;
+const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
+  period: 110,
+  date: 90,
+  type: 150,
+  reason: 110,
+  hours: 130,
+  source: 90,
+  status: 100,
+  autoDecision: 110,
+  finalDecision: 170,
+  appliedHours: 130,
+  manage: 90,
+};
 const DEFAULT_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
   period: 120,
   date: 100,
@@ -335,7 +347,7 @@ function LeaveBalanceModal({
     const handleMouseMove = (moveEvent: MouseEvent): void => {
       const nextWidth = Math.min(
         MAX_LEAVE_COLUMN_WIDTH,
-        Math.max(MIN_LEAVE_COLUMN_WIDTH, startWidth + moveEvent.clientX - startX),
+        Math.max(MIN_LEAVE_COLUMN_WIDTHS[key], startWidth + moveEvent.clientX - startX),
       );
       setColumnWidths((current) => ({...current, [key]: nextWidth}));
     };
@@ -354,7 +366,7 @@ function LeaveBalanceModal({
     const step = event.key === 'ArrowRight' ? 10 : -10;
     setColumnWidths((current) => ({
       ...current,
-      [key]: Math.min(MAX_LEAVE_COLUMN_WIDTH, Math.max(MIN_LEAVE_COLUMN_WIDTH, (current[key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[key]) + step)),
+      [key]: Math.min(MAX_LEAVE_COLUMN_WIDTH, Math.max(MIN_LEAVE_COLUMN_WIDTHS[key], (current[key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[key]) + step)),
     }));
   };
   const handleDownloadExcel = (): void => {
@@ -646,21 +658,21 @@ function LeaveBalanceModal({
                         return (
                           <tr key={row.id} className={[rowIsDismissed && 'leave-balance-row-dismissed', rowIsDuplicate && 'leave-balance-row-duplicate'].filter(Boolean).join(' ') || undefined}>
                             {orderedColumns.map((column) => {
-                              if (column.key === 'period') return <td key={column.key}>{row.periodLabel || '-'}</td>;
-                              if (column.key === 'date') return <td key={column.key}>{row.ymd}</td>;
-                              if (column.key === 'type') return <td key={column.key}>{row.type}</td>;
-                              if (column.key === 'reason') return <td key={column.key}>{row.reason || '-'}</td>;
-                              if (column.key === 'hours') return <td key={column.key}>{row.durationLabel || hoursLabel(row.hours)}</td>;
-                              if (column.key === 'source') return <td key={column.key}>{sourceLabel(row.source)}</td>;
-                              if (column.key === 'status') return <td key={column.key}>{row.status || '-'}</td>;
+                              if (column.key === 'period') return <td key={column.key} title={row.periodLabel || '-'}>{row.periodLabel || '-'}</td>;
+                              if (column.key === 'date') return <td key={column.key} title={row.ymd}>{row.ymd}</td>;
+                              if (column.key === 'type') return <td key={column.key} title={row.type}>{row.type}</td>;
+                              if (column.key === 'reason') return <td key={column.key} title={row.reason || '-'}>{row.reason || '-'}</td>;
+                              if (column.key === 'hours') return <td key={column.key} title={row.durationLabel || hoursLabel(row.hours)}>{row.durationLabel || hoursLabel(row.hours)}</td>;
+                              if (column.key === 'source') return <td key={column.key} title={sourceLabel(row.source)}>{sourceLabel(row.source)}</td>;
+                              if (column.key === 'status') return <td key={column.key} title={row.status || '-'}>{row.status || '-'}</td>;
                               if (column.key === 'autoDecision') return (
-                                <td key={column.key}>
+                                <td key={column.key} title={decisionLabel(row.autoDecision)}>
                                   <span>{decisionLabel(row.autoDecision)}</span>
                                   {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
                                 </td>
                               );
                               if (column.key === 'finalDecision') return (
-                                <td key={column.key}>
+                                <td key={column.key} title="최종 판정 선택값은 셀렉트 옵션 설명을 확인해주세요.">
                                   <select
                                     aria-label={`최종 판정 ${rowLabel}`}
                                     value={selectedDecision}
@@ -677,7 +689,7 @@ function LeaveBalanceModal({
                                 </td>
                               );
                               if (column.key === 'appliedHours') return (
-                                <td key={column.key}>
+                                <td key={column.key} title={`${effectiveHours === null ? '확인 필요' : `${effectiveHours}시간`} · 직접 수정 가능`}>
                                   <input
                                     type="number"
                                     min="0"

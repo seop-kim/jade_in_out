@@ -297,6 +297,7 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '발생기간'})).toHaveAttribute('title', '이 휴가가 차감되는 발생 연차 기간입니다.');
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toHaveAttribute('title', '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.');
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
+    expect(screen.getByText('연차휴가(시간차)')).toHaveAttribute('title', '연차휴가(시간차)');
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
     expect(screen.getAllByRole('option', {name: '자동 - 자동 판정 적용'})).toHaveLength(2);
     expect(screen.getAllByRole('option', {name: '차감 - 연차에서 차감'})).toHaveLength(2);
@@ -346,6 +347,13 @@ describe('LeaveBalanceModal', () => {
     fireEvent.mouseMove(window, {clientX: -1000});
     fireEvent.mouseUp(window);
     expect(dateHeader).toHaveStyle({width: '90px'});
+
+    const decisionHeader = screen.getByRole('columnheader', {name: '최종 판정'});
+    const decisionResizer = screen.getByRole('separator', {name: '최종 판정 열 너비 조절'});
+    fireEvent.mouseDown(decisionResizer, {clientX: 100});
+    fireEvent.mouseMove(window, {clientX: -1000});
+    fireEvent.mouseUp(window);
+    expect(decisionHeader).toHaveStyle({width: '170px'});
   });
 
   test('shows a review-needed marker for rows requiring manual confirmation', () => {
