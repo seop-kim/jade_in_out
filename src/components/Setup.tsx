@@ -56,7 +56,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [inputMode, setInputMode] = useState<InputMode>('curl');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
-  const [jadeGuideOpen, setJadeGuideOpen] = useState(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -166,16 +165,14 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                 Jade 연결
               </a>
             </div>
-            <button type="button" className="setup-demo-video-button" onClick={() => setJadeGuideOpen(true)}>
-              Jade 연결 방법 보기
-            </button>
-            <ol className="setup-steps setup-connection-steps">
-              <li>Jade 연결을 북마크에 끌어다 놓아 저장합니다.</li>
-              <li>Jade 시스템 열기를 클릭하여 엽니다.</li>
-              <li>Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러준 뒤 내정보 메뉴를 눌러줍니다.</li>
-              <li>출퇴근 기록을 누른 뒤 조회 버튼을 클릭해 줍니다.</li>
-              <li>시스템 연동이 되면 달력이 표기되며 데이터를 불러오게 됩니다.</li>
-            </ol>
+            <div className="setup-guide-inline" aria-label="Jade 연결 순서">
+              {jadeGuideSteps.map((step, index) => (
+                <figure className="setup-guide-step" key={step.image}>
+                  <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                  <figcaption>{index + 1}. {step.text}</figcaption>
+                </figure>
+              ))}
+            </div>
             <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
               {bridgeStatus === 'ready'
                 ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
@@ -188,24 +185,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             <ul className="setup-hint setup-connection-notes">
               <li>Jade 브라우저를 종료하지 말아주세요.</li>
             </ul>
-            {jadeGuideOpen && (
-              <div className="setup-video-backdrop">
-                <div className="setup-video-dialog setup-guide-dialog" role="dialog" aria-modal="true" aria-label="Jade 연결 방법">
-                  <div className="setup-video-header">
-                    <h3>Jade 연결 방법</h3>
-                    <button type="button" className="setup-video-close" aria-label="가이드 닫기" onClick={() => setJadeGuideOpen(false)}>×</button>
-                  </div>
-                  <div className="setup-guide-list">
-                    {jadeGuideSteps.map((step, index) => (
-                      <figure className="setup-guide-step" key={step.image}>
-                        <img className="setup-guide-image" src={step.image} alt={step.alt} />
-                        <figcaption>{index + 1}. {step.text}</figcaption>
-                      </figure>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </section>
         )}
       </div>

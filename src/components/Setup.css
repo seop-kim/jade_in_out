@@ -31,82 +31,17 @@
   flex-wrap: wrap;
 }
 
-.setup-demo-video-button {
-  margin: 0 0 16px;
-  padding: 7px 11px;
-  border: 1px solid #bfdbfe;
-  border-radius: 7px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.setup-demo-video-button:hover {
-  border-color: #60a5fa;
-  background: #dbeafe;
-}
-
-.setup-video-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.68);
-}
-
-.setup-video-dialog {
-  width: min(1000px, 100%);
-  max-height: min(88vh, 900px);
-  box-sizing: border-box;
-  padding: 16px;
-  border: 1px solid #dbeafe;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
-}
-
-.setup-guide-dialog {
-  display: flex;
-  flex-direction: column;
-}
-
-.setup-video-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.setup-video-header h3 {
-  margin: 0;
-  color: #111827;
-  font-size: 16px;
-}
-
-.setup-video-close {
-  border: 0;
-  background: transparent;
-  color: #4b5563;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.setup-guide-list {
-  min-height: 0;
+.setup-guide-inline {
   display: grid;
   gap: 16px;
-  overflow-y: auto;
-  padding-right: 4px;
+  margin: 20px 0 4px;
 }
 
 .setup-guide-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 16px;
   margin: 0;
   padding: 12px;
   border: 1px solid #e5e7eb;
@@ -117,14 +52,14 @@
 .setup-guide-image {
   display: block;
   width: 100%;
-  max-height: 480px;
+  max-height: 250px;
   object-fit: contain;
   border-radius: 6px;
   background: #ffffff;
 }
 
 .setup-guide-step figcaption {
-  margin-top: 10px;
+  margin: 0;
   color: #374151;
   font-size: 14px;
   line-height: 1.5;
@@ -459,26 +394,6 @@ html[data-theme='dark'] .setup-bookmarklet-link {
   color: var(--color-accent-hover);
 }
 
-html[data-theme='dark'] .setup-demo-video-button {
-  border-color: #4b78aa;
-  background: #203b60;
-  color: #dbeafe;
-}
-
-html[data-theme='dark'] .setup-demo-video-button:hover {
-  background: #2b4f7c;
-}
-
-html[data-theme='dark'] .setup-video-dialog {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-}
-
-html[data-theme='dark'] .setup-video-header h3,
-html[data-theme='dark'] .setup-video-close {
-  color: var(--color-text);
-}
-
 html[data-theme='dark'] .setup-guide-step {
   border-color: var(--color-border);
   background: var(--color-surface-muted);
@@ -490,6 +405,12 @@ html[data-theme='dark'] .setup-guide-image {
 
 html[data-theme='dark'] .setup-guide-step figcaption {
   color: var(--color-text);
+}
+
+@media (max-width: 640px) {
+  .setup-guide-step {
+    grid-template-columns: 1fr;
+  }
 }
 
 html[data-theme='dark'] .setup-title,
