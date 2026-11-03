@@ -115,6 +115,7 @@ function LeaveBalanceModal({
   const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
   const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
+  const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({...DEFAULT_LEAVE_COLUMN_WIDTHS}));
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -157,6 +158,7 @@ function LeaveBalanceModal({
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [canSelectPreviousPeriod, displayResult]);
 
@@ -176,6 +178,7 @@ function LeaveBalanceModal({
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   }, [open, result]);
 
@@ -192,6 +195,7 @@ function LeaveBalanceModal({
     setDeleteDismissedDialogOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     onClose();
   }, [onClose]);
@@ -381,6 +385,7 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
     const includePrevious = canSelectPreviousPeriod && requestedIncludePreviousPeriod;
     setIncludePreviousPeriod(includePrevious);
@@ -425,6 +430,7 @@ function LeaveBalanceModal({
     setIncludePreviousPeriod(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
+    setDragOverColumnKey(null);
     setColumnWidths({...DEFAULT_LEAVE_COLUMN_WIDTHS});
   };
 
@@ -582,7 +588,10 @@ function LeaveBalanceModal({
                             aria-label={column.label}
                             style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable
-                            className={draggedColumnKey === column.key ? 'leave-balance-column-dragging' : undefined}
+                            className={[
+                              draggedColumnKey === column.key && 'leave-balance-column-dragging',
+                              dragOverColumnKey === column.key && draggedColumnKey !== column.key && 'leave-balance-column-drag-over',
+                            ].filter(Boolean).join(' ') || undefined}
                             onDragStart={(event) => {
                               if (event.dataTransfer) {
                                 event.dataTransfer.effectAllowed = 'move';
@@ -590,15 +599,26 @@ function LeaveBalanceModal({
                               }
                               setDraggedColumnKey(column.key);
                             }}
-                            onDragOver={(event) => event.preventDefault()}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              if (draggedColumnKey !== column.key) setDragOverColumnKey(column.key);
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverColumnKey === column.key) setDragOverColumnKey(null);
+                            }}
                             onDrop={(event) => {
                               event.preventDefault();
                               const sourceKey = draggedColumnKey || event.dataTransfer?.getData('text/plain') || '';
                               if (sourceKey) handleColumnDrop(sourceKey, column.key);
                               setDraggedColumnKey(null);
+                              setDragOverColumnKey(null);
                             }}
-                            onDragEnd={() => setDraggedColumnKey(null)}
+                            onDragEnd={() => {
+                              setDraggedColumnKey(null);
+                              setDragOverColumnKey(null);
+                            }}
                           >
+                            <span className="leave-balance-column-drag-handle" role="img" aria-label={`${column.label} 열 이동 핸들`}>⠿</span>
                             {column.label}
                             <span
                               className="leave-balance-column-resizer"

@@ -312,6 +312,7 @@ describe('LeaveBalanceModal', () => {
 
     const dateHeader = screen.getByRole('columnheader', {name: '날짜'});
     const typeHeader = screen.getByRole('columnheader', {name: '휴가 유형'});
+    expect(screen.getByRole('img', {name: '날짜 열 이동 핸들'})).toBeInTheDocument();
     const dataTransfer = {
       effectAllowed: '',
       setData: jest.fn(),
@@ -319,9 +320,10 @@ describe('LeaveBalanceModal', () => {
     };
     fireEvent.dragStart(dateHeader, {dataTransfer});
     fireEvent.dragOver(typeHeader);
+    expect(typeHeader).toHaveClass('leave-balance-column-drag-over');
     fireEvent.drop(typeHeader, {dataTransfer});
 
-    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent);
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.replace('⠿', ''));
     expect(headers.slice(0, 3)).toEqual(['발생기간', '휴가 유형', '날짜']);
     expect(screen.getAllByRole('row')[1]?.textContent).toContain('2026-08-05');
   });

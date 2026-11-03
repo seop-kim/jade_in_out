@@ -473,6 +473,20 @@
   opacity: 0.45;
 }
 
+.leave-balance-column-drag-over {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface-muted)) !important;
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.leave-balance-column-drag-handle {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--color-accent);
+  font-size: 16px;
+  line-height: 0;
+  vertical-align: -1px;
+}
+
 .leave-balance-column-resizer {
   position: absolute;
   top: 0;
