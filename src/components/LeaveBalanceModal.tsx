@@ -123,6 +123,8 @@ function LeaveBalanceModal({
   const [deletedRowIds, setDeletedRowIds] = useState<ReadonlySet<string>>(new Set());
   const [includePreviousPeriod, setIncludePreviousPeriod] = useState(false);
   const [accruedHoursByPeriodId, setAccruedHoursByPeriodId] = useState<Record<string, number | undefined>>({});
+  const [accruedHoursEditPeriodId, setAccruedHoursEditPeriodId] = useState<string | null>(null);
+  const [accruedHoursDraft, setAccruedHoursDraft] = useState('');
   const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
   const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
   const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
@@ -167,6 +169,8 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(displayResult.includePreviousPeriod && canSelectPreviousPeriod);
     setAccruedHoursByPeriodId({});
+    setAccruedHoursEditPeriodId(null);
+    setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
@@ -187,6 +191,8 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
     setAccruedHoursByPeriodId({});
+    setAccruedHoursEditPeriodId(null);
+    setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
@@ -205,6 +211,8 @@ function LeaveBalanceModal({
     setDeletedRowIds(new Set());
     setIncludePreviousPeriod(false);
     setAccruedHoursByPeriodId({});
+    setAccruedHoursEditPeriodId(null);
+    setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
@@ -327,6 +335,21 @@ function LeaveBalanceModal({
   const handleConfirmDeleteRow = (): void => {
     if (deleteRowId) setDeletedRowIds((current) => new Set([...current, deleteRowId]));
     setDeleteRowId(null);
+  };
+  const handleOpenAccruedHoursEditor = (periodId: string, currentHours: number): void => {
+    setAccruedHoursEditPeriodId(periodId);
+    setAccruedHoursDraft(String(currentHours));
+  };
+  const handleCloseAccruedHoursEditor = (): void => {
+    setAccruedHoursEditPeriodId(null);
+    setAccruedHoursDraft('');
+  };
+  const handleSaveAccruedHours = (): void => {
+    if (!accruedHoursEditPeriodId) return;
+    const nextHours = Number(accruedHoursDraft);
+    if (!Number.isFinite(nextHours) || nextHours < 0) return;
+    setAccruedHoursByPeriodId((current) => ({...current, [accruedHoursEditPeriodId]: nextHours}));
+    handleCloseAccruedHoursEditor();
   };
   const handleColumnDrop = (sourceKey: string, targetKey: string, position: LeaveColumnDropPosition): void => {
     setOrderedColumnKeys((current) => {
@@ -553,27 +576,16 @@ function LeaveBalanceModal({
                     <div className="leave-balance-period-heading">
                       <strong>{period.isNewHire ? `${period.year} 신입휴가` : `${period.year} 연차`}</strong>
                       <div className="leave-balance-period-meta">
-                        <label>
-                          발생시간
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            aria-label={`발생시간 ${period.year}년`}
-                            value={accruedHoursByPeriodId[period.id] ?? period.accruedHours}
-                            onChange={(event) => setAccruedHoursByPeriodId((current) => ({
-                              ...current,
-                              [period.id]: event.target.value === '' ? undefined : Number(event.target.value),
-                            }))}
-                          />
-                          시간
-                        </label>
+                        <span>발생 {hoursLabel(accruedHoursByPeriodId[period.id] ?? period.accruedHours)}</span>
+                        <button type="button" className="leave-balance-period-edit" onClick={() => handleOpenAccruedHoursEditor(period.id, accruedHoursByPeriodId[period.id] ?? period.accruedHours)}>
+                          수정
+                        </button>
                         {period.isNewHire && <span>입사 1년차</span>}
                       </div>
                     </div>
                     <span>{period.period}</span>
                     <div className="leave-balance-period-values">
-                      <span>발생 <strong>{hoursLabel(period.accruedHours)}</strong></span>
+                      <span>발생 <strong>{hoursLabel(accruedHoursByPeriodId[period.id] ?? period.accruedHours)}</strong></span>
                     </div>
                   </div>
                 ))}
@@ -796,6 +808,29 @@ function LeaveBalanceModal({
                   <div className="leave-balance-confirm-actions">
                     <button type="button" onClick={() => setDeleteRowId(null)}>취소</button>
                     <button type="button" className="leave-balance-confirm-danger" onClick={handleConfirmDeleteRow}>삭제</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {accruedHoursEditPeriodId && (
+              <div className="leave-balance-confirm-backdrop">
+                <div className="leave-balance-confirm-dialog" role="dialog" aria-modal="true" aria-label="발생시간 수정">
+                  <h3>발생시간 수정</h3>
+                  <label className="leave-balance-accrued-hours-editor">
+                    발생시간
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      aria-label="발생시간 수정값"
+                      value={accruedHoursDraft}
+                      onChange={(event) => setAccruedHoursDraft(event.target.value)}
+                    />
+                    시간
+                  </label>
+                  <div className="leave-balance-confirm-actions">
+                    <button type="button" onClick={handleCloseAccruedHoursEditor}>취소</button>
+                    <button type="button" className="leave-balance-confirm-danger" onClick={handleSaveAccruedHours} disabled={!accruedHoursDraft || Number(accruedHoursDraft) < 0}>수정</button>
                   </div>
                 </div>
               </div>

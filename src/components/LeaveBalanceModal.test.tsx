@@ -156,11 +156,14 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
-    const accruedHours = screen.getByRole('spinbutton', {name: '발생시간 2026년'});
+    expect(screen.getByText('발생 160시간')).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', {name: '수정'})[0]!);
+    const accruedHours = screen.getByRole('spinbutton', {name: '발생시간 수정값'});
     expect(accruedHours).toHaveValue(160);
     await userEvent.clear(accruedHours);
     await userEvent.type(accruedHours, '96');
-    expect(accruedHours).toHaveValue(96);
+    await userEvent.click(screen.getAllByRole('button', {name: '수정'})[1]!);
+    expect(screen.getByText('발생 96시간')).toBeInTheDocument();
     expect(screen.getAllByText('96시간').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2026-08-05')).toHaveLength(2);
     expect(screen.getByText('연차')).toBeInTheDocument();
