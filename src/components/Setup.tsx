@@ -249,7 +249,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                             setSelectedGuideStep(index);
                           }}
                         >
-                          <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                          <img className="setup-guide-image" src={step.image} alt={step.alt} draggable={false} />
                         </button>
                       </div>
                       <figcaption>{index + 1}. {step.text}</figcaption>
@@ -309,6 +309,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                       className="setup-image-expanded"
                       src={selectedGuide.image}
                       alt={`${selectedGuide.alt} 확대`}
+                      draggable={false}
                     />
                     <button
                       type="button"

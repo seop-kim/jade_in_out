@@ -96,6 +96,7 @@
   object-fit: contain;
   border-radius: 6px;
   background: #ffffff;
+  -webkit-user-drag: none;
 }
 
 .setup-guide-image-button {
@@ -164,6 +165,7 @@
   max-height: min(68vh, 620px);
   object-fit: contain;
   border-radius: 6px;
+  -webkit-user-drag: none;
 }
 
 .setup-image-stage {
