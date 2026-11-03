@@ -263,6 +263,13 @@
   justify-content: space-between;
 }
 
+.leave-balance-period-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .leave-balance-period-meta {
   display: flex;
   align-items: center;

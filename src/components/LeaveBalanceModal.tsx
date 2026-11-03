@@ -588,10 +588,12 @@ function LeaveBalanceModal({
                         <button type="button" className="leave-balance-period-edit" onClick={() => handleOpenAccruedHoursEditor(period.id, accruedHoursByPeriodId[period.id] ?? period.accruedHours)}>
                           수정
                         </button>
-                        {period.isNewHire && <span>입사 1년차</span>}
                       </div>
                     </div>
-                    <span>{period.period}</span>
+                    <div className="leave-balance-period-range">
+                      <span>{period.period}</span>
+                      {period.isNewHire && <span>입사 1년차</span>}
+                    </div>
                     <div className="leave-balance-period-values">
                       <span>발생 <strong>{hoursLabel(accruedHoursByPeriodId[period.id] ?? period.accruedHours)}</strong></span>
                     </div>
