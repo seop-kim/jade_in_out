@@ -99,6 +99,9 @@
 
 .setup-guide-media {
   min-width: 0;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f1f3f5;
 }
 
 .setup-guide-image {
@@ -232,6 +235,9 @@
 
 .setup-image-pan-area {
   min-width: 0;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f1f3f5;
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
@@ -749,6 +755,11 @@ html[data-theme='dark'] .setup-guide-heading h3 {
 
 html[data-theme='dark'] .setup-guide-image {
   background: #111827;
+}
+
+html[data-theme='dark'] .setup-guide-media,
+html[data-theme='dark'] .setup-image-pan-area {
+  background: #252b33;
 }
 
 html[data-theme='dark'] .setup-guide-slide-zoom {
