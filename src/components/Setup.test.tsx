@@ -1,4 +1,4 @@
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Setup from './Setup';
 
@@ -63,7 +63,7 @@ describe('Jade setup', () => {
     expect(within(screen.getByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).getByRole('img', {name: '2단계 Jade 시스템 열기 확대'})).toHaveAttribute('src', '/images/jade-guide/02-open-system.png');
 
     await userEvent.click(screen.getByRole('button', {name: '확대 이미지 닫기'}));
-    expect(screen.queryByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog', {name: '2단계 Jade 시스템 열기 확대 보기'})).not.toBeInTheDocument());
   });
 
   test('moves through the Jade guide as a slider', async () => {

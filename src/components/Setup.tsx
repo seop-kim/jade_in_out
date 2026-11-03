@@ -58,6 +58,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
+  const [isGuideClosing, setIsGuideClosing] = useState(false);
   const guideDragStartX = useRef<number | null>(null);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
@@ -69,12 +70,23 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
     if (selectedGuideStep === null) return;
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setSelectedGuideStep(null);
+      if (event.key === 'Escape') setIsGuideClosing(true);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedGuideStep]);
+
+  useEffect(() => {
+    if (!isGuideClosing) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSelectedGuideStep(null);
+      setIsGuideClosing(false);
+    }, 180);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isGuideClosing]);
 
   const [curlText, setCurlText] = useState('');
   const curlParsed = useMemo(() => parseCurl(curlText), [curlText]);
@@ -108,6 +120,11 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const canSubmit = hasCookie && hasBody && hasRequired;
   const selectedGuide = selectedGuideStep === null ? null : jadeGuideSteps[selectedGuideStep];
   const selectedGuideIndex = selectedGuideStep ?? 0;
+
+  const openGuide = (index: number): void => {
+    setIsGuideClosing(false);
+    setSelectedGuideStep(index);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -236,7 +253,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                         type="button"
                         className="setup-guide-slide-zoom"
                         aria-label={`${step.alt} 확대 보기`}
-                        onClick={() => setSelectedGuideStep(index)}
+                        onClick={() => openGuide(index)}
                       >
                         <span className="setup-guide-zoom-icon" aria-hidden="true">
                           <svg viewBox="0 0 24 24" focusable="false">
@@ -276,16 +293,16 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             </div>
             {selectedGuide && (
               <div
-                className="setup-image-backdrop"
+                className={`setup-image-backdrop ${isGuideClosing ? 'is-closing' : ''}`}
                 role="dialog"
                 aria-modal="true"
                 aria-label={`${selectedGuide.alt} 확대 보기`}
                 onClick={(event) => {
-                  if (event.target === event.currentTarget) setSelectedGuideStep(null);
+                  if (event.target === event.currentTarget) setIsGuideClosing(true);
                 }}
               >
                 <div className="setup-image-dialog">
-                  <button type="button" className="setup-image-close" aria-label="확대 이미지 닫기" onClick={() => setSelectedGuideStep(null)}>×</button>
+                  <button type="button" className="setup-image-close" aria-label="확대 이미지 닫기" onClick={() => setIsGuideClosing(true)}>×</button>
                   <div className="setup-image-stage">
                     <button
                       type="button"
