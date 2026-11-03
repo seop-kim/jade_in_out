@@ -55,7 +55,6 @@ describe('leaveBalanceExport', () => {
         hours: '6시간 (09:00~15:00)',
         source: 'Jade',
         status: '확정',
-        autoDecision: '차감',
         finalDecision: '차감',
         appliedHours: '6시간',
       },
@@ -67,13 +66,12 @@ describe('leaveBalanceExport', () => {
         hours: '(출4)',
         source: '신규',
         status: '승인',
-        autoDecision: '중복 제외',
         finalDecision: '차감 제외',
         appliedHours: '4시간',
       },
     ]);
     expect(LEAVE_BALANCE_EXPORT_COLUMNS.map((column) => column.key)).toEqual([
-      'period', 'date', 'type', 'reason', 'hours', 'source', 'status', 'autoDecision', 'finalDecision', 'appliedHours',
+      'period', 'date', 'type', 'reason', 'hours', 'source', 'status', 'finalDecision', 'appliedHours',
     ]);
   });
 

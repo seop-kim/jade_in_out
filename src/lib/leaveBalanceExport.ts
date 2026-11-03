@@ -9,7 +9,6 @@ export const LEAVE_BALANCE_EXPORT_COLUMNS: CsvColumn[] = [
   {key: 'hours', label: '시간'},
   {key: 'source', label: '출처'},
   {key: 'status', label: '승인상태'},
-  {key: 'autoDecision', label: '자동 판정'},
   {key: 'finalDecision', label: '최종 판정'},
   {key: 'appliedHours', label: '반영시간'},
 ];
@@ -55,7 +54,6 @@ export function buildLeaveBalanceExportRows(
       hours: row.durationLabel || hoursLabel(row.hours),
       source: sourceLabel(row.source),
       status: row.status || '-',
-      autoDecision: decisionLabel(row.autoDecision),
       finalDecision: decisionLabel(effective),
       appliedHours: hoursLabel(appliedHours),
     };

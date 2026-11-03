@@ -54,7 +54,7 @@ function decisionLabel(decision: LeaveDecision): string {
 }
 
 interface LeaveTableColumn {
-  key: 'period' | 'date' | 'type' | 'reason' | 'hours' | 'source' | 'status' | 'autoDecision' | 'finalDecision' | 'appliedHours' | 'manage';
+  key: 'period' | 'date' | 'type' | 'reason' | 'hours' | 'source' | 'status' | 'finalDecision' | 'appliedHours' | 'manage';
   label: string;
   title: string;
 }
@@ -69,8 +69,7 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'hours', label: '시간', title: '사용한 휴가 시간 또는 시간차 정보입니다.'},
   {key: 'source', label: '출처', title: '해당 기록을 가져온 시스템입니다.'},
   {key: 'status', label: '승인상태', title: '원 시스템에서 표시한 승인 상태입니다.'},
-  {key: 'autoDecision', label: '자동 판정', title: '중복·비차감 휴가 여부를 자동으로 판정한 결과입니다.'},
-  {key: 'finalDecision', label: '최종 판정', title: '자동: 자동 판정 적용 / 차감: 연차에서 차감 / 차감 제외: 연차에서 제외 / 중복 제외: 중복 기록에서 제외'},
+  {key: 'finalDecision', label: '최종 판정', title: '자동: 자동 판정 결과 적용 / 차감: 연차에서 차감 / 차감 제외: 연차에서 제외 / 중복 제외: 중복 기록에서 제외'},
   {key: 'appliedHours', label: '반영시간', title: '최종 잔여시간 계산에 반영할 시간입니다.'},
   {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
 ];
@@ -84,7 +83,6 @@ const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
   hours: 92,
   source: 72,
   status: 86,
-  autoDecision: 100,
   finalDecision: 100,
   appliedHours: 90,
   manage: 72,
@@ -97,7 +95,6 @@ const DEFAULT_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
   hours: 170,
   source: 90,
   status: 100,
-  autoDecision: 110,
   finalDecision: 120,
   appliedHours: 110,
   manage: 90,
@@ -703,12 +700,6 @@ function LeaveBalanceModal({
                               if (column.key === 'hours') return <td key={column.key} title={row.durationLabel || hoursLabel(row.hours)}>{row.durationLabel || hoursLabel(row.hours)}</td>;
                               if (column.key === 'source') return <td key={column.key} title={sourceLabel(row.source)}>{sourceLabel(row.source)}</td>;
                               if (column.key === 'status') return <td key={column.key} title={row.status || '-'}>{row.status || '-'}</td>;
-                              if (column.key === 'autoDecision') return (
-                                <td key={column.key} title={decisionLabel(row.autoDecision)}>
-                                  <span>{decisionLabel(row.autoDecision)}</span>
-                                  {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
-                                </td>
-                              );
                               if (column.key === 'finalDecision') return (
                                 <td key={column.key} title="최종 판정 선택값은 셀렉트 옵션 설명을 확인해주세요.">
                                   <select
@@ -719,11 +710,12 @@ function LeaveBalanceModal({
                                       setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
                                     }}
                                   >
-                                    <option value="auto">자동</option>
+                                    <option value="auto">자동 ({decisionLabel(row.autoDecision)})</option>
                                     <option value="deduct">차감</option>
                                     <option value="exclude">차감 제외</option>
                                     <option value="duplicate">중복 제외</option>
                                   </select>
+                                  {row.needsReview && <span className="leave-balance-review-needed">확인 필요</span>}
                                 </td>
                               );
                               if (column.key === 'appliedHours') return (
