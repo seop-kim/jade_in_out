@@ -497,10 +497,28 @@
   cursor: col-resize;
 }
 
+.leave-balance-column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 38%, transparent);
+  transform: translate(-50%, -50%);
+}
+
 .leave-balance-column-resizer:hover,
 .leave-balance-column-resizer:focus-visible {
   background: color-mix(in srgb, var(--color-accent) 25%, transparent);
   outline: none;
+}
+
+.leave-balance-column-resizer:hover::after,
+.leave-balance-column-resizer:focus-visible::after {
+  height: 30px;
+  background: var(--color-accent);
 }
 
 .leave-balance-table-wrap select,
