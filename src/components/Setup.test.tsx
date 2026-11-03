@@ -1,4 +1,4 @@
-import {render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Setup from './Setup';
 
@@ -73,6 +73,17 @@ describe('Jade setup', () => {
 
     await userEvent.click(screen.getByRole('button', {name: '이전 단계'}));
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toBeInTheDocument();
+  });
+
+  test('moves through the Jade guide when dragged horizontally', () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+    const viewport = screen.getByTestId('jade-guide-viewport');
+
+    fireEvent.mouseDown(viewport, {clientX: 320, button: 0});
+    fireEvent.mouseUp(viewport, {clientX: 180, button: 0});
+
+    expect(screen.getByRole('img', {name: '2단계 Jade 시스템 열기'})).toBeInTheDocument();
+    expect(screen.getByTestId('jade-guide-track')).toHaveStyle({transform: 'translateX(-100%)'});
   });
 
   test('explains what to do when the bookmarklet link is clicked directly', async () => {

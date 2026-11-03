@@ -1,4 +1,4 @@
-import {FormEvent, useEffect, useMemo, useRef, useState} from 'react';
+import {FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState} from 'react';
 import './Setup.css';
 import {appConfig} from '../config';
 import {ParsedBody, parseBody, parseCurl} from '../lib/parseCurl';
@@ -58,6 +58,8 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
+  const guideDragStartX = useRef<number | null>(null);
+  const guideDidDrag = useRef(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -123,6 +125,43 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
     }
   };
 
+  const handleGuidePointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    guideDragStartX.current = event.clientX;
+    guideDidDrag.current = false;
+  };
+
+  const completeGuideDrag = (clientX: number): void => {
+    if (guideDragStartX.current === null) return;
+
+    const distance = clientX - guideDragStartX.current;
+    guideDragStartX.current = null;
+    if (!Number.isFinite(distance) || Math.abs(distance) < 50) return;
+
+    guideDidDrag.current = true;
+    setGuideStepIndex((index) => distance < 0
+      ? Math.min(jadeGuideSteps.length - 1, index + 1)
+      : Math.max(0, index - 1));
+  };
+
+  const handleGuidePointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    completeGuideDrag(event.clientX);
+  };
+
+  const handleGuideMouseDown = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return;
+    guideDragStartX.current = event.clientX;
+    guideDidDrag.current = false;
+  };
+
+  const handleGuideMouseUp = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    completeGuideDrag(event.clientX);
+  };
+
+  const handleGuidePointerCancel = (): void => {
+    guideDragStartX.current = null;
+  };
+
   return (
     <form className="setup" onSubmit={handleSubmit}>
       <div className="setup-auth-tabs" role="tablist" aria-label="Jade 인증 방식">
@@ -181,7 +220,15 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
               </a>
             </div>
             <div className="setup-guide-inline" aria-label="Jade 연결 순서">
-              <div className="setup-guide-viewport">
+              <div
+                className="setup-guide-viewport"
+                data-testid="jade-guide-viewport"
+                onPointerDown={handleGuidePointerDown}
+                onPointerUp={handleGuidePointerUp}
+                onPointerCancel={handleGuidePointerCancel}
+                onMouseDown={handleGuideMouseDown}
+                onMouseUp={handleGuideMouseUp}
+              >
                 <div
                   className="setup-guide-track"
                   data-testid="jade-guide-track"
@@ -194,7 +241,13 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                           type="button"
                           className="setup-guide-image-button"
                           aria-label={`${step.alt} 이미지 확대`}
-                          onClick={() => setSelectedGuideStep(index)}
+                          onClick={() => {
+                            if (guideDidDrag.current) {
+                              guideDidDrag.current = false;
+                              return;
+                            }
+                            setSelectedGuideStep(index);
+                          }}
                         >
                           <img className="setup-guide-image" src={step.image} alt={step.alt} />
                         </button>

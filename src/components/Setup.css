@@ -48,6 +48,13 @@
 .setup-guide-viewport {
   overflow: hidden;
   border-radius: 14px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.setup-guide-viewport:active {
+  cursor: grabbing;
 }
 
 .setup-guide-track {
