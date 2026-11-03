@@ -60,12 +60,19 @@
 }
 
 .setup-video-dialog {
-  width: min(900px, 100%);
+  width: min(1000px, 100%);
+  max-height: min(88vh, 900px);
+  box-sizing: border-box;
   padding: 16px;
   border: 1px solid #dbeafe;
   border-radius: 12px;
   background: #ffffff;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.setup-guide-dialog {
+  display: flex;
+  flex-direction: column;
 }
 
 .setup-video-header {
@@ -91,12 +98,36 @@
   cursor: pointer;
 }
 
-.setup-demo-video {
+.setup-guide-list {
+  min-height: 0;
+  display: grid;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.setup-guide-step {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.setup-guide-image {
   display: block;
   width: 100%;
-  max-height: min(72vh, 620px);
-  border-radius: 8px;
-  background: #111827;
+  max-height: 480px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.setup-guide-step figcaption {
+  margin-top: 10px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .setup-auto-card > .setup-desc {
@@ -445,6 +476,19 @@ html[data-theme='dark'] .setup-video-dialog {
 
 html[data-theme='dark'] .setup-video-header h3,
 html[data-theme='dark'] .setup-video-close {
+  color: var(--color-text);
+}
+
+html[data-theme='dark'] .setup-guide-step {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+html[data-theme='dark'] .setup-guide-image {
+  background: #111827;
+}
+
+html[data-theme='dark'] .setup-guide-step figcaption {
   color: var(--color-text);
 }
 

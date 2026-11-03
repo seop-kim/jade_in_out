@@ -24,11 +24,39 @@ interface ActiveInput {
   hasContent: boolean;
 }
 
+const jadeGuideSteps = [
+  {
+    image: '/images/jade-guide/01-bookmark.png',
+    alt: '1단계 Jade 연결 북마크 저장',
+    text: 'Jade 연결을 북마크에 끌어다 놓아 저장합니다.',
+  },
+  {
+    image: '/images/jade-guide/02-open-system.png',
+    alt: '2단계 Jade 시스템 열기',
+    text: 'Jade 시스템 열기를 클릭하여 엽니다.',
+  },
+  {
+    image: '/images/jade-guide/03-my-info.png',
+    alt: '3단계 Jade 내정보 메뉴 열기',
+    text: 'Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러준 뒤 내정보 메뉴를 눌러줍니다.',
+  },
+  {
+    image: '/images/jade-guide/04-attendance.png',
+    alt: '4단계 출퇴근 기록 열기',
+    text: '출퇴근 기록을 누른 뒤 조회 버튼을 클릭해 줍니다.',
+  },
+  {
+    image: '/images/jade-guide/05-calendar.png',
+    alt: '5단계 연동된 달력 확인',
+    text: '시스템 연동이 되면 달력이 표기되며 데이터를 불러오게 됩니다.',
+  },
+];
+
 function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: SetupProps) {
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [inputMode, setInputMode] = useState<InputMode>('curl');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
-  const [demoVideoOpen, setDemoVideoOpen] = useState(false);
+  const [jadeGuideOpen, setJadeGuideOpen] = useState(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -138,15 +166,15 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                 Jade 연결
               </a>
             </div>
-            <button type="button" className="setup-demo-video-button" onClick={() => setDemoVideoOpen(true)}>
-              Jade 인증 시연 영상 보기
+            <button type="button" className="setup-demo-video-button" onClick={() => setJadeGuideOpen(true)}>
+              Jade 연결 방법 보기
             </button>
             <ol className="setup-steps setup-connection-steps">
               <li>Jade 연결을 북마크에 끌어다 놓아 저장합니다.</li>
               <li>Jade 시스템 열기를 클릭하여 엽니다.</li>
-              <li>Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러줍니다.</li>
-              <li>출퇴근관리 탭으로 이동해줍니다.</li>
-              <li>조회버튼을 한번 클릭하면 연결이 됩니다.</li>
+              <li>Jade 시스템 로그인 후 북마크에 Jade 연결을 눌러준 뒤 내정보 메뉴를 눌러줍니다.</li>
+              <li>출퇴근 기록을 누른 뒤 조회 버튼을 클릭해 줍니다.</li>
+              <li>시스템 연동이 되면 달력이 표기되며 데이터를 불러오게 됩니다.</li>
             </ol>
             <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
               {bridgeStatus === 'ready'
@@ -160,21 +188,21 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             <ul className="setup-hint setup-connection-notes">
               <li>Jade 브라우저를 종료하지 말아주세요.</li>
             </ul>
-            {demoVideoOpen && (
+            {jadeGuideOpen && (
               <div className="setup-video-backdrop">
-                <div className="setup-video-dialog" role="dialog" aria-modal="true" aria-label="Jade 인증 시연 영상">
+                <div className="setup-video-dialog setup-guide-dialog" role="dialog" aria-modal="true" aria-label="Jade 연결 방법">
                   <div className="setup-video-header">
-                    <h3>Jade 인증 시연 영상</h3>
-                    <button type="button" className="setup-video-close" aria-label="영상 닫기" onClick={() => setDemoVideoOpen(false)}>×</button>
+                    <h3>Jade 연결 방법</h3>
+                    <button type="button" className="setup-video-close" aria-label="가이드 닫기" onClick={() => setJadeGuideOpen(false)}>×</button>
                   </div>
-                  <video
-                    className="setup-demo-video"
-                    aria-label="Jade 인증 시연 영상"
-                    controls
-                    playsInline
-                    preload="metadata"
-                    src="/videos/jade-auth-demo.mp4"
-                  />
+                  <div className="setup-guide-list">
+                    {jadeGuideSteps.map((step, index) => (
+                      <figure className="setup-guide-step" key={step.image}>
+                        <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                        <figcaption>{index + 1}. {step.text}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
