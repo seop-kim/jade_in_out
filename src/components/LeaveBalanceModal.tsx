@@ -127,6 +127,7 @@ function LeaveBalanceModal({
   const [accruedHoursDraft, setAccruedHoursDraft] = useState('');
   const [deleteDismissedDialogOpen, setDeleteDismissedDialogOpen] = useState(false);
   const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
@@ -173,6 +174,7 @@ function LeaveBalanceModal({
     setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
+    setCloseConfirmOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
@@ -195,6 +197,7 @@ function LeaveBalanceModal({
     setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
     setDeleteRowId(null);
+    setCloseConfirmOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
@@ -214,6 +217,7 @@ function LeaveBalanceModal({
     setAccruedHoursEditPeriodId(null);
     setAccruedHoursDraft('');
     setDeleteDismissedDialogOpen(false);
+    setCloseConfirmOpen(false);
     setOrderedColumnKeys(LEAVE_TABLE_COLUMNS.map((column) => column.key));
     setDraggedColumnKey(null);
     setDragOverColumnKey(null);
@@ -239,7 +243,11 @@ function LeaveBalanceModal({
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        handleClose();
+        if (closeConfirmOpen) setCloseConfirmOpen(false);
+        else if (accruedHoursEditPeriodId) handleCloseAccruedHoursEditor();
+        else if (deleteDismissedDialogOpen) setDeleteDismissedDialogOpen(false);
+        else if (deleteRowId) setDeleteRowId(null);
+        else setCloseConfirmOpen(true);
         return;
       }
       if (event.key !== 'Tab' || !dialogRef.current) return;
@@ -269,7 +277,7 @@ function LeaveBalanceModal({
       controllerRef.current = null;
       previousFocusRef.current?.focus();
     };
-  }, [handleClose, open]);
+  }, [accruedHoursEditPeriodId, closeConfirmOpen, deleteDismissedDialogOpen, deleteRowId, handleClose, open]);
 
   if (!open) return null;
 
@@ -831,6 +839,18 @@ function LeaveBalanceModal({
                   <div className="leave-balance-confirm-actions">
                     <button type="button" onClick={handleCloseAccruedHoursEditor}>취소</button>
                     <button type="button" className="leave-balance-confirm-primary" onClick={handleSaveAccruedHours} disabled={!accruedHoursDraft || Number(accruedHoursDraft) < 0}>수정</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {closeConfirmOpen && (
+              <div className="leave-balance-confirm-backdrop">
+                <div className="leave-balance-confirm-dialog" role="dialog" aria-modal="true" aria-label="휴가 현황 종료 확인">
+                  <h3>휴가 현황 종료</h3>
+                  <p>정말로 휴가 현황 창을 종료하시겠습니까?</p>
+                  <div className="leave-balance-confirm-actions">
+                    <button type="button" onClick={() => setCloseConfirmOpen(false)}>취소</button>
+                    <button type="button" className="leave-balance-confirm-danger" onClick={handleClose}>종료</button>
                   </div>
                 </div>
               </div>

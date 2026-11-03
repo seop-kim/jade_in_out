@@ -104,6 +104,21 @@ describe('LeaveBalanceModal', () => {
     expect(document.body.style.overflow).toBe('auto');
   });
 
+  test('asks for confirmation before closing with Escape', async () => {
+    const onClose = jest.fn();
+    render(<LeaveBalanceModal open onClose={onClose} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />);
+
+    fireEvent.keyDown(document, {key: 'Escape'});
+    expect(screen.getByRole('dialog', {name: '휴가 현황 종료 확인'})).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', {name: '취소'}));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, {key: 'Escape'});
+    await userEvent.click(screen.getByRole('button', {name: '종료'}));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   test('moves focus into the dialog, traps Tab, and restores focus on close', async () => {
     const trigger = document.createElement('button');
     trigger.type = 'button';
