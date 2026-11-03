@@ -82,7 +82,6 @@
 .setup-guide-step:hover {
   border-color: #93c5fd;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
-  transform: translateY(-1px);
 }
 
 .setup-guide-media {
