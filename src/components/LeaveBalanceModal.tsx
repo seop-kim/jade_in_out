@@ -624,7 +624,7 @@ function LeaveBalanceModal({
                         {orderedColumns.map((column) => (
                           <th
                             key={column.key}
-                            title={column.title}
+                            data-tooltip={column.title}
                             aria-label={column.label}
                             style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable

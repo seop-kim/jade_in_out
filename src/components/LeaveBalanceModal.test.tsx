@@ -317,9 +317,9 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', {name: '자동 판정'})).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', {name: '반영시간'})).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', {name: '발생기간'})).toHaveAttribute('title', '이 휴가가 차감되는 발생 연차 기간입니다.');
+    expect(screen.getByRole('columnheader', {name: '발생기간'})).toHaveAttribute('data-tooltip', '이 휴가가 차감되는 발생 연차 기간입니다.');
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toHaveAttribute(
-      'title',
+      'data-tooltip',
       '자동: 자동 판정 결과 적용 / 차감: 연차에서 차감 / 차감 제외: 연차에서 제외 / 중복 제외: 중복 기록에서 제외',
     );
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
