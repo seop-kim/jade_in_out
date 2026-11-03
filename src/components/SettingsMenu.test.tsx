@@ -11,6 +11,7 @@ const baseProps = {
   onResetCredentials: jest.fn(),
   canViewLeaveBalance: true,
   onOpenLeaveBalance: jest.fn(),
+  onShowNotice: jest.fn(),
 };
 
 describe('SettingsMenu leave balance entry', () => {
@@ -21,10 +22,12 @@ describe('SettingsMenu leave balance entry', () => {
 
     await userEvent.click(screen.getByRole('button', {name: '설정'}));
     const leaveButton = screen.getByRole('button', {name: '휴가 현황'});
-    expect(leaveButton).toBeDisabled();
+    expect(leaveButton).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(leaveButton);
+    expect(baseProps.onShowNotice).toHaveBeenCalledWith('모든 시스템에 연결해 주세요.');
 
     rerender(<SettingsMenu {...baseProps} />);
-    expect(screen.getByRole('button', {name: '휴가 현황'})).not.toBeDisabled();
+    expect(screen.getByRole('button', {name: '휴가 현황'})).toHaveAttribute('aria-disabled', 'false');
   });
 
   test('closes the settings popover and opens the vacation balance modal', async () => {

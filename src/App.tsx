@@ -560,6 +560,7 @@ function App() {
               onResetCredentials={handleResetCurrentCredentials}
               canViewLeaveBalance={canViewLeaveBalance}
               onOpenLeaveBalance={handleOpenLeaveBalance}
+              onShowNotice={showErrorToast}
             />
           </div>
         </div>

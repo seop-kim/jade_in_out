@@ -12,6 +12,7 @@ interface SettingsMenuProps {
   onResetCredentials: () => void;
   canViewLeaveBalance: boolean;
   onOpenLeaveBalance: () => void;
+  onShowNotice: (message: string) => void;
 }
 
 function SettingsIcon() {
@@ -32,6 +33,7 @@ function SettingsMenu({
   onResetCredentials,
   canViewLeaveBalance,
   onOpenLeaveBalance,
+  onShowNotice,
 }: SettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -100,11 +102,15 @@ function SettingsMenu({
           <button
             type="button"
             className="settings-leave-balance"
+            aria-disabled={!canViewLeaveBalance}
             onClick={() => {
+              if (!canViewLeaveBalance) {
+                onShowNotice('모든 시스템에 연결해 주세요.');
+                return;
+              }
               onOpenLeaveBalance();
               setOpen(false);
             }}
-            disabled={!canViewLeaveBalance}
           >
             휴가 현황
           </button>

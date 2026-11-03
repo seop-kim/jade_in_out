@@ -196,12 +196,12 @@ html[data-theme='dark'] .settings-status-value.is-error {
   cursor: pointer;
 }
 
-.settings-leave-balance:hover:not(:disabled) {
+.settings-leave-balance:hover:not([aria-disabled='true']) {
   border-color: var(--color-border-strong);
   background: var(--color-surface);
 }
 
-.settings-leave-balance:disabled {
+.settings-leave-balance[aria-disabled='true'] {
   color: var(--color-disabled-text);
   cursor: not-allowed;
 }
