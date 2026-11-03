@@ -362,6 +362,7 @@ function LeaveBalanceModal({
         .map((column) => LEAVE_BALANCE_EXPORT_COLUMNS.find((exportColumn) => exportColumn.key === column.key)!)
         .filter(Boolean),
       buildLeaveBalanceExportRows(displayRows, decisionByRowId, hoursByRowId),
+      columnWidths,
     );
   };
   const handleLoad = async (requestedIncludePreviousPeriod = includePreviousPeriod): Promise<void> => {
