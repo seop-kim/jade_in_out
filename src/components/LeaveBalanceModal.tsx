@@ -397,6 +397,11 @@ function LeaveBalanceModal({
     const above = bounds.bottom + 80 > window.innerHeight;
     setColumnTooltip({text, left, top: above ? bounds.top - gap : bounds.bottom + gap, above});
   };
+  const cellTooltipProps = (text: string) => ({
+    'data-tooltip': text,
+    onMouseEnter: (event: ReactMouseEvent<HTMLTableCellElement>) => handleColumnTooltipShow(event.currentTarget, text),
+    onMouseLeave: () => setColumnTooltip(null),
+  });
   const handleColumnResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
     event.preventDefault();
     event.stopPropagation();
@@ -742,15 +747,15 @@ function LeaveBalanceModal({
                         return (
                           <tr key={row.id} className={[rowIsDismissed && 'leave-balance-row-dismissed', rowIsDuplicate && 'leave-balance-row-duplicate'].filter(Boolean).join(' ') || undefined}>
                             {orderedColumns.map((column) => {
-                              if (column.key === 'period') return <td key={column.key} title={row.periodLabel || '-'}>{row.periodLabel || '-'}</td>;
-                              if (column.key === 'date') return <td key={column.key} title={row.ymd}>{row.ymd}</td>;
-                              if (column.key === 'type') return <td key={column.key} title={row.type}>{row.type}</td>;
-                              if (column.key === 'reason') return <td key={column.key} title={row.reason || '-'}>{row.reason || '-'}</td>;
-                              if (column.key === 'hours') return <td key={column.key} title={row.durationLabel || hoursLabel(row.hours)}>{row.durationLabel || hoursLabel(row.hours)}</td>;
-                              if (column.key === 'source') return <td key={column.key} title={sourceLabel(row.source)}>{sourceLabel(row.source)}</td>;
-                              if (column.key === 'status') return <td key={column.key} title={row.status || '-'}>{row.status || '-'}</td>;
+                              if (column.key === 'period') return <td key={column.key} {...cellTooltipProps(row.periodLabel || '-')}>{row.periodLabel || '-'}</td>;
+                              if (column.key === 'date') return <td key={column.key} {...cellTooltipProps(row.ymd)}>{row.ymd}</td>;
+                              if (column.key === 'type') return <td key={column.key} {...cellTooltipProps(row.type)}>{row.type}</td>;
+                              if (column.key === 'reason') return <td key={column.key} {...cellTooltipProps(row.reason || '-')}>{row.reason || '-'}</td>;
+                              if (column.key === 'hours') return <td key={column.key} {...cellTooltipProps(row.durationLabel || hoursLabel(row.hours))}>{row.durationLabel || hoursLabel(row.hours)}</td>;
+                              if (column.key === 'source') return <td key={column.key} {...cellTooltipProps(sourceLabel(row.source))}>{sourceLabel(row.source)}</td>;
+                              if (column.key === 'status') return <td key={column.key} {...cellTooltipProps(row.status || '-')}>{row.status || '-'}</td>;
                               if (column.key === 'finalDecision') return (
-                                <td key={column.key} title="최종 판정 선택값은 셀렉트 옵션 설명을 확인해주세요.">
+                                <td key={column.key} {...cellTooltipProps('최종 판정 선택값은 셀렉트 옵션 설명을 확인해주세요.')}>
                                   <select
                                     aria-label={`최종 판정 ${rowLabel}`}
                                     value={selectedDecision}
@@ -768,7 +773,7 @@ function LeaveBalanceModal({
                                 </td>
                               );
                               if (column.key === 'appliedHours') return (
-                                <td key={column.key} title={`${effectiveHours === null ? '확인 필요' : `${effectiveHours}시간`} · 직접 수정 가능`}>
+                                <td key={column.key} {...cellTooltipProps(`${effectiveHours === null ? '확인 필요' : `${effectiveHours}시간`} · 직접 수정 가능`)}>
                                   <input
                                     type="number"
                                     min="0"

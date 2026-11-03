@@ -339,7 +339,7 @@ describe('LeaveBalanceModal', () => {
       '자동: 자동 판정 결과 적용 / 차감: 연차에서 차감 / 차감 제외: 연차에서 제외 / 중복 제외: 중복 기록에서 제외',
     );
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
-    expect(screen.getByText('연차휴가(시간차)')).toHaveAttribute('title', '연차휴가(시간차)');
+    expect(screen.getByText('연차휴가(시간차)')).toHaveAttribute('data-tooltip', '연차휴가(시간차)');
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})[0]).toHaveDisplayValue('자동 (차감)');
     expect(screen.getAllByRole('option', {name: /자동 \(/})).toHaveLength(2);
