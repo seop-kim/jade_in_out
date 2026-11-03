@@ -68,7 +68,7 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'source', label: '출처', title: '해당 기록을 가져온 시스템입니다.'},
   {key: 'status', label: '승인상태', title: '원 시스템에서 표시한 승인 상태입니다.'},
   {key: 'autoDecision', label: '자동 판정', title: '중복·비차감 휴가 여부를 자동으로 판정한 결과입니다.'},
-  {key: 'finalDecision', label: '최종 판정', title: '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.'},
+  {key: 'finalDecision', label: '최종 판정', title: '자동: 자동 판정 적용 / 차감: 연차에서 차감 / 차감 제외: 연차에서 제외 / 중복 제외: 중복 기록에서 제외'},
   {key: 'appliedHours', label: '반영시간', title: '최종 잔여시간 계산에 반영할 시간입니다.'},
   {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
 ];
@@ -681,10 +681,10 @@ function LeaveBalanceModal({
                                       setDecisionByRowId((current) => ({...current, [row.id]: nextDecision}));
                                     }}
                                   >
-                                    <option value="auto" title="자동 판정 결과를 적용합니다.">자동 - 자동 판정 적용</option>
-                                    <option value="deduct" title="해당 휴가 시간을 연차에서 차감합니다.">차감 - 연차에서 차감</option>
-                                    <option value="exclude" title="해당 휴가 시간을 연차 차감에서 제외합니다.">차감 제외 - 연차에서 제외</option>
-                                    <option value="duplicate" title="중복으로 판단된 기록을 차감에서 제외합니다.">중복 제외 - 중복 기록에서 제외</option>
+                                    <option value="auto">자동</option>
+                                    <option value="deduct">차감</option>
+                                    <option value="exclude">차감 제외</option>
+                                    <option value="duplicate">중복 제외</option>
                                   </select>
                                 </td>
                               );
