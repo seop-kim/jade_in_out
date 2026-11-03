@@ -45,6 +45,19 @@
   margin: 22px 0 4px;
 }
 
+.setup-guide-heading {
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.setup-guide-heading h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
 .setup-guide-viewport {
   overflow: hidden;
   border-radius: 14px;
@@ -707,6 +720,14 @@ html[data-theme='dark'] .setup-bridge-help {
 
 html[data-theme='dark'] .setup-guide-step {
   border-color: var(--color-border);
+}
+
+html[data-theme='dark'] .setup-guide-heading {
+  border-top-color: var(--color-border);
+}
+
+html[data-theme='dark'] .setup-guide-heading h3 {
+  color: var(--color-text);
 }
 
 html[data-theme='dark'] .setup-guide-image {

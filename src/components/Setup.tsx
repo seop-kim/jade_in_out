@@ -233,6 +233,9 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
               </a>
             </div>
             <div className="setup-guide-inline" aria-label="Jade 연결 순서">
+              <div className="setup-guide-heading">
+                <h3>연결 가이드</h3>
+              </div>
               <div
                 className="setup-guide-viewport"
                 data-testid="jade-guide-viewport"

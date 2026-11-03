@@ -30,6 +30,7 @@ describe('Jade setup', () => {
     expect(screen.getByRole('button', {name: 'Jade 시스템 열기'})).toBeInTheDocument();
     expect(screen.getByRole('link', {name: 'Jade 연결'})).toHaveAttribute('href', expect.stringMatching(/^javascript:/));
     expect(screen.getByText('아래 순서대로 진행하면 cURL을 직접 입력하지 않고 로그인된 Jade와 연결할 수 있습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: '연결 가이드'})).toBeInTheDocument();
     expect(screen.getByText(/Jade 연결을 북마크에 끌어다 놓아 저장합니다\./)).toBeInTheDocument();
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('draggable', 'false');
