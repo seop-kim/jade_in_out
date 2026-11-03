@@ -73,7 +73,7 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'appliedHours', label: '반영시간', title: '최종 잔여시간 계산에 반영할 시간입니다.'},
   {key: 'manage', label: '관리', title: '사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.'},
 ];
-const NON_REMOVABLE_LEAVE_COLUMN_KEYS = new Set<LeaveTableColumn['key']>(['date', 'hours']);
+const NON_REMOVABLE_LEAVE_COLUMN_KEYS = new Set<LeaveTableColumn['key']>(['date', 'hours', 'manage']);
 
 const MAX_LEAVE_COLUMN_WIDTH = 600;
 const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {

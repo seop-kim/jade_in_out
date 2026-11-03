@@ -370,7 +370,7 @@ describe('LeaveBalanceModal', () => {
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
     );
 
-    for (const label of ['날짜', '시간']) {
+    for (const label of ['날짜', '시간', '관리']) {
       expect(screen.queryByRole('button', {name: `컬럼 삭제 ${label}`})).not.toBeInTheDocument();
     }
 
