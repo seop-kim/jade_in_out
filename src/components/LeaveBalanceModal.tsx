@@ -59,6 +59,8 @@ interface LeaveTableColumn {
   title: string;
 }
 
+type LeaveColumnDropPosition = 'before' | 'after';
+
 const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
   {key: 'period', label: '발생기간', title: '이 휴가가 차감되는 발생 연차 기간입니다.'},
   {key: 'date', label: '날짜', title: '휴가를 사용한 날짜입니다.'},
@@ -128,6 +130,7 @@ function LeaveBalanceModal({
   const [orderedColumnKeys, setOrderedColumnKeys] = useState<string[]>(() => LEAVE_TABLE_COLUMNS.map((column) => column.key));
   const [draggedColumnKey, setDraggedColumnKey] = useState<string | null>(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<LeaveColumnDropPosition>('before');
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({...DEFAULT_LEAVE_COLUMN_WIDTHS}));
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -327,14 +330,14 @@ function LeaveBalanceModal({
     if (deleteRowId) setDeletedRowIds((current) => new Set([...current, deleteRowId]));
     setDeleteRowId(null);
   };
-  const handleColumnDrop = (sourceKey: string, targetKey: string): void => {
+  const handleColumnDrop = (sourceKey: string, targetKey: string, position: LeaveColumnDropPosition): void => {
     setOrderedColumnKeys((current) => {
       const sourceIndex = current.indexOf(sourceKey);
-      const targetIndex = current.indexOf(targetKey);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
+      if (sourceIndex < 0 || current.indexOf(targetKey) < 0 || sourceKey === targetKey) return current;
       const next = [...current];
       const [moved] = next.splice(sourceIndex, 1);
-      if (moved !== undefined) next.splice(targetIndex, 0, moved);
+      const targetIndex = next.indexOf(targetKey);
+      if (moved !== undefined) next.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, moved);
       return next;
     });
   };
@@ -602,7 +605,7 @@ function LeaveBalanceModal({
                             draggable
                             className={[
                               draggedColumnKey === column.key && 'leave-balance-column-dragging',
-                              dragOverColumnKey === column.key && draggedColumnKey !== column.key && 'leave-balance-column-drag-over',
+                              dragOverColumnKey === column.key && draggedColumnKey !== column.key && `leave-balance-column-drop-${dropPosition}`,
                             ].filter(Boolean).join(' ') || undefined}
                             onDragStart={(event) => {
                               if (event.dataTransfer) {
@@ -613,7 +616,15 @@ function LeaveBalanceModal({
                             }}
                             onDragOver={(event) => {
                               event.preventDefault();
-                              if (draggedColumnKey !== column.key) setDragOverColumnKey(column.key);
+                              if (draggedColumnKey !== column.key) {
+                                const bounds = event.currentTarget.getBoundingClientRect();
+                                const pointerX = Number.isFinite(event.clientX) ? event.clientX : bounds.left;
+                                const nextPosition: LeaveColumnDropPosition = pointerX <= bounds.left + (bounds.width / 2)
+                                  ? 'before'
+                                  : 'after';
+                                setDragOverColumnKey(column.key);
+                                setDropPosition(nextPosition);
+                              }
                             }}
                             onDragLeave={() => {
                               if (dragOverColumnKey === column.key) setDragOverColumnKey(null);
@@ -621,7 +632,7 @@ function LeaveBalanceModal({
                             onDrop={(event) => {
                               event.preventDefault();
                               const sourceKey = draggedColumnKey || event.dataTransfer?.getData('text/plain') || '';
-                              if (sourceKey) handleColumnDrop(sourceKey, column.key);
+                              if (sourceKey) handleColumnDrop(sourceKey, column.key, dropPosition);
                               setDraggedColumnKey(null);
                               setDragOverColumnKey(null);
                             }}

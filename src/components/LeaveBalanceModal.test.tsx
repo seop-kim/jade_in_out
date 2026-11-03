@@ -320,12 +320,12 @@ describe('LeaveBalanceModal', () => {
     const dataTransfer = {
       effectAllowed: '',
       setData: jest.fn(),
-      getData: jest.fn(() => 'date'),
+      getData: jest.fn(() => 'type'),
     };
-    fireEvent.dragStart(dateHeader, {dataTransfer});
-    fireEvent.dragOver(typeHeader);
-    expect(typeHeader).toHaveClass('leave-balance-column-drag-over');
-    fireEvent.drop(typeHeader, {dataTransfer});
+    fireEvent.dragStart(typeHeader, {dataTransfer});
+    fireEvent.dragOver(dateHeader, {clientX: 0});
+    expect(dateHeader).toHaveClass('leave-balance-column-drop-before');
+    fireEvent.drop(dateHeader, {dataTransfer, clientX: 0});
 
     const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.replace('⠿', ''));
     expect(headers.slice(0, 3)).toEqual(['발생기간', '휴가 유형', '날짜']);
