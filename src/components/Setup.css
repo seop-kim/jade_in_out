@@ -58,6 +58,67 @@
   background: #ffffff;
 }
 
+.setup-guide-image-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.setup-guide-image-button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+.setup-image-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.78);
+}
+
+.setup-image-dialog {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(1200px, 100%);
+  max-height: 92vh;
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+}
+
+.setup-image-expanded {
+  display: block;
+  max-width: 100%;
+  max-height: calc(92vh - 24px);
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.setup-image-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #374151;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .setup-guide-step figcaption {
   margin: 0;
   color: #374151;
@@ -401,6 +462,16 @@ html[data-theme='dark'] .setup-guide-step {
 
 html[data-theme='dark'] .setup-guide-image {
   background: #111827;
+}
+
+html[data-theme='dark'] .setup-image-dialog {
+  background: var(--color-surface);
+}
+
+html[data-theme='dark'] .setup-image-close {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
 }
 
 html[data-theme='dark'] .setup-guide-step figcaption {

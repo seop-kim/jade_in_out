@@ -56,11 +56,23 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [authMethod, setAuthMethod] = useState<AuthMethod>('automatic');
   const [inputMode, setInputMode] = useState<InputMode>('curl');
   const [bookmarkletClicked, setBookmarkletClicked] = useState(false);
+  const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     bookmarkletRef.current?.setAttribute('href', bookmarkletHref);
   }, [bookmarkletHref]);
+
+  useEffect(() => {
+    if (selectedGuideStep === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setSelectedGuideStep(null);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGuideStep]);
 
   const [curlText, setCurlText] = useState('');
   const curlParsed = useMemo(() => parseCurl(curlText), [curlText]);
@@ -92,6 +104,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const empId = active.parsedBody[appConfig.jade.fields.employeeId] ?? '';
   const empName = active.parsedBody[appConfig.jade.fields.employeeName] ?? '';
   const canSubmit = hasCookie && hasBody && hasRequired;
+  const selectedGuide = selectedGuideStep === null ? null : jadeGuideSteps[selectedGuideStep];
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -168,11 +181,38 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
             <div className="setup-guide-inline" aria-label="Jade 연결 순서">
               {jadeGuideSteps.map((step, index) => (
                 <figure className="setup-guide-step" key={step.image}>
-                  <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                  <button
+                    type="button"
+                    className="setup-guide-image-button"
+                    aria-label={`${step.alt} 이미지 확대`}
+                    onClick={() => setSelectedGuideStep(index)}
+                  >
+                    <img className="setup-guide-image" src={step.image} alt={step.alt} />
+                  </button>
                   <figcaption>{index + 1}. {step.text}</figcaption>
                 </figure>
               ))}
             </div>
+            {selectedGuide && (
+              <div
+                className="setup-image-backdrop"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedGuide.alt} 확대 보기`}
+                onClick={(event) => {
+                  if (event.target === event.currentTarget) setSelectedGuideStep(null);
+                }}
+              >
+                <div className="setup-image-dialog">
+                  <button type="button" className="setup-image-close" aria-label="확대 이미지 닫기" onClick={() => setSelectedGuideStep(null)}>×</button>
+                  <img
+                    className="setup-image-expanded"
+                    src={selectedGuide.image}
+                    alt={`${selectedGuide.alt} 확대`}
+                  />
+                </div>
+              </div>
+            )}
             <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
               {bridgeStatus === 'ready'
                 ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'

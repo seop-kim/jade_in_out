@@ -42,6 +42,18 @@ describe('Jade setup', () => {
     expect(screen.queryByLabelText('cURL 명령어')).not.toBeInTheDocument();
   });
 
+  test('opens a guide image in an enlarged viewer', async () => {
+    render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
+
+    await userEvent.click(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 이미지 확대'}));
+
+    expect(screen.getByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'})).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장 확대'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
+
+    await userEvent.click(screen.getByRole('button', {name: '확대 이미지 닫기'}));
+    expect(screen.queryByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'})).not.toBeInTheDocument();
+  });
+
   test('explains what to do when the bookmarklet link is clicked directly', async () => {
     render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
 
