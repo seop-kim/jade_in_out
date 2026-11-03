@@ -294,6 +294,8 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '자동 판정'})).toBeInTheDocument();
     expect(screen.getByRole('columnheader', {name: '최종 판정'})).toBeInTheDocument();
     expect(screen.getByRole('columnheader', {name: '반영시간'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '발생기간'})).toHaveAttribute('title', '이 휴가가 차감되는 발생 연차 기간입니다.');
+    expect(screen.getByRole('columnheader', {name: '최종 판정'})).toHaveAttribute('title', '자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.');
     expect(screen.getByText('신규 사유')).toBeInTheDocument();
     expect(screen.getAllByRole('combobox', {name: /최종 판정/})).toHaveLength(2);
   });

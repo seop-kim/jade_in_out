@@ -449,7 +449,21 @@ function LeaveBalanceModal({
               ) : (
                 <div className="leave-balance-table-wrap">
                   <table>
-                    <thead><tr><th>발생기간</th><th>날짜</th><th>휴가 유형</th><th>사유</th><th>시간</th><th>출처</th><th>승인상태</th><th>자동 판정</th><th>최종 판정</th><th>반영시간</th><th>관리</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th title="이 휴가가 차감되는 발생 연차 기간입니다.">발생기간</th>
+                        <th title="휴가를 사용한 날짜입니다.">날짜</th>
+                        <th title="원 시스템에서 조회된 휴가 종류입니다.">휴가 유형</th>
+                        <th title="휴가 신청 시 입력된 사유입니다.">사유</th>
+                        <th title="사용한 휴가 시간 또는 시간차 정보입니다.">시간</th>
+                        <th title="해당 기록을 가져온 시스템입니다.">출처</th>
+                        <th title="원 시스템에서 표시한 승인 상태입니다.">승인상태</th>
+                        <th title="중복·비차감 휴가 여부를 자동으로 판정한 결과입니다.">자동 판정</th>
+                        <th title="자동 판정을 확인하고 직접 변경할 수 있는 최종 처리값입니다.">최종 판정</th>
+                        <th title="최종 잔여시간 계산에 반영할 시간입니다.">반영시간</th>
+                        <th title="사용 내역을 삭제합니다. 취소선이 없는 행은 확인 후 삭제됩니다.">관리</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {displayRows.map((row) => {
                         const selectedDecision = decisionByRowId[row.id] ?? 'auto';
