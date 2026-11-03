@@ -367,6 +367,21 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByRole('columnheader', {name: '사유'})).toBeInTheDocument();
   });
 
+  test('keeps date and hours columns required', async () => {
+    render(
+      <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
+    );
+
+    for (const label of ['날짜', '시간']) {
+      await userEvent.click(screen.getByRole('columnheader', {name: label}));
+      expect(screen.getByRole('menuitem', {name: `컬럼 삭제 ${label}`})).toBeDisabled();
+      await userEvent.click(screen.getByRole('columnheader', {name: label}));
+    }
+
+    expect(screen.getByRole('columnheader', {name: '날짜'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: '시간'})).toBeInTheDocument();
+  });
+
   test('resizes a leave grid column within its minimum and maximum width', () => {
     render(
       <LeaveBalanceModal open onClose={jest.fn()} onLoad={jest.fn()} result={result} error={null} loading={false} progress={null} />
