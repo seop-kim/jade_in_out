@@ -381,7 +381,7 @@ describe('LeaveBalanceModal', () => {
     fireEvent.mouseDown(resizer, {clientX: 180});
     fireEvent.mouseMove(window, {clientX: -1000});
     fireEvent.mouseUp(window);
-    expect(dateHeader).toHaveStyle({width: '90px'});
+    expect(dateHeader).toHaveStyle({width: '72px'});
 
     const decisionHeader = screen.getByRole('columnheader', {name: '최종 판정'});
     const decisionResizer = screen.getByRole('separator', {name: '최종 판정 열 너비 조절'});

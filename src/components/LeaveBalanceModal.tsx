@@ -77,17 +77,17 @@ const LEAVE_TABLE_COLUMNS: LeaveTableColumn[] = [
 
 const MAX_LEAVE_COLUMN_WIDTH = 600;
 const MIN_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
-  period: 110,
-  date: 90,
-  type: 150,
-  reason: 110,
-  hours: 130,
-  source: 90,
-  status: 100,
-  autoDecision: 110,
+  period: 100,
+  date: 72,
+  type: 112,
+  reason: 86,
+  hours: 92,
+  source: 72,
+  status: 86,
+  autoDecision: 100,
   finalDecision: 100,
   appliedHours: 90,
-  manage: 90,
+  manage: 72,
 };
 const DEFAULT_LEAVE_COLUMN_WIDTHS: Record<LeaveTableColumn['key'], number> = {
   period: 120,
