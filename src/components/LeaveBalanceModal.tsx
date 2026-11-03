@@ -397,9 +397,16 @@ function LeaveBalanceModal({
     const above = bounds.bottom + 80 > window.innerHeight;
     setColumnTooltip({text, left, top: above ? bounds.top - gap : bounds.bottom + gap, above});
   };
+  const handleTooltipShowIfClipped = (element: HTMLElement, text: string, contentElement = element): void => {
+    if (contentElement.scrollWidth <= contentElement.clientWidth) {
+      setColumnTooltip(null);
+      return;
+    }
+    handleColumnTooltipShow(element, text);
+  };
   const cellTooltipProps = (text: string) => ({
     'data-tooltip': text,
-    onMouseEnter: (event: ReactMouseEvent<HTMLTableCellElement>) => handleColumnTooltipShow(event.currentTarget, text),
+    onMouseEnter: (event: ReactMouseEvent<HTMLTableCellElement>) => handleTooltipShowIfClipped(event.currentTarget, text),
     onMouseLeave: () => setColumnTooltip(null),
   });
   const handleColumnResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, key: LeaveTableColumn['key']): void => {
@@ -659,9 +666,17 @@ function LeaveBalanceModal({
                             aria-label={column.label}
                             style={{width: `${columnWidths[column.key] ?? DEFAULT_LEAVE_COLUMN_WIDTHS[column.key]}px`}}
                             draggable
-                            onMouseEnter={(event) => handleColumnTooltipShow(event.currentTarget, column.title)}
+                            onMouseEnter={(event) => handleTooltipShowIfClipped(
+                              event.currentTarget,
+                              column.title,
+                              event.currentTarget.querySelector<HTMLElement>('.leave-balance-column-label') ?? event.currentTarget,
+                            )}
                             onMouseLeave={() => setColumnTooltip(null)}
-                            onFocus={(event) => handleColumnTooltipShow(event.currentTarget, column.title)}
+                            onFocus={(event) => handleTooltipShowIfClipped(
+                              event.currentTarget,
+                              column.title,
+                              event.currentTarget.querySelector<HTMLElement>('.leave-balance-column-label') ?? event.currentTarget,
+                            )}
                             onBlur={() => setColumnTooltip(null)}
                             className={[
                               draggedColumnKey === column.key && 'leave-balance-column-dragging',
