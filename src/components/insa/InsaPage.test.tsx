@@ -75,9 +75,12 @@ describe('InsaPage', () => {
     const bookmarkletLink = screen.getByRole('link', {name: '인사 연결'});
     expect(bookmarkletLink).toHaveAttribute('href', expect.stringMatching(/^javascript:/));
     expect(bookmarkletLink).not.toHaveAttribute('href', expect.stringContaining('React has blocked'));
-    expect(screen.getByText('인사 연결을 북마크에 끌어다 놓아 저장합니다.')).toBeInTheDocument();
-    expect(screen.getByText('인사시스템 열기를 클릭하여 엽니다.')).toBeInTheDocument();
-    expect(screen.getByText('달력에 휴가·출퇴근 정보가 표시되면 연결이 완료됩니다.')).toBeInTheDocument();
+    expect(screen.getByText(/인사 연결을 북마크에 끌어다 놓아 저장합니다\./)).toBeInTheDocument();
+    expect(screen.getByText(/인사시스템 열기를 클릭하여 엽니다\./)).toBeInTheDocument();
+    expect(screen.getByText(/달력에 출퇴근 정보가 표시되면 연결이 완료됩니다\./)).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: '연결 가이드'})).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: '1단계 인사 연결 북마크 저장'})).toHaveAttribute('src', '/images/insa-guide/01-bookmark.png');
+    expect(screen.getByText('1 / 5')).toBeInTheDocument();
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
     expect(screen.queryByText('위 순서대로 인사 연결을 설정해주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('인사시스템 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('insa-auto-connect-card');
