@@ -167,7 +167,7 @@ describe('LeaveBalanceModal', () => {
     resolve(result);
     expect((await screen.findAllByText('발생')).length).toBeGreaterThan(0);
     expect(screen.getByText('Jade 사용')).toBeInTheDocument();
-    expect(screen.getByText('신규 사용')).toBeInTheDocument();
+    expect(screen.getByText('신규 (KIMS) 사용')).toBeInTheDocument();
     expect(screen.getAllByText('중복 제외').length).toBeGreaterThan(0);
     expect(screen.getByText('최종 사용')).toBeInTheDocument();
     expect(screen.getByText('잔여 시간')).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('LeaveBalanceModal', () => {
     expect(screen.getByText('연차')).toBeInTheDocument();
     expect(screen.getByText('전4')).toBeInTheDocument();
     expect(screen.getAllByText('Jade').length).toBeGreaterThan(0);
-    expect(screen.getByText('신규')).toBeInTheDocument();
+    expect(screen.getByText('KIMS')).toBeInTheDocument();
     expect(screen.getByText('승인')).toBeInTheDocument();
   });
 

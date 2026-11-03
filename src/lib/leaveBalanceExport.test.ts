@@ -64,7 +64,7 @@ describe('leaveBalanceExport', () => {
         type: '연차휴가(시간차)',
         reason: '개인 사유',
         hours: '(출4)',
-        source: '신규',
+        source: 'KIMS',
         status: '승인',
         finalDecision: '차감 제외',
         appliedHours: '4시간',

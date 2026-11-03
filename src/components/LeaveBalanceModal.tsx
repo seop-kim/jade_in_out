@@ -42,8 +42,8 @@ function hoursLabel(hours: number | null): string {
 }
 
 function sourceLabel(source: LeaveBalanceResult['records'][number]['source'] | LeaveReviewRow['source']): string {
-  if (source === 'both') return 'Jade + 신규';
-  return source === 'jade' ? 'Jade' : '신규';
+  if (source === 'both') return 'Jade + KIMS';
+  return source === 'jade' ? 'Jade' : 'KIMS';
 }
 
 function decisionLabel(decision: LeaveDecision): string {
@@ -571,7 +571,7 @@ function LeaveBalanceModal({
             <div className="leave-balance-summary" aria-label="휴가 합계">
               <div><span>발생</span><strong>{hoursLabel(summaryResult?.accruedHours ?? displayResult.accruedHours)}</strong></div>
               <div><span>Jade 사용</span><strong>{hoursLabel(displaySummary.jadeUsedHours)}</strong></div>
-              <div><span>신규 사용</span><strong>{hoursLabel(displaySummary.insaUsedHours)}</strong></div>
+              <div><span>신규 (KIMS) 사용</span><strong>{hoursLabel(displaySummary.insaUsedHours)}</strong></div>
               <div><span>중복 제외</span><strong>{hoursLabel(displaySummary.duplicateHours)}</strong></div>
               <div><span>최종 사용</span><strong>{hoursLabel(displaySummary.usedHours)}</strong></div>
               <div className="leave-balance-summary-primary"><span>잔여 시간</span><strong>{hoursLabel(displaySummary.remainingHours)}</strong></div>

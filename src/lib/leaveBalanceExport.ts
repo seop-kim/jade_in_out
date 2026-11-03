@@ -14,7 +14,7 @@ export const LEAVE_BALANCE_EXPORT_COLUMNS: CsvColumn[] = [
 ];
 
 function sourceLabel(source: LeaveReviewRow['source']): string {
-  return source === 'jade' ? 'Jade' : '신규';
+  return source === 'jade' ? 'Jade' : 'KIMS';
 }
 
 function decisionLabel(decision: LeaveDecision): string {
