@@ -59,7 +59,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [selectedGuideStep, setSelectedGuideStep] = useState<number | null>(null);
   const guideDragStartX = useRef<number | null>(null);
-  const guideDidDrag = useRef(false);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -128,7 +127,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const handleGuidePointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     guideDragStartX.current = event.clientX;
-    guideDidDrag.current = false;
   };
 
   const completeGuideDrag = (clientX: number): void => {
@@ -138,7 +136,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
     guideDragStartX.current = null;
     if (!Number.isFinite(distance) || Math.abs(distance) < 50) return;
 
-    guideDidDrag.current = true;
     setGuideStepIndex((index) => distance < 0
       ? Math.min(jadeGuideSteps.length - 1, index + 1)
       : Math.max(0, index - 1));
@@ -151,7 +148,6 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
   const handleGuideMouseDown = (event: ReactMouseEvent<HTMLDivElement>): void => {
     if (event.button !== 0) return;
     guideDragStartX.current = event.clientX;
-    guideDidDrag.current = false;
   };
 
   const handleGuideMouseUp = (event: ReactMouseEvent<HTMLDivElement>): void => {
@@ -249,20 +245,7 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                         </span>
                       </button>
                       <div className="setup-guide-media">
-                        <button
-                          type="button"
-                          className="setup-guide-image-button"
-                          aria-label={`${step.alt} 이미지 확대`}
-                          onClick={() => {
-                            if (guideDidDrag.current) {
-                              guideDidDrag.current = false;
-                              return;
-                            }
-                            setSelectedGuideStep(index);
-                          }}
-                        >
-                          <img className="setup-guide-image" src={step.image} alt={step.alt} draggable={false} />
-                        </button>
+                        <img className="setup-guide-image" src={step.image} alt={step.alt} draggable={false} />
                       </div>
                       <figcaption>{index + 1}. {step.text}</figcaption>
                     </figure>

@@ -34,6 +34,7 @@ describe('Jade setup', () => {
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('src', '/images/jade-guide/01-bookmark.png');
     expect(screen.getByRole('img', {name: '1단계 Jade 연결 북마크 저장'})).toHaveAttribute('draggable', 'false');
     expect(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 확대 보기'}).querySelector('.setup-guide-zoom-icon')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: '1단계 Jade 연결 북마크 저장 이미지 확대'})).not.toBeInTheDocument();
     expect(screen.getAllByRole('img', {name: /단계/})).toHaveLength(5);
     expect(screen.getByText('1 / 5')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: '다음 단계'})).toBeInTheDocument();
@@ -47,7 +48,7 @@ describe('Jade setup', () => {
   test('opens a guide image in an enlarged viewer', async () => {
     render(<Setup onSubmit={jest.fn()} onOpenAutomatic={jest.fn()} bridgeStatus="idle" bookmarkletHref="javascript:void(0)" />);
 
-    await userEvent.click(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 이미지 확대'}));
+    await userEvent.click(screen.getByRole('button', {name: '1단계 Jade 연결 북마크 저장 확대 보기'}));
 
     expect(screen.getByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'})).toBeInTheDocument();
     const dialog = screen.getByRole('dialog', {name: '1단계 Jade 연결 북마크 저장 확대 보기'});

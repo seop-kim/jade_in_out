@@ -98,16 +98,6 @@
   -webkit-user-drag: none;
 }
 
-.setup-guide-image-button {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  cursor: zoom-in;
-}
-
 .setup-guide-zoom-icon {
   display: grid;
   place-items: center;
@@ -148,11 +138,6 @@
 .setup-guide-slide-zoom:focus-visible {
   opacity: 1;
   background: rgba(15, 23, 42, 0.86);
-}
-
-.setup-guide-image-button:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.35);
-  outline-offset: 3px;
 }
 
 .setup-image-backdrop {
