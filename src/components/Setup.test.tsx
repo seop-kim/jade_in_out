@@ -37,7 +37,7 @@ describe('Jade setup', () => {
     expect(screen.getByRole('button', {name: '다음 단계'})).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Jade 연결 방법 보기'})).not.toBeInTheDocument();
     expect(screen.getByText('Jade 브라우저를 종료하지 말아주세요.')).toBeInTheDocument();
-    expect(screen.queryByText('위 순서대로 Jade 연결을 설정해주세요.')).not.toBeInTheDocument();
+    expect(screen.queryByText('위 순서대로 Jade 연결을 설정해 주세요.')).not.toBeInTheDocument();
     expect(screen.getByText('Jade 브라우저를 종료하지 말아주세요.').closest('section')).toHaveClass('setup-auto-card');
     expect(screen.queryByLabelText('cURL 명령어')).not.toBeInTheDocument();
   });

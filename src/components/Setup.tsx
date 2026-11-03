@@ -343,15 +343,15 @@ function Setup({onSubmit, onOpenAutomatic, bridgeStatus, bookmarkletHref}: Setup
                 </div>
               </div>
             )}
-            <p className="setup-bridge-help" role={bridgeStatus !== 'idle' || bookmarkletClicked ? 'status' : undefined}>
-              {bridgeStatus === 'ready'
-                ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
-                : bridgeStatus === 'waiting'
-                  ? '새 탭에서 로그인한 뒤 Jade 연결을 눌러 주세요.'
-                : bookmarkletClicked
-                  ? '이 링크를 즐겨찾기 바에 저장한 뒤, Jade 시스템 탭에서 눌러 주세요.'
-                  : '위 순서대로 Jade 연결을 설정해 주세요.'}
-            </p>
+            {(bridgeStatus !== 'idle' || bookmarkletClicked) && (
+              <p className="setup-bridge-help" role="status">
+                {bridgeStatus === 'ready'
+                  ? 'Jade 연결이 실행되었습니다. 출퇴근 기록의 날짜 조회 응답을 기다리는 중입니다.'
+                  : bridgeStatus === 'waiting'
+                    ? '새 탭에서 로그인한 뒤 Jade 연결을 눌러 주세요.'
+                    : '이 링크를 즐겨찾기 바에 저장한 뒤, Jade 시스템 탭에서 눌러 주세요.'}
+              </p>
+            )}
             <ul className="setup-hint setup-connection-notes">
               <li>Jade 브라우저를 종료하지 말아주세요.</li>
             </ul>
